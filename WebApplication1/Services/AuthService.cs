@@ -515,9 +515,7 @@ public class AuthService : IAuthService
 
     private static List<string> ResolvePermissions(string role, IEnumerable<string>? permissions)
     {
-        return permissions?.Any() == true
-            ? permissions.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-            : AppPermissions.RoleDefaults.GetValueOrDefault(role, new List<string>()).ToList();
+        return AdminAccountHelper.ResolvePermissions(role, permissions);
     }
 
     private int GetAccessTokenExpiryMinutes()

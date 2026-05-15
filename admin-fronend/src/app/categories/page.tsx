@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { unwrapApiData } from '@/lib/api-response';
 import { PERMISSIONS } from '@/lib/permissions';
 
@@ -33,6 +34,11 @@ interface Category {
   children?: Category[];
 }
 
+type Notice = {
+  tone: 'success' | 'error';
+  message: string;
+} | null;
+
 function isMediaValue(value?: string | null) {
   return !!value && (value.startsWith('data:') || value.startsWith('http'));
 }
@@ -45,6 +51,7 @@ export default function CategoriesPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [currentCat, setCurrentCat] = useState<Category | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
   const [formData, setFormData] = useState({
     name: '',
     icon: 'folder',
@@ -61,13 +68,14 @@ export default function CategoriesPage() {
       setCategories(unwrapApiData<Category[]>(response) || []);
     } catch (err) {
       console.error('Failed to fetch categories', err);
+      setNotice({ tone: 'error', message: getApiErrorMessage(err, 'Failed to fetch categories.') });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCategories();
+    void fetchCategories();
   }, []);
 
   const handleSave = async () => {
@@ -76,15 +84,17 @@ export default function CategoriesPage() {
     try {
       if (currentCat) {
         await api.put(`/admin/categories/${currentCat.categoryId}`, formData);
+        setNotice({ tone: 'success', message: 'Category updated successfully.' });
       } else {
         await api.post('/admin/categories', formData);
+        setNotice({ tone: 'success', message: 'Category created successfully.' });
       }
       setIsEditing(false);
       setCurrentCat(null);
       await fetchCategories();
     } catch (err) {
       console.error('Save failed', err);
-      alert('Failed to save category.');
+      setNotice({ tone: 'error', message: getApiErrorMessage(err, 'Failed to save category.') });
     }
   };
 
@@ -105,10 +115,11 @@ export default function CategoriesPage() {
     if (!confirm('Are you sure you want to delete this category?')) return;
     try {
       await api.delete(`/admin/categories/${id}`);
+      setNotice({ tone: 'success', message: 'Category deleted successfully.' });
       await fetchCategories();
     } catch (err) {
       console.error('Delete failed', err);
-      alert('Failed to delete category.');
+      setNotice({ tone: 'error', message: getApiErrorMessage(err, 'Failed to delete category.') });
     }
   };
 
@@ -116,10 +127,10 @@ export default function CategoriesPage() {
     setSyncing(true);
     try {
       await api.post('/admin/categories/sync-firestore');
-      alert('Categories synced successfully.');
+      setNotice({ tone: 'success', message: 'Categories synced successfully.' });
     } catch (err) {
       console.error('Sync failed', err);
-      alert('Failed to sync categories.');
+      setNotice({ tone: 'error', message: getApiErrorMessage(err, 'Failed to sync categories.') });
     } finally {
       setSyncing(false);
     }
@@ -145,6 +156,7 @@ export default function CategoriesPage() {
 
   const renderCategoryIcon = (cat: Pick<Category, 'icon' | 'color' | 'name'>) => {
     if (isMediaValue(cat.icon)) {
+      // eslint-disable-next-line @next/next/no-img-element
       return <img src={cat.icon} alt={cat.name} style={{ width: '20px', height: '20px', objectFit: 'cover', borderRadius: '6px' }} />;
     }
 
@@ -255,6 +267,22 @@ export default function CategoriesPage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {notice && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '0.875rem 1rem',
+                borderRadius: 'var(--radius)',
+                background: notice.tone === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                color: notice.tone === 'error' ? '#ef4444' : '#10b981',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              {notice.message}
+            </div>
+          )}
+
           {categories.map((cat) => renderCategoryRow(cat))}
           {categories.length === 0 && !loading && (
             <div className="flex-center glass-card" style={{ padding: '4rem' }}>
@@ -309,6 +337,7 @@ export default function CategoriesPage() {
 
                   {isMediaValue(formData.icon) && (
                     <div style={{ padding: '0.75rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.03)', border: '1px solid hsl(var(--border))' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={formData.icon} alt="Category icon preview" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '10px' }} />
                     </div>
                   )}

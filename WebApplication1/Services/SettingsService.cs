@@ -7,6 +7,7 @@ using allonbiz.AdminAPI.DTOs.Admin;
 using allonbiz.AdminAPI.DTOs.Common;
 using allonbiz.AdminAPI.DTOs.Settings;
 using allonbiz.AdminAPI.DTOs.System;
+using allonbiz.AdminAPI.Constants;
 using allonbiz.AdminAPI.Helpers;
 using allonbiz.AdminAPI.Models.Entities;
 using allonbiz.AdminAPI.Services.Interfaces;
@@ -143,6 +144,7 @@ public class SettingsService : ISettingsService
 
     public async Task<AdminDetailDto> CreateAdminAsync(CreateAdminRequestDto dto, Guid actorAdminId, CancellationToken ct = default)
     {
+        _ = await GetRequiredAdminAsync(actorAdminId, ct);
         var email = AdminAccountHelper.NormalizeEmail(dto.Email);
         if (await _adminRepo.Query().AnyAsync(admin => admin.Email == email, ct))
         {
@@ -150,6 +152,7 @@ public class SettingsService : ISettingsService
         }
 
         var role = AdminAccountHelper.NormalizeAdminRole(dto.Role);
+        EnsureActorCanAssignRole(role);
         var temporaryPassword = GenerateTemporaryPassword();
         var admin = new AdminAccount
         {
@@ -195,7 +198,7 @@ public class SettingsService : ISettingsService
             IsActive = a.IsActive,
             Is2FAEnabled = a.Is2FAEnabled,
             LastLoginAt = a.LastLoginAt,
-            Permissions = a.Permissions,
+            Permissions = AdminAccountHelper.ResolvePermissions(a.Role, a.Permissions),
             FailedLoginAttempts = a.FailedLoginAttempts,
             LockoutEnd = a.LockoutEnd
         };
@@ -203,6 +206,7 @@ public class SettingsService : ISettingsService
 
     public async Task UpdateAdminAsync(Guid adminId, UpdateAdminRequestDto dto, Guid actorAdminId, CancellationToken ct = default)
     {
+        var actor = await GetRequiredAdminAsync(actorAdminId, ct);
         var a = await _adminRepo.GetByIdAsync(adminId, ct);
         if (a == null) throw new KeyNotFoundException($"Admin {adminId} not found.");
 
@@ -214,6 +218,8 @@ public class SettingsService : ISettingsService
         }
 
         var role = AdminAccountHelper.NormalizeAdminRole(dto.Role);
+        EnsureActorCanManageTarget(actor, a, role);
+        EnsureSelfAdminUpdateRules(actor, a, role, dto.IsActive);
         a.Email = email;
         a.FirstName = AdminAccountHelper.RequireValue(dto.FirstName, "First name");
         a.LastName = AdminAccountHelper.RequireValue(dto.LastName, "Last name");
@@ -328,12 +334,67 @@ public class SettingsService : ISettingsService
         return JsonSerializer.Deserialize<Dictionary<string, string>>(value) ?? new Dictionary<string, string>();
     }
 
+    private async Task<AdminAccount> GetRequiredAdminAsync(Guid adminId, CancellationToken ct)
+    {
+        return await _adminRepo.GetByIdAsync(adminId, ct)
+            ?? throw new KeyNotFoundException($"Admin {adminId} not found.");
+    }
+
     private static void EnsureActorIsNotTarget(Guid actorAdminId, Guid targetAdminId, string action)
     {
         if (actorAdminId == targetAdminId)
         {
             throw new InvalidOperationException($"You cannot {action}.");
         }
+    }
+
+    private static void EnsureActorCanAssignRole(string targetRole)
+    {
+        if (IsSuperAdmin(targetRole))
+        {
+            throw new InvalidOperationException("Only one super admin account is allowed. Creating another super admin is disabled.");
+        }
+    }
+
+    private static void EnsureActorCanManageTarget(AdminAccount actor, AdminAccount target, string nextRole)
+    {
+        if (IsSuperAdmin(nextRole) && !IsSuperAdmin(target.Role))
+        {
+            throw new InvalidOperationException("Only one super admin account is allowed. Promoting another admin to super admin is disabled.");
+        }
+
+        if (!IsSuperAdmin(actor.Role) && IsSuperAdmin(target.Role))
+        {
+            throw new InvalidOperationException("Only the existing super admin can manage the super admin account.");
+        }
+    }
+
+    private static void EnsureSelfAdminUpdateRules(AdminAccount actor, AdminAccount target, string nextRole, bool isActive)
+    {
+        if (actor.AdminId != target.AdminId)
+        {
+            return;
+        }
+
+        if (!IsSuperAdmin(target.Role))
+        {
+            return;
+        }
+
+        if (!IsSuperAdmin(nextRole))
+        {
+            throw new InvalidOperationException("Super admins cannot remove their own super admin role.");
+        }
+
+        if (!isActive)
+        {
+            throw new InvalidOperationException("Super admins cannot deactivate their own account.");
+        }
+    }
+
+    private static bool IsSuperAdmin(string role)
+    {
+        return role.Equals(Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GenerateTemporaryPassword()

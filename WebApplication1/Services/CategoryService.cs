@@ -98,7 +98,6 @@ public class CategoryService : ICategoryService
         c.IsActive = dto.IsActive;
         c.UpdatedAt = DateTime.UtcNow;
 
-        _categoryRepo.Update(c);
         await _categoryRepo.SaveChangesAsync(ct);
         await _firestore.SyncCategoryAsync(c, ct);
 

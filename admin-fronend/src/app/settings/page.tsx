@@ -201,6 +201,11 @@ export default function SettingsPage() {
   const [useRoleDefaults, setUseRoleDefaults] = useState(true);
   const [adminForm, setAdminForm] = useState<AdminFormState>(defaultAdminForm);
   const [notice, setNotice] = useState<Notice>(null);
+  const currentUserIsSuperAdmin = user?.role === 'super_admin';
+  const isEditingSelf = Boolean(editingAdminId && user?.adminId === editingAdminId);
+  const isEditingOwnSuperAdmin = isEditingSelf && user?.role === 'super_admin';
+  const isEditingExistingSuperAdmin = Boolean(editingAdminId && adminForm.role === 'super_admin');
+  const canManageSelectedSuperAdmin = currentUserIsSuperAdmin || adminForm.role !== 'super_admin';
 
   const tabs = useMemo(
     () =>
@@ -315,6 +320,7 @@ export default function SettingsPage() {
     setUseRoleDefaults(true);
     setAdminForm({
       ...defaultAdminForm,
+      role: 'admin',
       permissions: roleDefaultPermissions.admin,
     });
     setIsAdminModalOpen(true);
@@ -353,6 +359,21 @@ export default function SettingsPage() {
       return;
     }
 
+    if (adminForm.role === 'super_admin' && !isEditingExistingSuperAdmin) {
+      setNotice({ tone: 'error', message: 'Only one super admin account is allowed.' });
+      return;
+    }
+
+    if (isEditingOwnSuperAdmin && adminForm.role !== 'super_admin') {
+      setNotice({ tone: 'error', message: 'You cannot remove your own super admin role.' });
+      return;
+    }
+
+    if (isEditingOwnSuperAdmin && !adminForm.isActive) {
+      setNotice({ tone: 'error', message: 'You cannot deactivate your own super admin account.' });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -361,7 +382,7 @@ export default function SettingsPage() {
         email: adminForm.email.trim(),
         role: adminForm.role,
         isActive: adminForm.isActive,
-        permissions: useRoleDefaults ? undefined : normalizePermissions(adminForm.permissions),
+        permissions: useRoleDefaults || isEditingOwnSuperAdmin ? undefined : normalizePermissions(adminForm.permissions),
       };
 
       if (editingAdminId) {
@@ -425,6 +446,10 @@ export default function SettingsPage() {
   };
 
   const togglePermission = (permission: string) => {
+    if (isEditingOwnSuperAdmin) {
+      return;
+    }
+
     setAdminForm((current) => ({
       ...current,
       permissions: current.permissions.includes(permission)
@@ -434,6 +459,10 @@ export default function SettingsPage() {
   };
 
   const handleRoleChange = (role: string) => {
+    if (isEditingOwnSuperAdmin) {
+      return;
+    }
+
     setAdminForm((current) => ({
       ...current,
       role,
@@ -442,6 +471,11 @@ export default function SettingsPage() {
   };
 
   const handleUseRoleDefaultsChange = (nextValue: boolean) => {
+    if (isEditingOwnSuperAdmin) {
+      setUseRoleDefaults(true);
+      return;
+    }
+
     setUseRoleDefaults(nextValue);
     if (nextValue) {
       setAdminForm((current) => ({
@@ -635,6 +669,8 @@ export default function SettingsPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {admins.map((admin) => {
                           const isSelf = user?.adminId === admin.adminId;
+                          const targetIsSuperAdmin = admin.role === 'super_admin';
+                          const canManageAdmin = currentUserIsSuperAdmin || !targetIsSuperAdmin;
 
                           return (
                             <div key={admin.adminId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', flexWrap: 'wrap' }}>
@@ -657,28 +693,29 @@ export default function SettingsPage() {
                               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                   onClick={() => void openEditAdmin(admin.adminId)}
-                                  style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                                  disabled={!canManageAdmin}
+                                  style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: canManageAdmin ? 1 : 0.45 }}
                                 >
                                   <Pencil size={14} /> Edit
                                 </button>
                                 <button
                                   onClick={() => void handleTerminateSessions(admin.adminId)}
-                                  disabled={isSelf}
-                                  style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isSelf ? 0.45 : 1 }}
+                                  disabled={isSelf || !canManageAdmin}
+                                  style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isSelf || !canManageAdmin ? 0.45 : 1 }}
                                 >
                                   <LogOut size={14} /> Terminate Sessions
                                 </button>
                                 <button
                                   onClick={() => void handleResetPassword(admin.adminId)}
-                                  disabled={isSelf}
-                                  style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isSelf ? 0.45 : 1 }}
+                                  disabled={isSelf || !canManageAdmin}
+                                  style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isSelf || !canManageAdmin ? 0.45 : 1 }}
                                 >
                                   <RefreshCcw size={14} /> Reset Password
                                 </button>
                                 <button
                                   onClick={() => void handleDeleteAdmin(admin.adminId)}
-                                  disabled={isSelf}
-                                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', color: '#ef4444', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isSelf ? 0.45 : 1 }}
+                                  disabled={isSelf || !canManageAdmin}
+                                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius)', color: '#ef4444', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', opacity: isSelf || !canManageAdmin ? 0.45 : 1 }}
                                 >
                                   <Trash2 size={14} /> Delete
                                 </button>
@@ -723,32 +760,39 @@ export default function SettingsPage() {
                   )}
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <select value={adminForm.role} onChange={(event) => handleRoleChange(event.target.value)} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }}>
-                      <option value="admin">Admin</option>
-                      <option value="moderator">Moderator</option>
-                      <option value="analyst">Analyst</option>
-                      <option value="super_admin">Super Admin</option>
-                    </select>
+                    {isEditingExistingSuperAdmin ? (
+                      <select value={adminForm.role} disabled style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white', opacity: 0.7 }}>
+                        <option value="super_admin">Super Admin</option>
+                      </select>
+                    ) : (
+                      <select value={adminForm.role} onChange={(event) => handleRoleChange(event.target.value)} disabled={isEditingOwnSuperAdmin} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white', opacity: isEditingOwnSuperAdmin ? 0.7 : 1 }}>
+                        <option value="admin">Admin</option>
+                        <option value="moderator">Moderator</option>
+                        <option value="analyst">Analyst</option>
+                      </select>
+                    )}
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius)', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))' }}>
-                      <input type="checkbox" checked={adminForm.isActive} onChange={(event) => setAdminForm({ ...adminForm, isActive: event.target.checked })} />
+                      <input type="checkbox" checked={adminForm.isActive} disabled={isEditingOwnSuperAdmin} onChange={(event) => setAdminForm({ ...adminForm, isActive: event.target.checked })} />
                       Active Account
                     </label>
                   </div>
 
                   <div style={{ padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.02)' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', fontWeight: 600 }}>
-                      <input type="checkbox" checked={useRoleDefaults} onChange={(event) => handleUseRoleDefaultsChange(event.target.checked)} />
+                      <input type="checkbox" checked={useRoleDefaults || isEditingOwnSuperAdmin} disabled={isEditingOwnSuperAdmin} onChange={(event) => handleUseRoleDefaultsChange(event.target.checked)} />
                       Use role default permissions
                     </label>
 
                     <p style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginBottom: useRoleDefaults ? 0 : '0.75rem' }}>
-                      {useRoleDefaults
+                      {isEditingOwnSuperAdmin
+                        ? 'Your own super admin account always keeps the full default permission set.'
+                        : useRoleDefaults
                         ? `This ${adminForm.role} account will use ${normalizePermissions(roleDefaultPermissions[adminForm.role] || []).length} default permissions.`
                         : 'Custom permissions override the role defaults for this admin.'}
                     </p>
 
-                    {!useRoleDefaults && (
+                    {!useRoleDefaults && !isEditingOwnSuperAdmin && canManageSelectedSuperAdmin && (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', maxHeight: '260px', overflowY: 'auto' }}>
                         {allPermissions.map((permission) => (
                           <label key={permission} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))' }}>

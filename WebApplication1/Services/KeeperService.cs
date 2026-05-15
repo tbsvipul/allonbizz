@@ -74,21 +74,23 @@ public class KeeperService : IKeeperService
 
     public async Task ApproveKeeperAsync(Guid keeperId, ApproveKeeperDto dto, Guid actorAdminId, CancellationToken ct = default)
     {
-        await ExecuteKeeperReviewWorkflowAsync(
+        var keeper = await _keeperRepo.GetByIdAsync(keeperId, ct)
+            ?? throw new KeyNotFoundException($"Keeper {keeperId} not found.");
+
+        keeper.Status = KeeperStatus.Approved;
+        keeper.ApprovedAt = DateTime.UtcNow;
+        keeper.RejectionReason = null;
+        keeper.HoldReason = null;
+        keeper.HoldUntil = null;
+        keeper.UpdatedAt = DateTime.UtcNow;
+
+        AddReviewMessage(
             keeperId,
             actorAdminId,
             "approve",
-            string.IsNullOrWhiteSpace(dto.Notes) ? "Application approved." : dto.Notes.Trim(),
-            (now, cancellationToken) => _db.Keepers
-                .Where(keeper => keeper.KeeperId == keeperId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(keeper => keeper.Status, KeeperStatus.Approved)
-                    .SetProperty(keeper => keeper.ApprovedAt, now)
-                    .SetProperty(keeper => keeper.RejectionReason, (string?)null)
-                    .SetProperty(keeper => keeper.HoldReason, (string?)null)
-                    .SetProperty(keeper => keeper.HoldUntil, (DateTime?)null)
-                    .SetProperty(keeper => keeper.UpdatedAt, now), cancellationToken),
-            ct);
+            string.IsNullOrWhiteSpace(dto.Notes) ? "Application approved." : dto.Notes.Trim());
+
+        await _db.SaveChangesAsync(ct);
 
         await _auditService.LogAsync(actorAdminId, "KEEPER_APPROVE", nameof(Keeper), keeperId.ToString(), null, "N/A");
         _logger.LogInformation("Keeper {KeeperId} approved", keeperId);
@@ -97,20 +99,17 @@ public class KeeperService : IKeeperService
     public async Task RejectKeeperAsync(Guid keeperId, RejectKeeperDto dto, Guid actorAdminId, CancellationToken ct = default)
     {
         var reason = dto.Reason.Trim();
-        await ExecuteKeeperReviewWorkflowAsync(
-            keeperId,
-            actorAdminId,
-            "reject",
-            reason,
-            (now, cancellationToken) => _db.Keepers
-                .Where(keeper => keeper.KeeperId == keeperId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(keeper => keeper.Status, KeeperStatus.Rejected)
-                    .SetProperty(keeper => keeper.RejectionReason, reason)
-                    .SetProperty(keeper => keeper.HoldReason, (string?)null)
-                    .SetProperty(keeper => keeper.HoldUntil, (DateTime?)null)
-                    .SetProperty(keeper => keeper.UpdatedAt, now), cancellationToken),
-            ct);
+        var keeper = await _keeperRepo.GetByIdAsync(keeperId, ct)
+            ?? throw new KeyNotFoundException($"Keeper {keeperId} not found.");
+
+        keeper.Status = KeeperStatus.Rejected;
+        keeper.RejectionReason = reason;
+        keeper.HoldReason = null;
+        keeper.HoldUntil = null;
+        keeper.UpdatedAt = DateTime.UtcNow;
+
+        AddReviewMessage(keeperId, actorAdminId, "reject", reason);
+        await _db.SaveChangesAsync(ct);
 
         await _auditService.LogAsync(actorAdminId, "KEEPER_REJECT", nameof(Keeper), keeperId.ToString(), null, "N/A");
         _logger.LogInformation("Keeper {KeeperId} rejected. Reason: {Reason}", keeperId, dto.Reason);
@@ -118,36 +117,34 @@ public class KeeperService : IKeeperService
 
     public async Task RequestMoreInfoAsync(Guid keeperId, RequestInfoDto dto, Guid actorAdminId, CancellationToken ct = default)
     {
-        await ExecuteKeeperReviewWorkflowAsync(
-            keeperId,
-            actorAdminId,
-            "request_info",
-            dto.Message.Trim(),
-            (now, cancellationToken) => _db.Keepers
-                .Where(keeper => keeper.KeeperId == keeperId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(keeper => keeper.UpdatedAt, now), cancellationToken),
-            ct);
+        var keeper = await _keeperRepo.GetByIdAsync(keeperId, ct)
+            ?? throw new KeyNotFoundException($"Keeper {keeperId} not found.");
+
+        keeper.UpdatedAt = DateTime.UtcNow;
+        AddReviewMessage(keeperId, actorAdminId, "request_info", dto.Message.Trim());
+        await _db.SaveChangesAsync(ct);
 
         await _auditService.LogAsync(actorAdminId, "KEEPER_REQUEST_INFO", nameof(Keeper), keeperId.ToString(), null, "N/A");
     }
 
     public async Task HoldApplicationAsync(Guid keeperId, HoldApplicationDto dto, Guid actorAdminId, CancellationToken ct = default)
     {
+        var keeper = await _keeperRepo.GetByIdAsync(keeperId, ct)
+            ?? throw new KeyNotFoundException($"Keeper {keeperId} not found.");
         var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
-        await ExecuteKeeperReviewWorkflowAsync(
+
+        keeper.Status = KeeperStatus.OnHold;
+        keeper.HoldReason = reason;
+        keeper.HoldUntil = dto.HoldUntil;
+        keeper.UpdatedAt = DateTime.UtcNow;
+
+        AddReviewMessage(
             keeperId,
             actorAdminId,
             "hold",
-            string.IsNullOrWhiteSpace(reason) ? "Application placed on hold." : reason,
-            (now, cancellationToken) => _db.Keepers
-                .Where(keeper => keeper.KeeperId == keeperId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(keeper => keeper.Status, KeeperStatus.OnHold)
-                    .SetProperty(keeper => keeper.HoldReason, reason)
-                    .SetProperty(keeper => keeper.HoldUntil, dto.HoldUntil)
-                    .SetProperty(keeper => keeper.UpdatedAt, now), cancellationToken),
-            ct);
+            string.IsNullOrWhiteSpace(reason) ? "Application placed on hold." : reason);
+
+        await _db.SaveChangesAsync(ct);
 
         await _auditService.LogAsync(actorAdminId, "KEEPER_HOLD", nameof(Keeper), keeperId.ToString(), null, "N/A");
     }
@@ -342,39 +339,15 @@ public class KeeperService : IKeeperService
         };
     }
 
-    private async Task ExecuteKeeperReviewWorkflowAsync(
-        Guid keeperId,
-        Guid actorAdminId,
-        string messageType,
-        string message,
-        Func<DateTime, CancellationToken, Task<int>> updateAsync,
-        CancellationToken ct)
+    private void AddReviewMessage(Guid keeperId, Guid actorAdminId, string messageType, string message)
     {
-        var strategy = _db.Database.CreateExecutionStrategy();
-        var reviewMessageId = Guid.NewGuid();
-        var createdAt = DateTime.UtcNow;
-
-        await strategy.ExecuteAsync(async () =>
+        _db.KeeperReviewMessages.Add(new KeeperReviewMessage
         {
-            await using var transaction = await _db.Database.BeginTransactionAsync(ct);
-
-            var affectedRows = await updateAsync(createdAt, ct);
-            if (affectedRows == 0)
-            {
-                throw new KeyNotFoundException($"Keeper {keeperId} not found.");
-            }
-
-            await _db.Database.ExecuteSqlInterpolatedAsync(
-                $"""
-                INSERT INTO keeper_review_messages
-                    ("MessageId", "KeeperId", "AdminId", "MessageType", "Message", "IsReadByKeeper", "CreatedAt")
-                VALUES
-                    ({reviewMessageId}, {keeperId}, {actorAdminId}, {messageType}, {message}, {false}, {createdAt})
-                ON CONFLICT ("MessageId") DO NOTHING
-                """,
-                ct);
-
-            await transaction.CommitAsync(ct);
+            KeeperId = keeperId,
+            AdminId = actorAdminId,
+            MessageType = messageType,
+            Message = message,
+            CreatedAt = DateTime.UtcNow
         });
     }
 

@@ -10,7 +10,7 @@ import api, {
   setStoredUser,
 } from '@/lib/api';
 import { unwrapApiData } from '@/lib/api-response';
-import { preferredLandingRoute } from '@/lib/permissions';
+import { PERMISSIONS, preferredLandingRoute } from '@/lib/permissions';
 
 interface User {
   adminId: string;
@@ -34,6 +34,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const superAdminPermissions = Array.from(new Set(Object.values(PERMISSIONS))).sort();
+
+function normalizeUser(user: User | null): User | null {
+  if (!user) {
+    return null;
+  }
+
+  if (user.role === 'super_admin') {
+    return {
+      ...user,
+      permissions: superAdminPermissions,
+    };
+  }
+
+  return {
+    ...user,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,12 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const cachedUser = getStoredUser<User>();
       if (!cancelled && cachedUser) {
-        setUser(cachedUser);
+        setUser(normalizeUser(cachedUser));
       }
 
       try {
         const response = await api.get('/admin/auth/me');
-        const liveUser = unwrapApiData<User>(response);
+        const liveUser = normalizeUser(unwrapApiData<User>(response));
         if (!cancelled) {
           setUser(liveUser);
         }
@@ -84,9 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (accessToken: string, refreshToken: string, userData: User) => {
-    setStoredSession(accessToken, refreshToken, userData);
-    setUser(userData);
-    router.push(preferredLandingRoute(userData.permissions));
+    const normalizedUser = normalizeUser(userData);
+    setStoredSession(accessToken, refreshToken, normalizedUser);
+    setUser(normalizedUser);
+    router.push(preferredLandingRoute(normalizedUser?.permissions || []));
   };
 
   const logout = async () => {
@@ -104,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasPermission = (permission?: string | string[] | null) => {
     if (!permission) return true;
     if (!user) return false;
+    if (user.role === 'super_admin') return true;
 
     const userPermissions = user.permissions || [];
     if (Array.isArray(permission)) {
@@ -116,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = (userData: Partial<User>) => {
     setUser((current) => {
       if (!current) return current;
-      const nextUser = { ...current, ...userData };
+      const nextUser = normalizeUser({ ...current, ...userData });
       setStoredUser(nextUser);
       return nextUser;
     });

@@ -81,7 +81,6 @@ public class TagService : ITagService
         t.IsActive = dto.IsActive;
         t.UpdatedAt = DateTime.UtcNow;
 
-        _tagRepo.Update(t);
         await _tagRepo.SaveChangesAsync(ct);
     }
 

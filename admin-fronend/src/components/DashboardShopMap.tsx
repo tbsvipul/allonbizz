@@ -423,9 +423,64 @@ export default function DashboardShopMap() {
       mapRef.current = new win.google.maps.Map(mapContainerRef.current, {
         center: { lat: 23.0375, lng: 72.566 },
         zoom: 11,
+        minZoom: 3,
+        restriction: {
+          latLngBounds: { north: 85, south: -85, west: -180, east: 180 },
+          strictBounds: true,
+        },
         mapTypeControl: false,
         streetViewControl: false,
-        fullscreenControl: false,
+        fullscreenControl: true,
+        gestureHandling: 'cooperative',
+      });
+
+      // Add Current Location Button
+      const locationButton = document.createElement('button');
+      locationButton.type = 'button';
+      locationButton.title = 'Pan to Current Location';
+      locationButton.style.backgroundColor = '#fff';
+      locationButton.style.border = 'none';
+      locationButton.style.outline = 'none';
+      locationButton.style.width = '40px';
+      locationButton.style.height = '40px';
+      locationButton.style.borderRadius = '2px';
+      locationButton.style.boxShadow = 'rgba(0, 0, 0, 0.3) 0px 1px 4px -1px';
+      locationButton.style.cursor = 'pointer';
+      locationButton.style.marginRight = '10px';
+      locationButton.style.padding = '0';
+      locationButton.style.display = 'flex';
+      locationButton.style.alignItems = 'center';
+      locationButton.style.justifyContent = 'center';
+
+      const locationIcon = document.createElement('div');
+      locationIcon.style.width = '18px';
+      locationIcon.style.height = '18px';
+      locationIcon.style.backgroundImage = 'url(https://maps.gstatic.com/tactile/mylocation/mylocation-sprite-1x.png)';
+      locationIcon.style.backgroundSize = '180px 18px';
+      locationIcon.style.backgroundPosition = '0px 0px';
+      locationIcon.style.backgroundRepeat = 'no-repeat';
+      locationButton.appendChild(locationIcon);
+
+      mapRef.current.controls[win.google.maps.ControlPosition.RIGHT_BOTTOM].push(locationButton);
+
+      locationButton.addEventListener('click', () => {
+        if (navigator.geolocation) {
+          locationIcon.style.backgroundPosition = '-18px 0px';
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              locationIcon.style.backgroundPosition = '0px 0px';
+              mapRef.current.panTo({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              });
+              mapRef.current.setZoom(15);
+            },
+            () => {
+              locationIcon.style.backgroundPosition = '0px 0px';
+              console.warn('Geolocation failed or was denied.');
+            }
+          );
+        }
       });
     }
 

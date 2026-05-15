@@ -462,13 +462,7 @@ public class AdminAuthService : IAdminAuthService
 
     private static List<string> ResolvePermissions(string role, List<string>? customPermissions)
     {
-        var defaults = AppPermissions.RoleDefaults.GetValueOrDefault(role, new List<string>());
-        if (customPermissions == null || customPermissions.Count == 0)
-        {
-            return defaults;
-        }
-
-        return customPermissions.Distinct().ToList();
+        return AdminAccountHelper.ResolvePermissions(role, customPermissions);
     }
 
     private int GetAccessTokenExpiryMinutes()

@@ -9,7 +9,6 @@ public class CreateCategoryRequestDto
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(100)]
     public string Icon { get; set; } = string.Empty;
 
     [Required]
@@ -31,7 +30,6 @@ public class UpdateCategoryRequestDto
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(100)]
     public string Icon { get; set; } = string.Empty;
 
     [Required]

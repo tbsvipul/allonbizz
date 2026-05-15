@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using allonbiz.AdminAPI.Constants;
 using allonbiz.AdminAPI.Data;
 using allonbiz.AdminAPI.Models.Enums;
 
@@ -116,6 +117,9 @@ public static class DatabaseMigrationBootstrapper
         ILogger? logger = null,
         CancellationToken ct = default)
     {
+        var repairedSuperAdmins = await RepairSuperAdminPermissionsAsync(db, ct);
+        var mediaRepair = await StringMediaSchemaRepair.RepairAsync(db, logger, ct);
+
         var repairedNotifications = await db.Database.ExecuteSqlRawAsync(
             """
             UPDATE "Notifications"
@@ -142,13 +146,55 @@ public static class DatabaseMigrationBootstrapper
             """,
             ct);
 
-        if (repairedNotifications > 0 || publishedReviews > 0)
+        if (repairedSuperAdmins > 0 || mediaRepair.NormalizedColumns > 0 || mediaRepair.FallbackRows > 0 || repairedNotifications > 0 || publishedReviews > 0)
         {
             logger?.LogWarning(
-                "Repaired legacy runtime data. Notifications fixed: {NotificationsFixed}, pending reviews published: {PublishedReviews}.",
+                "Repaired legacy runtime data. Super admins fixed: {SuperAdminsFixed}, media columns normalized: {NormalizedColumns}, binary fallback rows: {FallbackRows}, notifications fixed: {NotificationsFixed}, pending reviews published: {PublishedReviews}.",
+                repairedSuperAdmins,
+                mediaRepair.NormalizedColumns,
+                mediaRepair.FallbackRows,
                 repairedNotifications,
                 publishedReviews);
         }
+    }
+
+    private static async Task<int> RepairSuperAdminPermissionsAsync(AppDbContext db, CancellationToken ct)
+    {
+        var expectedPermissions = AdminAccountHelper.ResolvePermissions(Roles.SuperAdmin, null);
+        var superAdmins = await db.AdminAccounts
+            .Where(admin => EF.Functions.ILike(admin.Role, Roles.SuperAdmin))
+            .ToListAsync(ct);
+
+        var repaired = 0;
+        foreach (var admin in superAdmins)
+        {
+            if (HaveSamePermissions(admin.Permissions, expectedPermissions))
+            {
+                continue;
+            }
+
+            admin.Permissions = expectedPermissions.ToList();
+            admin.UpdatedAt = DateTime.UtcNow;
+            repaired++;
+        }
+
+        if (repaired > 0)
+        {
+            await db.SaveChangesAsync(ct);
+        }
+
+        return repaired;
+    }
+
+    private static bool HaveSamePermissions(IReadOnlyCollection<string>? current, IReadOnlyCollection<string> expected)
+    {
+        var currentSet = new HashSet<string>(
+            current?.Where(permission => !string.IsNullOrWhiteSpace(permission))
+                .Select(permission => permission.Trim()) ?? Array.Empty<string>(),
+            StringComparer.OrdinalIgnoreCase);
+
+        var expectedSet = new HashSet<string>(expected, StringComparer.OrdinalIgnoreCase);
+        return currentSet.SetEquals(expectedSet);
     }
 
     private static async Task<bool> HasRuntimeWorkflowSchemaAsync(

@@ -73,6 +73,19 @@ public static class AdminAccountHelper
 
     public static List<string> ResolvePermissions(string role, IEnumerable<string>? permissions)
     {
+        var normalizedRole = role?.Trim().ToLowerInvariant() ?? string.Empty;
+        var defaultPermissions = AppPermissions.RoleDefaults
+            .GetValueOrDefault(normalizedRole, new List<string>())
+            .Where(permission => !string.IsNullOrWhiteSpace(permission))
+            .Select(permission => permission.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (normalizedRole.Equals(Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultPermissions;
+        }
+
         var normalizedPermissions = permissions?
             .Where(permission => !string.IsNullOrWhiteSpace(permission))
             .Select(permission => permission.Trim())
@@ -84,8 +97,6 @@ public static class AdminAccountHelper
             return normalizedPermissions;
         }
 
-        return AppPermissions.RoleDefaults
-            .GetValueOrDefault(role, new List<string>())
-            .ToList();
+        return defaultPermissions;
     }
 }
