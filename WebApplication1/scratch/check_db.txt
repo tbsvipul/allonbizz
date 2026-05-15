@@ -1,0 +1,23 @@
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using allonbiz.AdminAPI.Data;
+using System.Linq;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var shops = await context.Shops.ToListAsync();
+    Console.WriteLine($"Found {shops.Count} shops.");
+    foreach (var shop in shops)
+    {
+        Console.WriteLine($"- {shop.Name} (ID: {shop.ShopId}, IsActive: {shop.IsActive})");
+    }
+}

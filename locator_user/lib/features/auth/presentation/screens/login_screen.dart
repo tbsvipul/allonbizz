@@ -1,0 +1,242 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+import 'package:locator/l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_text_field.dart';
+import '../controllers/auth_controller.dart';
+import '../utils/auth_error_mapper.dart';
+import '../widgets/auth_header.dart';
+
+
+/// Sign-in screen with manual Email & Password, plus Google/Apple options.
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _onLogin() {
+    if (_formKey.currentState?.validate() ?? false) {
+      ref
+          .read(authControllerProvider.notifier)
+          .signInWithEmail(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
+    }
+  }
+
+  Future<void> _onForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email to reset your password'),
+        ),
+      );
+      return;
+    }
+
+    await ref.read(authControllerProvider.notifier).sendPasswordReset(email);
+
+    if (!mounted) return;
+
+    if (ref.read(authControllerProvider).status != AuthStatus.error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset link sent to your email')),
+      );
+    }
+  }
+
+  void _clearError() {
+    if (ref.read(authControllerProvider).status == AuthStatus.error) {
+      ref.read(authControllerProvider.notifier).clearError();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final l10n = AppLocalizations.of(context)!;
+    final authState = ref.watch(authControllerProvider);
+    final isLoading = authState.status == AuthStatus.loading;
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: AbsorbPointer(
+          absorbing: isLoading,
+          child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    AuthHeader(
+                      title: l10n.appName,
+                      subtitle: l10n.welcomeBackShort,
+                    ),
+                    const SizedBox(height: 32),
+
+                    if (authState.status == AuthStatus.error &&
+                        authState.errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: colorScheme.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                AuthErrorMapper.getMessage(
+                                  authState.errorMessage,
+                                  l10n,
+                                ),
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    AppTextField.regular(
+                          controller: _emailController,
+                          label: l10n.email,
+                          hint: l10n.emailHint,
+                          keyboardType: TextInputType.emailAddress,
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return l10n.emailValidError;
+                              }
+                            final emailRegex = RegExp(
+                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                            );
+                            return emailRegex.hasMatch(value.trim())
+                                ? null
+                                : l10n.emailValidError;
+                          },
+                          onChanged: (_) => _clearError(),
+                        )
+                        .animate()
+                        .fadeIn(delay: 400.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    const SizedBox(height: 16),
+
+                    AppTextField.password(
+                          controller: _passwordController,
+                          label: l10n.password,
+                          hint: l10n.passwordHint,
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          validator: (value) =>
+                              (value == null || value.length < 6)
+                              ? l10n.passwordValidError
+                              : null,
+                          onChanged: (_) => _clearError(),
+                        )
+                        .animate()
+                        .fadeIn(delay: 450.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isLoading ? null : _onForgotPassword,
+                        child: Text(
+                          'Forgot Password?',
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ).animate().fadeIn(delay: 500.ms),
+
+                    const SizedBox(height: 8),
+
+                    SizedBox(
+                          width: double.infinity,
+                          child: AppButton.primary(
+                            label: l10n.login,
+                            isLoading: isLoading,
+                            onPressed: isLoading ? null : _onLogin,
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(delay: 550.ms)
+                        .slideY(begin: 0.2, end: 0),
+
+
+
+                    const SizedBox(height: 24),
+
+                    TextButton(
+                      onPressed: () => context.push('/register'),
+                      child: RichText(
+                        text: TextSpan(
+                          text: l10n.dontHaveAccountPrefix,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: ' ${l10n.registerLink}',
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ).animate().fadeIn(delay: 750.ms),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      ),
+    );
+  }
+}

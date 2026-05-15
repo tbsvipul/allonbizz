@@ -1,0 +1,11 @@
+firebase-credentials.json
+logs/
+audit_build*/
+audit_build_before/
+bin/
+obj/
+build_out/
+build_verify/
+build_verify_remove_demo/
+plan_build*/
+api.stdout.log
