@@ -44,6 +44,9 @@ export default function TagsPage() {
     isActive: true,
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
   const fetchTags = async () => {
     setLoading(true);
     try {
@@ -146,6 +149,9 @@ export default function TagsPage() {
 
   const canSaveTag = currentTag ? hasPermission(PERMISSIONS.tagsEdit) : hasPermission(PERMISSIONS.tagsCreate);
 
+  const totalPages = Math.ceil(tags.length / itemsPerPage);
+  const currentTags = tags.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <DashboardLayout>
       <div className="animate-fade-in">
@@ -179,7 +185,7 @@ export default function TagsPage() {
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {tags.map((tag) => (
+          {currentTags.map((tag) => (
             <motion.div key={tag.tagId} layout className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -236,6 +242,28 @@ export default function TagsPage() {
             </div>
           )}
         </div>
+
+        {!loading && totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '2rem', gap: '1rem' }}>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              style={{ padding: '0.5rem 1rem', borderRadius: 'var(--radius)', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', fontWeight: 600, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, color: 'var(--foreground)' }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--foreground)' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              style={{ padding: '0.5rem 1rem', borderRadius: 'var(--radius)', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', fontWeight: 600, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, color: 'var(--foreground)' }}
+            >
+              Next
+            </button>
+          </div>
+        )}
 
         <AnimatePresence>
           {isEditing && (

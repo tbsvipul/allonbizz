@@ -21,6 +21,7 @@ using allonbiz.AdminAPI.Data.Repositories;
 using AutoMapper;
 using Serilog;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopment = builder.Environment.IsDevelopment();
@@ -110,7 +111,11 @@ builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection(
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -207,6 +212,7 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IKeeperProfileService, KeeperProfileService>();
 builder.Services.AddScoped<IKeeperOfferService, KeeperOfferService>();
 builder.Services.AddScoped<IKeeperDashboardService, KeeperDashboardService>();
+builder.Services.AddScoped<IKeeperContextService, KeeperContextService>();
 
 var app = builder.Build();
 
