@@ -1,0 +1,267 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kProfileMode;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
+import '../../../../shared/models/app_user.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/base_api.dart';
+import '../../../../core/services/storage_service.dart';
+import '../../../profile/data/repositories/profile_repository.dart';
+
+/// Riverpod provider for AuthRepository.
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository(
+    notificationService: ref.watch(notificationServiceProvider),
+    apiClient: ref.watch(apiClientProvider),
+    storageService: ref.watch(storageServiceProvider),
+    profileRepository: ref.watch(profileRepositoryProvider),
+  );
+});
+
+/// Stream of auth state changes.
+final authStateProvider = StreamProvider<AppUser?>((ref) {
+  return ref.watch(authRepositoryProvider).authStateChanges;
+});
+
+/// Repository for Backend Authentication and user profile management.
+class AuthRepository {
+  AuthRepository({
+    NotificationService? notificationService,
+    ApiClient? apiClient,
+    StorageService? storageService,
+    ProfileRepository? profileRepository,
+  }) : _notificationService = notificationService ?? NotificationService(),
+       _apiClient = apiClient ??
+           ApiClient(
+             baseUrl: BaseApi.backendBaseUrl,
+             storageService: StorageService(),
+           ),
+       _storageService = storageService ?? StorageService(),
+       _profileRepository = profileRepository {
+    _init();
+  }
+
+  final NotificationService _notificationService;
+  final ApiClient _apiClient;
+  final StorageService _storageService;
+  final ProfileRepository? _profileRepository;
+
+  final _authController = StreamController<AppUser?>.broadcast();
+  AppUser? _currentUser;
+
+  Stream<AppUser?> get authStateChanges async* {
+    yield _currentUser;
+    yield* _authController.stream;
+  }
+
+  AppUser? get currentUser => _currentUser;
+
+  Future<void> _init() async {
+    final token = _storageService.backendAccessToken;
+    _logAuthFlow(
+      'init',
+      details: {'hasStoredAccessToken': token != null},
+    );
+    if (token != null) {
+      try {
+        await refreshProfile();
+      } catch (_) {
+        _logAuthFlow('init-refresh-profile-failed');
+        _updateState(null);
+      }
+    } else {
+      _updateState(null);
+    }
+  }
+
+  void _updateState(AppUser? user) {
+    _currentUser = user;
+    _authController.add(user);
+  }
+
+  Future<AppUser?> refreshProfile() async {
+    _logAuthFlow('refresh-profile-start');
+    try {
+      final user = await (_profileRepository?.getProfile() ?? 
+        _apiClient.get('/user/profile').then((r) => AppUser.fromJson(r['data'])));
+      
+      _updateState(user);
+      _logAuthFlow(
+        'refresh-profile-success',
+        details: {
+          'userId': user.uid,
+          'email': user.email == null ? null : _maskEmail(user.email!),
+        },
+      );
+
+      return user;
+    } catch (e) {
+      _logAuthFlow(
+        'refresh-profile-failure',
+        details: {'error': e.toString()},
+      );
+      if (e is ServerFailure && e.statusCode == 401) {
+        _updateState(null);
+      }
+      rethrow;
+    }
+  }
+
+  Future<AppUser?> signInWithEmailAndPassword(String email, String password) async {
+    _logAuthFlow(
+      'login-start',
+      details: {
+        'email': _maskEmail(email),
+        'baseUrl': _apiClient.baseUrl,
+      },
+    );
+    try {
+      final response = await _apiClient.post(
+        '/auth/user-login',
+        body: {'email': email, 'password': password},
+      );
+
+      final data = response['data'];
+      if (data != null) {
+        _storageService.backendAccessToken = data['accessToken'];
+        _storageService.backendRefreshToken = data['refreshToken'];
+        _logAuthFlow(
+          'login-success-auth-payload',
+          details: {
+            'hasAccessToken': data['accessToken'] != null,
+            'hasRefreshToken': data['refreshToken'] != null,
+          },
+        );
+        _logAuthFlow('login-refresh-profile-start');
+        return await refreshProfile();
+      }
+      _logAuthFlow('login-invalid-response');
+      throw const AuthFailure('login-failed', 'Invalid response from server');
+    } on ServerFailure catch (e) {
+      _logAuthFlow(
+        'login-server-failure',
+        details: {
+          'statusCode': e.statusCode,
+          'message': e.message,
+        },
+      );
+      if (e.statusCode == 401) throw const AuthFailure('unauthorized', 'Invalid email or password');
+      throw AuthFailure('error', e.message);
+    } catch (e) {
+      _logAuthFlow(
+        'login-unexpected-failure',
+        details: {'error': e.toString()},
+      );
+      rethrow;
+    }
+  }
+
+  Future<AppUser?> createUserWithEmailAndPassword(String email, String password, String name) async {
+    _logAuthFlow(
+      'register-start',
+      details: {
+        'email': _maskEmail(email),
+        'baseUrl': _apiClient.baseUrl,
+      },
+    );
+    try {
+      final names = name.trim().split(RegExp(r'\s+'));
+      final fn = names.first;
+      final ln = names.length > 1 ? names.sublist(1).join(' ') : 'User';
+
+      final response = await _apiClient.post(
+        '/auth/register-user',
+        body: {
+          'firstName': fn,
+          'lastName': ln,
+          'email': email,
+          'password': password,
+        },
+      );
+      final data = response['data'];
+      if (data != null) {
+        _storageService.backendAccessToken = data['accessToken'];
+        _storageService.backendRefreshToken = data['refreshToken'];
+        _logAuthFlow(
+          'register-success-auth-payload',
+          details: {
+            'hasAccessToken': data['accessToken'] != null,
+            'hasRefreshToken': data['refreshToken'] != null,
+          },
+        );
+        _logAuthFlow('register-refresh-profile-start');
+        return await refreshProfile();
+      }
+      _logAuthFlow('register-invalid-response');
+      throw const AuthFailure('registration-failed', 'Could not create account');
+    } on ServerFailure catch (e) {
+      _logAuthFlow(
+        'register-server-failure',
+        details: {
+          'statusCode': e.statusCode,
+          'message': e.message,
+        },
+      );
+      if (e.statusCode == 409) throw const AuthFailure('email-already-in-use', 'Email is already registered');
+      throw AuthFailure('error', e.message);
+    } catch (e) {
+      _logAuthFlow(
+        'register-unexpected-failure',
+        details: {'error': e.toString()},
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> signOut() async {
+    try {
+      if (_storageService.backendAccessToken != null) {
+        await _apiClient.post('/auth/logout');
+      }
+    } catch (_) {
+    } finally {
+      _storageService.backendAccessToken = null;
+      _storageService.backendRefreshToken = null;
+      _updateState(null);
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _apiClient.post('/auth/forgot-password', body: {'email': email});
+    } on ServerFailure catch (e) {
+      throw AuthFailure('forgot-password-failed', e.message);
+    }
+  }
+
+  void _logAuthFlow(String step, {Map<String, Object?>? details}) {
+    if (!kDebugMode && !kProfileMode) {
+      return;
+    }
+
+    if (details == null || details.isEmpty) {
+      debugPrint('[AuthFlow] $step');
+      return;
+    }
+
+    debugPrint('[AuthFlow] $step $details');
+  }
+
+  String _maskEmail(String email) {
+    final trimmed = email.trim();
+    final atIndex = trimmed.indexOf('@');
+    if (atIndex <= 1) {
+      return '***';
+    }
+
+    final localPart = trimmed.substring(0, atIndex);
+    final domain = trimmed.substring(atIndex);
+    if (localPart.length <= 2) {
+      return '${localPart[0]}***$domain';
+    }
+
+    return '${localPart.substring(0, 2)}***$domain';
+  }
+
+}

@@ -36,19 +36,17 @@ public class AnalyticsService : IAnalyticsService
 
     public async Task<UserAnalyticsDto> GetUserAnalyticsAsync(AnalyticsRangeQueryDto? query, CancellationToken ct = default)
     {
-        var totalTask = _userRepo.Query().CountAsync(ct);
-        var activeTask = _userRepo.Query().CountAsync(u => u.IsActive, ct);
-        var customersTask = _userRepo.Query().CountAsync(u => u.Role == "customer", ct);
-        var keepersTask = _userRepo.Query().CountAsync(u => u.Role == "keeper", ct);
-
-        await Task.WhenAll(totalTask, activeTask, customersTask, keepersTask);
+        var totalUsers = await _userRepo.Query().CountAsync(ct);
+        var activeUsers = await _userRepo.Query().CountAsync(u => u.IsActive, ct);
+        var customers = await _userRepo.Query().CountAsync(u => u.Role == "customer", ct);
+        var keepers = await _userRepo.Query().CountAsync(u => u.Role == "keeper", ct);
 
         return new UserAnalyticsDto
         {
-            TotalUsers = totalTask.Result,
-            ActiveUsers = activeTask.Result,
-            Customers = customersTask.Result,
-            Keepers = keepersTask.Result
+            TotalUsers = totalUsers,
+            ActiveUsers = activeUsers,
+            Customers = customers,
+            Keepers = keepers
         };
     }
 

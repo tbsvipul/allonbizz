@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/services/places_service.dart';
+import '../../../../core/theme/app_text_styles.dart';
+
+class SearchSuggestionsList extends StatelessWidget {
+  final List<PlaceSuggestion> suggestions;
+  final bool isLoading;
+  final bool isDark;
+  final Function(PlaceSuggestion) onSelect;
+
+  const SearchSuggestionsList({
+    super.key,
+    required this.suggestions,
+    required this.isLoading,
+    required this.isDark,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (suggestions.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      constraints: const BoxConstraints(maxHeight: 300),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.grey800 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: suggestions.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: isDark ? AppColors.grey700 : AppColors.grey200,
+        ),
+        itemBuilder: (context, index) {
+          final suggestion = suggestions[index];
+          return ListTile(
+            leading: Icon(
+              Icons.location_on_rounded,
+              color: AppColors.primary.withValues(alpha: 0.6),
+              size: 20,
+            ),
+            title: Text(
+              suggestion.name,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              suggestion.description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSmall.copyWith(color: AppColors.grey500),
+            ),
+            onTap: () => onSelect(suggestion),
+          );
+        },
+      ),
+    );
+  }
+}

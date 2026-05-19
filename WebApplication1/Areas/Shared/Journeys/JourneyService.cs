@@ -55,6 +55,10 @@ public class JourneyService : IJourneyService
             EndName = dto.DestinationName,
             EndLat = dto.DestLat,
             EndLng = dto.DestLng,
+            PathJson = JsonSerializer.Serialize(new List<double[]>
+            {
+                new[] { dto.StartLat, dto.StartLng }
+            }),
         };
 
         _db.Journeys.Add(journey);
@@ -68,9 +72,10 @@ public class JourneyService : IJourneyService
         var journey = await _db.Journeys.FindAsync(journeyId);
         if (journey == null) return new List<JourneyRecommendationResponse>();
 
-        var journeyTags = string.IsNullOrEmpty(journey.TagsJson) 
-            ? new List<string>() 
-            : JsonSerializer.Deserialize<List<string>>(journey.TagsJson) ?? new List<string>();
+        var journeyTags = NormalizeTags(
+            string.IsNullOrEmpty(journey.TagsJson)
+                ? new List<string>()
+                : JsonSerializer.Deserialize<List<string>>(journey.TagsJson) ?? new List<string>());
 
         // Approximate bounding box (1 degree latitude is approx 111km)
         double latOffset = radiusKm / 111.0;
@@ -95,10 +100,10 @@ public class JourneyService : IJourneyService
             .Select(s => new {
                 Shop = s,
                 Distance = CalculateDistance(lat, lng, s.Latitude!.Value, s.Longitude!.Value),
-                Tags = s.Tags != null && s.Tags.Any() ? s.Tags : new List<string> { s.Category?.Name ?? "" }
+                Tags = BuildShopMatchTokens(s.Tags, s.Category?.Name)
             })
             .Where(x => x.Distance <= radiusKm)
-            .Where(x => journeyTags.Count == 0 || x.Tags.Any(t => journeyTags.Any(jt => jt.Equals(t, StringComparison.OrdinalIgnoreCase))))
+            .Where(x => journeyTags.Count == 0 || MatchesAnyJourneyTag(journeyTags, x.Tags))
             .OrderBy(x => x.Distance)
             .Select(x => new JourneyRecommendationResponse
             {
@@ -115,6 +120,47 @@ public class JourneyService : IJourneyService
         return recommendations;
     }
 
+    private static List<string> NormalizeTags(IEnumerable<string>? tags)
+    {
+        return tags?
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? new List<string>();
+    }
+
+    private static List<string> BuildShopMatchTokens(IEnumerable<string>? shopTags, string? categoryName)
+    {
+        var tokens = NormalizeTags(shopTags);
+
+        if (!string.IsNullOrWhiteSpace(categoryName) &&
+            !tokens.Contains(categoryName.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            tokens.Add(categoryName.Trim());
+        }
+
+        return tokens;
+    }
+
+    private static bool MatchesAnyJourneyTag(IReadOnlyCollection<string> journeyTags, IReadOnlyCollection<string> shopTokens)
+    {
+        if (journeyTags.Count == 0)
+        {
+            return true;
+        }
+
+        if (shopTokens.Count == 0)
+        {
+            return false;
+        }
+
+        return journeyTags.Any(selectedTag =>
+            shopTokens.Any(shopToken =>
+                shopToken.Contains(selectedTag, StringComparison.OrdinalIgnoreCase) ||
+                selectedTag.Contains(shopToken, StringComparison.OrdinalIgnoreCase)));
+    }
+
     public async Task<bool> UpdateJourneyProgressAsync(Guid journeyId, UpdateJourneyProgressDto dto)
     {
         var journey = await _db.Journeys.FindAsync(journeyId);
@@ -125,8 +171,15 @@ public class JourneyService : IJourneyService
         
         if (journey.Status != "active") return true; 
 
-        journey.Distance = dto.Distance;
-        journey.Duration = dto.Duration;
+        if (dto.Distance > 0)
+        {
+            journey.Distance = Math.Max(journey.Distance, dto.Distance);
+        }
+
+        if (dto.Duration > 0)
+        {
+            journey.Duration = Math.Max(journey.Duration, dto.Duration);
+        }
 
         // Append current position to path breadcrumb trail
         var path = string.IsNullOrEmpty(journey.PathJson)
@@ -157,14 +210,31 @@ public class JourneyService : IJourneyService
         var journey = await _db.Journeys.FindAsync(journeyId);
         if (journey != null)
         {
+            var completedAt = DateTime.UtcNow;
+            var effectiveEndName = !string.IsNullOrWhiteSpace(dto.EndName)
+                ? dto.EndName
+                : (!string.IsNullOrWhiteSpace(journey.EndName) ? journey.EndName : journey.StartName) ?? "Destination";
+            var effectiveDistance = ResolveJourneyDistanceMeters(
+                journey,
+                dto.Distance,
+                dto.EndLat,
+                dto.EndLng);
+            var effectiveDuration = ResolveJourneyDurationSeconds(
+                journey,
+                dto.Duration,
+                completedAt);
+            var mergedShops = MergeEncounteredShops(journey.ShopsJson, dto.ShopsEncountered);
+
             journey.Status = "completed";
-            journey.EndName = dto.EndName;
+            journey.EndName = effectiveEndName;
             journey.EndLat = dto.EndLat;
             journey.EndLng = dto.EndLng;
-            journey.Distance = dto.Distance;
-            journey.Duration = dto.Duration;
-            journey.ShopsJson = JsonSerializer.Serialize(dto.ShopsEncountered);
-            journey.EndTime = DateTime.UtcNow;
+            journey.Distance = effectiveDistance;
+            journey.Duration = effectiveDuration;
+            journey.ShopsJson = JsonSerializer.Serialize(mergedShops);
+            journey.EndTime = completedAt;
+
+            AppendPathPoint(journey, dto.EndLat, dto.EndLng);
 
             await _db.SaveChangesAsync();
             await _firestore.SyncJourneyAsync(journey);
@@ -175,31 +245,14 @@ public class JourneyService : IJourneyService
 
     public async Task<List<JourneyHistoryDto>> GetUserJourneysAsync(Guid userId)
     {
-        return await _db.Journeys
+        var journeys = await _db.Journeys
             .AsNoTracking()
             .Include(j => j.User)
             .Where(j => j.UserId == userId)
             .OrderByDescending(j => j.StartTime)
-            .Select(j => new JourneyHistoryDto
-            {
-                JourneyId = j.JourneyId,
-                UserId = j.UserId,
-                UserEmail = j.User != null ? j.User.Email ?? string.Empty : string.Empty,
-                Type = j.Type,
-                StartName = j.StartName,
-                StartLat = j.StartLat,
-                StartLng = j.StartLng,
-                EndName = j.EndName,
-                EndLat = j.EndLat,
-                EndLng = j.EndLng,
-                StartTime = j.StartTime,
-                EndTime = j.EndTime,
-                Distance = j.Distance,
-                Duration = j.Duration,
-                Tags = DeserializeStringList(j.TagsJson),
-                ShopsEncountered = DeserializeStringList(j.ShopsJson),
-            })
             .ToListAsync();
+
+        return journeys.Select(MapJourneyHistory).ToList();
     }
 
     public async Task<JourneyDetailDto?> GetJourneyDetailAsync(Guid journeyId, Guid userId)
@@ -216,6 +269,16 @@ public class JourneyService : IJourneyService
 
         var pathPoints = DeserializePathPoints(journey.PathJson);
 
+        var effectiveDistance = ResolveJourneyDistanceMeters(
+            journey,
+            journey.Distance,
+            journey.EndLat,
+            journey.EndLng);
+        var effectiveDuration = ResolveJourneyDurationSeconds(
+            journey,
+            journey.Duration,
+            journey.EndTime ?? DateTime.UtcNow);
+
         return new JourneyDetailDto
         {
             JourneyId = journey.JourneyId,
@@ -226,16 +289,49 @@ public class JourneyService : IJourneyService
             StartName = journey.StartName,
             StartLat = journey.StartLat,
             StartLng = journey.StartLng,
-            EndName = journey.EndName,
+            EndName = ResolveJourneyEndName(journey),
             EndLat = journey.EndLat,
             EndLng = journey.EndLng,
             StartTime = journey.StartTime,
             EndTime = journey.EndTime,
-            Distance = journey.Distance,
-            Duration = journey.Duration,
+            Distance = effectiveDistance,
+            Duration = effectiveDuration,
             Tags = DeserializeStringList(journey.TagsJson),
             ShopsEncountered = DeserializeStringList(journey.ShopsJson),
             PathPoints = pathPoints
+        };
+    }
+
+    private JourneyHistoryDto MapJourneyHistory(Journey journey)
+    {
+        var effectiveDistance = ResolveJourneyDistanceMeters(
+            journey,
+            journey.Distance,
+            journey.EndLat,
+            journey.EndLng);
+        var effectiveDuration = ResolveJourneyDurationSeconds(
+            journey,
+            journey.Duration,
+            journey.EndTime ?? DateTime.UtcNow);
+
+        return new JourneyHistoryDto
+        {
+            JourneyId = journey.JourneyId,
+            UserId = journey.UserId,
+            UserEmail = journey.User?.Email ?? string.Empty,
+            Type = journey.Type,
+            StartName = journey.StartName,
+            StartLat = journey.StartLat,
+            StartLng = journey.StartLng,
+            EndName = ResolveJourneyEndName(journey),
+            EndLat = journey.EndLat,
+            EndLng = journey.EndLng,
+            StartTime = journey.StartTime,
+            EndTime = journey.EndTime,
+            Distance = effectiveDistance,
+            Duration = effectiveDuration,
+            Tags = DeserializeStringList(journey.TagsJson),
+            ShopsEncountered = DeserializeStringList(journey.ShopsJson),
         };
     }
 
@@ -265,6 +361,107 @@ public class JourneyService : IJourneyService
                 Longitude = point[1]
             })
             .ToList();
+    }
+
+    private static List<string> MergeEncounteredShops(string? existingJson, List<string>? incoming)
+    {
+        var merged = DeserializeStringList(existingJson);
+
+        if (incoming == null || incoming.Count == 0)
+        {
+            return merged;
+        }
+
+        foreach (var shop in incoming.Where(shop => !string.IsNullOrWhiteSpace(shop)))
+        {
+            if (!merged.Contains(shop))
+            {
+                merged.Add(shop);
+            }
+        }
+
+        return merged;
+    }
+
+    private static string ResolveJourneyEndName(Journey journey)
+    {
+        if (!string.IsNullOrWhiteSpace(journey.EndName))
+        {
+            return journey.EndName!;
+        }
+
+        if (journey.Type.Equals("freeRoam", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Free Roam End";
+        }
+
+        return journey.StartName ?? "Destination";
+    }
+
+    private double ResolveJourneyDistanceMeters(
+        Journey journey,
+        double candidateDistance,
+        double? endLat,
+        double? endLng)
+    {
+        if (candidateDistance > 0)
+        {
+            return candidateDistance;
+        }
+
+        if (journey.Distance > 0)
+        {
+            return journey.Distance;
+        }
+
+        if (endLat.HasValue && endLng.HasValue)
+        {
+            return CalculateDistance(journey.StartLat, journey.StartLng, endLat.Value, endLng.Value) * 1000;
+        }
+
+        return 0;
+    }
+
+    private static long ResolveJourneyDurationSeconds(
+        Journey journey,
+        long candidateDuration,
+        DateTime referenceTime)
+    {
+        if (candidateDuration > 0)
+        {
+            return candidateDuration;
+        }
+
+        if (journey.Duration > 0)
+        {
+            return journey.Duration;
+        }
+
+        var effectiveEndTime = journey.EndTime ?? referenceTime;
+        var elapsed = (long)Math.Round((effectiveEndTime - journey.StartTime).TotalSeconds);
+        return Math.Max(elapsed, 0);
+    }
+
+    private static void AppendPathPoint(Journey journey, double latitude, double longitude)
+    {
+        var path = string.IsNullOrEmpty(journey.PathJson)
+            ? new List<double[]>()
+            : JsonSerializer.Deserialize<List<double[]>>(journey.PathJson) ?? new List<double[]>();
+
+        if (path.Count == 0)
+        {
+            path.Add(new[] { journey.StartLat, journey.StartLng });
+        }
+
+        if (path.Count == 0 ||
+            path[^1].Length < 2 ||
+            path[^1][0] != latitude ||
+            path[^1][1] != longitude)
+        {
+            path.Add(new[] { latitude, longitude });
+        }
+
+        journey.PathJson = JsonSerializer.Serialize(path);
     }
 
     private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)

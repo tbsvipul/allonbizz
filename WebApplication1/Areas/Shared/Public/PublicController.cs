@@ -48,6 +48,18 @@ public class PublicController : ControllerBase
         return Ok(ApiResponse<List<TagDetailDto>>.Ok(activeTags));
     }
 
+    /// <summary>POST /api/v1/public/tags — Create a new tag (public).</summary>
+    [HttpPost("public/tags")]
+    public async Task<IActionResult> CreatePublicTag([FromBody] CreateTagRequestDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Tag name is required."));
+
+        dto.Type ??= "public";
+        var result = await _tagService.CreateTagAsync(dto);
+        return CreatedAtAction(nameof(GetPublicTags), ApiResponse<TagDetailDto>.Ok(result));
+    }
+
     /// <summary>GET /api/v1/reviews — Get reviews.</summary>
     [HttpGet("reviews")]
     public async Task<IActionResult> GetReviews([FromQuery] Guid? shopId, [FromQuery] Guid? offerId, [FromQuery] PaginationParams paging)

@@ -15,6 +15,38 @@ public class UserProfileService : IUserProfileService
     private readonly AppDbContext _db;
     public UserProfileService(AppDbContext db) => _db = db;
 
+    private sealed class UserSavingsRow
+    {
+        public decimal? SavedAmount { get; init; }
+        public decimal? OfferDiscountAmount { get; init; }
+    }
+
+    private static decimal ResolveSavings(decimal? savedAmount, decimal? offerDiscountAmount)
+    {
+        return savedAmount ?? offerDiscountAmount ?? 0m;
+    }
+
+    private IQueryable<UserSavingsRow> BuildUserSavingsQuery(Guid userId)
+    {
+        return
+            from redemption in _db.Redemptions.AsNoTracking()
+            join offer in _db.Offers.AsNoTracking()
+                on redemption.OfferId equals offer.OfferId into offerGroup
+            from offer in offerGroup.DefaultIfEmpty()
+            where redemption.UserId == userId
+            select new UserSavingsRow
+            {
+                SavedAmount = redemption.SavedAmount,
+                OfferDiscountAmount = offer != null ? offer.DiscountAmount : null
+            };
+    }
+
+    private async Task<decimal> GetTotalSavedAsync(Guid userId)
+    {
+        var savingsRows = await BuildUserSavingsQuery(userId).ToListAsync();
+        return savingsRows.Sum(item => ResolveSavings(item.SavedAmount, item.OfferDiscountAmount));
+    }
+
     public async Task<UserProfileDto> GetProfileAsync(Guid userId)
     {
         var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
@@ -146,36 +178,29 @@ public class UserProfileService : IUserProfileService
             })
             .ToListAsync();
 
-        var totalTripsTask = _db.Journeys.AsNoTracking().CountAsync(j => j.UserId == userId);
-        var totalSavedTask = _db.Redemptions
+        var totalTrips = await _db.Journeys
             .AsNoTracking()
-            .Include(r => r.Offer)
-            .Where(r => r.UserId == userId && r.Offer != null)
-            .Select(r => r.SavedAmount ?? r.Offer!.DiscountAmount ?? 0)
-            .DefaultIfEmpty(0)
-            .SumAsync();
-        var loyaltyPointsTask = _db.LoyaltyWallets
+            .CountAsync(j => j.UserId == userId);
+        var totalSaved = await GetTotalSavedAsync(userId);
+        var loyaltyPoints = await _db.LoyaltyWallets
             .AsNoTracking()
             .Where(wallet => wallet.UserId == userId)
             .Select(wallet => (int?)(wallet.TotalPoints - wallet.RedeemedPoints))
             .FirstOrDefaultAsync();
-        var activeJourneyTask = _db.Journeys
+        var activeJourney = await _db.Journeys
             .AsNoTracking()
             .Where(j => j.UserId == userId && j.Status == "active")
             .OrderByDescending(j => j.StartTime)
             .Select(j => new { j.JourneyId, j.Type, Destination = j.EndName })
             .FirstOrDefaultAsync();
 
-        await Task.WhenAll(totalTripsTask, totalSavedTask, loyaltyPointsTask, activeJourneyTask);
-        var activeJourney = activeJourneyTask.Result;
-
         return new UserHomeDto 
         { 
             Summary = new HomeSummaryDto
             {
-                TotalTrips = totalTripsTask.Result,
-                TotalSaved = totalSavedTask.Result,
-                LoyaltyPoints = loyaltyPointsTask.Result ?? 0,
+                TotalTrips = totalTrips,
+                TotalSaved = totalSaved,
+                LoyaltyPoints = loyaltyPoints ?? 0,
                 HasActiveJourney = activeJourney != null,
                 ActiveJourneyId = activeJourney?.JourneyId,
                 ActiveJourneyType = activeJourney?.Type,
@@ -498,6 +523,11 @@ public class UserHistoryService : IUserHistoryService
     private readonly AppDbContext _db;
     public UserHistoryService(AppDbContext db) => _db = db;
 
+    private static decimal ResolveSavings(decimal? savedAmount, decimal? offerDiscountAmount)
+    {
+        return savedAmount ?? offerDiscountAmount ?? 0m;
+    }
+
     public async Task<List<RedemptionHistoryDto>> GetRedemptionHistoryAsync(Guid userId)
     {
         return await _db.Redemptions
@@ -534,15 +564,29 @@ public class UserHistoryService : IUserHistoryService
 
     public async Task<UserSavingsSummaryDto> GetSavingsSummaryAsync(Guid userId)
     {
-        var userRedemptions = _db.Redemptions
+        var savingsRows = await (
+            from redemption in _db.Redemptions.AsNoTracking()
+            join offer in _db.Offers.AsNoTracking()
+                on redemption.OfferId equals offer.OfferId into offerGroup
+            from offer in offerGroup.DefaultIfEmpty()
+            where redemption.UserId == userId
+            select new
+            {
+                redemption.SavedAmount,
+                OfferDiscountAmount = offer != null ? offer.DiscountAmount : null
+            }
+        ).ToListAsync();
+        var totalRedemptions = await _db.Redemptions
             .AsNoTracking()
-            .Include(r => r.Offer)
-            .Where(r => r.UserId == userId && r.Offer != null);
+            .CountAsync(r => r.UserId == userId);
+
+        var totalSaved = savingsRows.Sum(item =>
+            ResolveSavings(item.SavedAmount, item.OfferDiscountAmount));
 
         return new UserSavingsSummaryDto
         {
-            TotalSaved = await userRedemptions.SumAsync(r => r.SavedAmount ?? r.Offer!.DiscountAmount ?? 0),
-            TotalRedemptions = await userRedemptions.CountAsync()
+            TotalSaved = totalSaved,
+            TotalRedemptions = totalRedemptions
         };
     }
 }

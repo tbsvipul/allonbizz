@@ -29,11 +29,6 @@ public class UserOffersController : ControllerBase
         [FromQuery] string? category,
         [FromQuery] List<string>? tags)
     {
-        if (lat == null && lng == null && string.IsNullOrEmpty(category) && (tags == null || tags.Count == 0))
-        {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Latitude/longitude, category, or tags are required."));
-        }
-
         var result = await _offerService.GetNearbyOffersAsync(lat, lng, radiusKm, category, tags);
         return Ok(ApiResponse<List<OfferSummaryDto>>.Ok(result));
     }
