@@ -39,6 +39,10 @@ public class ModerationService : IModerationService
         {
             itemsQuery = itemsQuery.Where(i => i.Status == query.Status.ToLower());
         }
+        else
+        {
+            itemsQuery = itemsQuery.Where(i => i.Status == "pending" || i.Status == "under_review");
+        }
 
         if (!string.IsNullOrWhiteSpace(query.ContentType))
         {

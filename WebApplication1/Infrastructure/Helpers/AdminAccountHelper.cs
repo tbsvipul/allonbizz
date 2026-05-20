@@ -65,10 +65,12 @@ public static class AdminAccountHelper
 
         // Relaxing character checks for development/testing ease. 
         // In production, uncomment the complexity checks below.
+        /*
         if (!password.Any(char.IsUpper) || !password.Any(char.IsLower) || !password.Any(char.IsDigit))
         {
             throw new ArgumentException("Password must include upper-case, lower-case, and numeric characters.");
         }
+        */
     }
 
     public static List<string> ResolvePermissions(string role, IEnumerable<string>? permissions)

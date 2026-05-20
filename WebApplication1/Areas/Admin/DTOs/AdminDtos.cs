@@ -22,6 +22,7 @@ public class CreateAdminRequestDto
     public string Role { get; set; } = AdminRoles.Admin;
     public bool IsActive { get; set; } = true;
     public List<string>? Permissions { get; set; }
+    public string? Password { get; set; }
 }
 
 public class UpdateAdminRequestDto
@@ -42,7 +43,9 @@ public class UpdateAdminRequestDto
     public string Role { get; set; } = AdminRoles.Admin;
     public bool IsActive { get; set; } = true;
     public List<string>? Permissions { get; set; }
+    public string? Password { get; set; }
 }
+
 public class UpdateAdminProfileDto
 {
     public string? FirstName { get; set; }

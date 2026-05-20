@@ -153,11 +153,18 @@ public class SettingsService : ISettingsService
 
         var role = AdminAccountHelper.NormalizeAdminRole(dto.Role);
         EnsureActorCanAssignRole(role);
-        var temporaryPassword = GenerateTemporaryPassword();
+        
+        var hasExplicitPassword = !string.IsNullOrWhiteSpace(dto.Password);
+        var password = hasExplicitPassword ? dto.Password! : GenerateTemporaryPassword();
+        if (hasExplicitPassword)
+        {
+            AdminAccountHelper.ValidatePassword(dto.Password!);
+        }
+
         var admin = new AdminAccount
         {
             Email = email,
-            PasswordHash = PasswordHelper.HashPassword(temporaryPassword),
+            PasswordHash = PasswordHelper.HashPassword(password),
             FirstName = AdminAccountHelper.RequireValue(dto.FirstName, "First name"),
             LastName = AdminAccountHelper.RequireValue(dto.LastName, "Last name"),
             Role = role,
@@ -172,7 +179,10 @@ public class SettingsService : ISettingsService
         try
         {
             await _adminRepo.SaveChangesAsync(ct);
-            await _adminAuthService.ForgotPasswordAsync(admin.Email);
+            if (!hasExplicitPassword)
+            {
+                await _adminAuthService.ForgotPasswordAsync(admin.Email);
+            }
             await _auditService.LogAsync(actorAdminId, "ADMIN_CREATE", nameof(AdminAccount), admin.AdminId.ToString(), null, "N/A");
             return await GetAdminAsync(admin.AdminId, ct);
         }
@@ -226,6 +236,14 @@ public class SettingsService : ISettingsService
         a.Role = role;
         a.IsActive = dto.IsActive;
         a.Permissions = AdminAccountHelper.ResolvePermissions(role, dto.Permissions);
+
+        if (!string.IsNullOrWhiteSpace(dto.Password))
+        {
+            AdminAccountHelper.ValidatePassword(dto.Password);
+            a.PasswordHash = PasswordHelper.HashPassword(dto.Password);
+            await RevokeActiveTokensAsync(adminId, ct);
+        }
+
         a.UpdatedAt = DateTime.UtcNow;
 
         _adminRepo.Update(a);

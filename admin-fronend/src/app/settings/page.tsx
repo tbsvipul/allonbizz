@@ -71,6 +71,7 @@ interface AdminFormState {
   role: string;
   isActive: boolean;
   permissions: string[];
+  password?: string;
 }
 
 type Notice = {
@@ -98,6 +99,7 @@ const defaultAdminForm: AdminFormState = {
   role: 'admin',
   isActive: true,
   permissions: [],
+  password: '',
 };
 
 const allPermissions = Array.from(new Set(Object.values(PERMISSIONS))).sort();
@@ -383,6 +385,7 @@ export default function SettingsPage() {
         role: adminForm.role,
         isActive: adminForm.isActive,
         permissions: useRoleDefaults || isEditingOwnSuperAdmin ? undefined : normalizePermissions(adminForm.permissions),
+        password: adminForm.password?.trim() || undefined,
       };
 
       if (editingAdminId) {
@@ -391,7 +394,7 @@ export default function SettingsPage() {
         setNotice({ tone: 'success', message: 'Administrator updated successfully.' });
       } else {
         await api.post('/settings/admins', payload);
-        setNotice({ tone: 'success', message: 'Administrator created and invite instructions sent successfully.' });
+        setNotice({ tone: 'success', message: 'Administrator created successfully.' });
       }
 
       closeAdminModal();
@@ -753,7 +756,14 @@ export default function SettingsPage() {
                   </div>
 
                   <input placeholder="Email" value={adminForm.email} onChange={(event) => setAdminForm({ ...adminForm, email: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
-                  {!editingAdminId && (
+                  <input
+                    type="password"
+                    placeholder={editingAdminId ? "Password (leave blank to keep unchanged)" : "Password (optional, auto-generated if blank)"}
+                    value={adminForm.password || ''}
+                    onChange={(event) => setAdminForm({ ...adminForm, password: event.target.value })}
+                    style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }}
+                  />
+                  {!editingAdminId && !adminForm.password && (
                     <p style={{ fontSize: '0.8125rem', color: 'hsl(var(--muted-foreground))' }}>
                       A setup OTP will be emailed to the new administrator so they can complete their password creation flow securely.
                     </p>
