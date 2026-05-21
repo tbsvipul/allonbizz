@@ -44,6 +44,17 @@ export interface KeeperProfile {
   approvedAt?: string | null;
   documents: KeeperDocument[];
   reviewMessages: KeeperReviewMessage[];
+  identityProofType?: string | null;
+  identityProofNumber?: string | null;
+  identityProofImage?: string | null;
+  businessLicenseNumber?: string | null;
+  businessLicenseImage?: string | null;
+  gstCertificateImage?: string | null;
+  panCardImage?: string | null;
+  addressProofType?: string | null;
+  addressProofImage?: string | null;
+  shopFrontImage?: string | null;
+  shopInsideImage?: string | null;
 }
 
 export interface ReviewMessagesReadResult {

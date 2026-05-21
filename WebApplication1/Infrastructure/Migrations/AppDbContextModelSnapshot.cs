@@ -525,10 +525,22 @@ namespace allonbiz.AdminAPI.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<byte[]>("AddressProofImage")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("AddressProofType")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("BusinessLicense")
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("BusinessLicenseImage")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("BusinessLicenseNumber")
                         .HasColumnType("text");
 
                     b.Property<string>("BusinessName")
@@ -538,8 +550,14 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("DocumentData")
                         .HasColumnType("text");
+
+                    b.Property<byte[]>("GstCertificateImage")
+                        .HasColumnType("bytea");
 
                     b.Property<string>("GstNumber")
                         .HasColumnType("text");
@@ -550,11 +568,32 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Property<DateTime?>("HoldUntil")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<byte[]>("IdentityProofImage")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("IdentityProofNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdentityProofType")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("boolean");
+
+                    b.Property<byte[]>("PanCardImage")
+                        .HasColumnType("bytea");
+
                     b.Property<string>("PanNumber")
                         .HasColumnType("text");
 
                     b.Property<string>("RejectionReason")
                         .HasColumnType("text");
+
+                    b.Property<byte[]>("ShopFrontImage")
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("ShopInsideImage")
+                        .HasColumnType("bytea");
 
                     b.Property<string>("SocialLinksJson")
                         .HasColumnType("text");
@@ -567,6 +606,9 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("VerificationNotes")
+                        .HasColumnType("text");
 
                     b.HasKey("KeeperId");
 
@@ -1006,7 +1048,10 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("ImageData")
+                    b.Property<byte[]>("ImageData")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
@@ -1293,8 +1338,11 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Property<string>("AdminNotes")
                         .HasColumnType("text");
 
-                    b.Property<string>("Amenities")
-                        .HasColumnType("text");
+                    b.Property<List<string>>("Amenities")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("ARRAY[]::text[]");
 
                     b.Property<string>("BusinessHoursJson")
                         .HasColumnType("text");
@@ -1314,7 +1362,10 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Property<string>("GooglePlaceId")
                         .HasColumnType("text");
 
-                    b.Property<string>("ImageData")
+                    b.Property<byte[]>("ImageData")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
@@ -1350,7 +1401,9 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.Property<List<string>>("Tags")
                         .IsRequired()
-                        .HasColumnType("text[]");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("ARRAY[]::text[]");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

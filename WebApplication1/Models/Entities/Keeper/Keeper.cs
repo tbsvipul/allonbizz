@@ -21,6 +21,27 @@ public class Keeper
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ApprovedAt { get; set; }
 
+    public string? IdentityProofType { get; set; }
+    public string? IdentityProofNumber { get; set; }
+    public byte[]? IdentityProofImage { get; set; }
+
+    public string? BusinessLicenseNumber { get; set; }
+    public byte[]? BusinessLicenseImage { get; set; }
+
+    public byte[]? GstCertificateImage { get; set; }
+
+    public byte[]? PanCardImage { get; set; }
+
+    public string? AddressProofType { get; set; }
+    public byte[]? AddressProofImage { get; set; }
+
+    public byte[]? ShopFrontImage { get; set; }
+    public byte[]? ShopInsideImage { get; set; }
+
+    public string? VerificationNotes { get; set; }
+    public bool IsVerified { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+
     public User? User { get; set; }
     public ICollection<Shop> Shops { get; set; } = new List<Shop>();
     public ICollection<KeeperDocument> Documents { get; set; } = new List<KeeperDocument>();
@@ -34,3 +55,4 @@ public class Keeper
         set => DocumentData = value;
     }
 }
+

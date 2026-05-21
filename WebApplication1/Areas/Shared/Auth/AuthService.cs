@@ -11,6 +11,8 @@ using allonbiz.AdminAPI.Services.Interfaces;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 
 namespace allonbiz.AdminAPI.Services;
 
@@ -298,8 +300,24 @@ public class AuthService : IAuthService
             UserId = user.UserId,
             BusinessName = AdminAccountHelper.RequireValue(dto.BusinessName, "Business name"),
             BusinessLicense = dto.BusinessLicense?.Trim(),
-            Status = KeeperStatus.PendingApproval
+            Status = KeeperStatus.PendingApproval,
+            IdentityProofType = dto.IdentityProofType?.Trim(),
+            IdentityProofNumber = dto.IdentityProofNumber?.Trim(),
+            BusinessLicenseNumber = dto.BusinessLicenseNumber?.Trim(),
+            AddressProofType = dto.AddressProofType?.Trim(),
+            IsVerified = false,
+            CreatedAt = now,
+            UpdatedAt = now
         };
+
+        keeper.IdentityProofImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.IdentityProofImage, "identity");
+        keeper.BusinessLicenseImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.BusinessLicenseImage, "license");
+        keeper.GstCertificateImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.GstCertificateImage, "gst");
+        keeper.PanCardImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.PanCardImage, "pan");
+        keeper.AddressProofImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.AddressProofImage, "address");
+        keeper.ShopFrontImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.ShopFrontImage, "shopfront");
+        keeper.ShopInsideImage = await SaveKeeperImageAsync(keeper.KeeperId, dto.ShopInsideImage, "shopinside");
+
         _db.Keepers.Add(keeper);
 
         var permissions = ResolvePermissions(Roles.Keeper, null);
@@ -319,6 +337,15 @@ public class AuthService : IAuthService
             Role = Roles.Keeper,
             UserId = user.UserId
         };
+    }
+
+    private async Task<byte[]?> SaveKeeperImageAsync(Guid keeperId, IFormFile? file, string suffix)
+    {
+        if (file == null || file.Length == 0) return null;
+
+        using var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+        return memoryStream.ToArray();
     }
 
     public async Task<UserLoginResponseDto> UserLoginAsync(UserLoginRequestDto dto, string? ipAddress = null)

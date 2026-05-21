@@ -15,7 +15,14 @@ public static class StringMediaSchemaRepair
         new("Keepers", "DocumentData", "KeeperId"),
         new("Categories", "IconData", "CategoryId"),
         new("Tags", "IconData", "TagId"),
-        new("Users", "ProfilePhotoData", "UserId")
+        new("Users", "ProfilePhotoData", "UserId"),
+        new("Keepers", "IdentityProofImage", "KeeperId"),
+        new("Keepers", "BusinessLicenseImage", "KeeperId"),
+        new("Keepers", "GstCertificateImage", "KeeperId"),
+        new("Keepers", "PanCardImage", "KeeperId"),
+        new("Keepers", "AddressProofImage", "KeeperId"),
+        new("Keepers", "ShopFrontImage", "KeeperId"),
+        new("Keepers", "ShopInsideImage", "KeeperId")
     };
 
     public static async Task<MediaRepairSummary> RepairAsync(

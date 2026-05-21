@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace allonbiz.AdminAPI.DTOs.Auth;
 
@@ -105,6 +106,23 @@ public class KeeperRegisterRequestDto
 
     [StringLength(200)]
     public string? BusinessLicense { get; set; }
+
+    public string? IdentityProofType { get; set; }
+    public string? IdentityProofNumber { get; set; }
+    public IFormFile? IdentityProofImage { get; set; }
+
+    public string? BusinessLicenseNumber { get; set; }
+    public IFormFile? BusinessLicenseImage { get; set; }
+
+    public IFormFile? GstCertificateImage { get; set; }
+
+    public IFormFile? PanCardImage { get; set; }
+
+    public string? AddressProofType { get; set; }
+    public IFormFile? AddressProofImage { get; set; }
+
+    public IFormFile? ShopFrontImage { get; set; }
+    public IFormFile? ShopInsideImage { get; set; }
 }
 
 public class UserLoginRequestDto

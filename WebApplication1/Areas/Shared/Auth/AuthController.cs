@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register-keeper")]
     [AllowAnonymous]
-    public async Task<IActionResult> RegisterKeeper([FromBody] KeeperRegisterRequestDto dto)
+    public async Task<IActionResult> RegisterKeeper([FromForm] KeeperRegisterRequestDto dto)
         => Ok(ApiResponse<UserLoginResponseDto>.Ok(await _authService.RegisterKeeperAsync(dto, Request.HttpContext.Connection.RemoteIpAddress?.ToString())));
 
     [HttpPost("user-login")]

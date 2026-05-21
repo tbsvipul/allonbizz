@@ -100,7 +100,18 @@ public class KeeperProfileService : IKeeperProfileService
                     IsReadByKeeper = message.IsReadByKeeper,
                     CreatedAt = message.CreatedAt
                 })
-                .ToList()
+                .ToList(),
+            IdentityProofType = keeper.IdentityProofType,
+            IdentityProofNumber = keeper.IdentityProofNumber,
+            IdentityProofImage = keeper.IdentityProofImage,
+            BusinessLicenseNumber = keeper.BusinessLicenseNumber,
+            BusinessLicenseImage = keeper.BusinessLicenseImage,
+            GstCertificateImage = keeper.GstCertificateImage,
+            PanCardImage = keeper.PanCardImage,
+            AddressProofType = keeper.AddressProofType,
+            AddressProofImage = keeper.AddressProofImage,
+            ShopFrontImage = keeper.ShopFrontImage,
+            ShopInsideImage = keeper.ShopInsideImage
         };
     }
 
@@ -117,6 +128,19 @@ public class KeeperProfileService : IKeeperProfileService
         keeper.GstNumber = NormalizeOptional(dto.GstNumber);
         keeper.PanNumber = NormalizeOptional(dto.PanNumber);
         keeper.SocialLinksJson = NormalizeOptional(dto.SocialLinksJson);
+
+        keeper.IdentityProofType = NormalizeOptional(dto.IdentityProofType);
+        keeper.IdentityProofNumber = NormalizeOptional(dto.IdentityProofNumber);
+        keeper.IdentityProofImage = dto.IdentityProofImage;
+        keeper.BusinessLicenseNumber = NormalizeOptional(dto.BusinessLicenseNumber);
+        keeper.BusinessLicenseImage = dto.BusinessLicenseImage;
+        keeper.GstCertificateImage = dto.GstCertificateImage;
+        keeper.PanCardImage = dto.PanCardImage;
+        keeper.AddressProofType = NormalizeOptional(dto.AddressProofType);
+        keeper.AddressProofImage = dto.AddressProofImage;
+        keeper.ShopFrontImage = dto.ShopFrontImage;
+        keeper.ShopInsideImage = dto.ShopInsideImage;
+
         keeper.UpdatedAt = now;
         ApplyPendingResubmissionIfNeeded(keeper, now);
 

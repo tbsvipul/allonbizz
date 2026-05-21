@@ -26,6 +26,10 @@ interface KeeperFormState {
   panNumber: string;
   contactPhone: string;
   socialLinksJson: string;
+  identityProofType: string;
+  identityProofNumber: string;
+  businessLicenseNumber: string;
+  addressProofType: string;
 }
 
 interface DocumentFormState {
@@ -171,6 +175,48 @@ function BusinessProfileForm({
         </div>
       </div>
 
+      <div className="field-grid">
+        <div className="field">
+          <label htmlFor="identityProofType">Identity proof type</label>
+          <input
+            id="identityProofType"
+            value={form.identityProofType}
+            onChange={(event) => setForm((current) => ({ ...current, identityProofType: event.target.value }))}
+            placeholder="Aadhaar Card, Passport, National ID"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="identityProofNumber">Identity proof number</label>
+          <input
+            id="identityProofNumber"
+            value={form.identityProofNumber}
+            onChange={(event) => setForm((current) => ({ ...current, identityProofNumber: event.target.value }))}
+            placeholder="ID Number"
+          />
+        </div>
+      </div>
+
+      <div className="field-grid">
+        <div className="field">
+          <label htmlFor="businessLicenseNumber">Business license number</label>
+          <input
+            id="businessLicenseNumber"
+            value={form.businessLicenseNumber}
+            onChange={(event) => setForm((current) => ({ ...current, businessLicenseNumber: event.target.value }))}
+            placeholder="License Number"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="addressProofType">Address proof type</label>
+          <input
+            id="addressProofType"
+            value={form.addressProofType}
+            onChange={(event) => setForm((current) => ({ ...current, addressProofType: event.target.value }))}
+            placeholder="Utility Bill, Rent Agreement"
+          />
+        </div>
+      </div>
+
       <div className="field">
         <label htmlFor="socialLinksJson">Social links JSON</label>
         <textarea
@@ -231,6 +277,42 @@ function getDocumentStatusLabel(status?: string | null) {
   return 'Pending review';
 }
 
+const getFullImageUrl = (path?: string | null) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+  
+  if (path.length > 200 && !path.includes('.')) {
+    try {
+      // The backend may have serialized the ASCII bytes of a PostgreSQL hex string 
+      // instead of the raw binary data. We decode the base64 to check.
+      const decodedStr = atob(path);
+      if (decodedStr.startsWith('\\x')) {
+        // It is a hex string (e.g. \x89504e47...), parse it into binary
+        const hex = decodedStr.slice(2);
+        let binary = '';
+        for (let i = 0; i < hex.length; i += 2) {
+          binary += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
+        }
+        // Encode the true binary back to base64
+        const realBase64 = btoa(binary);
+        return `data:image/png;base64,${realBase64}`;
+      }
+    } catch (e) {
+      // Ignore if it's not a valid base64 string or decode fails
+    }
+    // If it's a raw base64 string from a byte[] property
+    return `data:image/png;base64,${path}`;
+  }
+  
+  try {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5247/api/v1';
+    const origin = new URL(apiBaseUrl).origin;
+    return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
+  } catch (e) {
+    return `http://localhost:5247${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+};
+
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const { showToast } = useToast();
@@ -256,6 +338,10 @@ export default function ProfilePage() {
     sessionUser.keeper?.panNumber || '',
     sessionUser.keeper?.contactPhone || '',
     sessionUser.keeper?.socialLinksJson || '',
+    sessionUser.keeper?.identityProofType || '',
+    sessionUser.keeper?.identityProofNumber || '',
+    sessionUser.keeper?.businessLicenseNumber || '',
+    sessionUser.keeper?.addressProofType || '',
   ].join('|');
   const unreadMessageCount = sessionUser.keeper?.reviewMessages?.filter((message) => !message.isReadByKeeper).length ?? 0;
   const editingDocument = Boolean(documentForm.documentId);
@@ -306,6 +392,10 @@ export default function ProfilePage() {
         panNumber: form.panNumber.trim() || null,
         contactPhone: form.contactPhone.trim() || null,
         socialLinksJson: form.socialLinksJson.trim() || null,
+        identityProofType: form.identityProofType.trim() || null,
+        identityProofNumber: form.identityProofNumber.trim() || null,
+        businessLicenseNumber: form.businessLicenseNumber.trim() || null,
+        addressProofType: form.addressProofType.trim() || null,
       });
 
       const nextUser = await refreshUser();
@@ -436,6 +526,10 @@ export default function ProfilePage() {
               panNumber: sessionUser.keeper?.panNumber || '',
               contactPhone: sessionUser.keeper?.contactPhone || '',
               socialLinksJson: sessionUser.keeper?.socialLinksJson || '',
+              identityProofType: sessionUser.keeper?.identityProofType || '',
+              identityProofNumber: sessionUser.keeper?.identityProofNumber || '',
+              businessLicenseNumber: sessionUser.keeper?.businessLicenseNumber || '',
+              addressProofType: sessionUser.keeper?.addressProofType || '',
             }}
             busy={savingKeeper}
             onSubmit={handleKeeperSave}
@@ -562,6 +656,144 @@ export default function ProfilePage() {
           </div>
         </SectionCard>
       </div>
+
+      {sessionUser.keeper && (
+        sessionUser.keeper.identityProofImage ||
+        sessionUser.keeper.businessLicenseImage ||
+        sessionUser.keeper.gstCertificateImage ||
+        sessionUser.keeper.panCardImage ||
+        sessionUser.keeper.addressProofImage ||
+        sessionUser.keeper.shopFrontImage ||
+        sessionUser.keeper.shopInsideImage
+      ) && (
+        <SectionCard
+          title="Verification Credentials & Media Proofs"
+          description="The official registration documents and shop photos uploaded during onboarding."
+        >
+          <style dangerouslySetInnerHTML={{ __html: `
+            .hover-overlay {
+              opacity: 0 !important;
+              transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+            .hover-overlay:hover {
+              opacity: 1 !important;
+            }
+          ` }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+            {sessionUser.keeper.identityProofImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Identity Proof ({sessionUser.keeper.identityProofType || 'National ID'})</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>{sessionUser.keeper.identityProofNumber || 'N/A'}</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.identityProofImage)} alt="Identity Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.identityProofImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {sessionUser.keeper.businessLicenseImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Business License</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>{sessionUser.keeper.businessLicenseNumber || 'N/A'}</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.businessLicenseImage)} alt="Business License" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.businessLicenseImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {sessionUser.keeper.gstCertificateImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>GST Certificate</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>{sessionUser.keeper.gstNumber || 'N/A'}</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.gstCertificateImage)} alt="GST Certificate" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.gstCertificateImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {sessionUser.keeper.panCardImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>PAN Card</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>{sessionUser.keeper.panNumber || 'N/A'}</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.panCardImage)} alt="PAN Card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.panCardImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {sessionUser.keeper.addressProofImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Address Proof ({sessionUser.keeper.addressProofType || 'Utility Bill'})</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>Verified Address Document</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.addressProofImage)} alt="Address Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.addressProofImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {sessionUser.keeper.shopFrontImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Shop Front View</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>Exterior storefront view</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.shopFrontImage)} alt="Shop Front View" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.shopFrontImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {sessionUser.keeper.shopInsideImage && (
+              <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Shop Inside View</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem', color: 'white' }}>Interior store layout photo</p>
+                </div>
+                <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                  <img src={getFullImageUrl(sessionUser.keeper.shopInsideImage)} alt="Shop Inside View" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <a href={getFullImageUrl(sessionUser.keeper.shopInsideImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                    View Full Image
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+      )}
 
       <SectionCard
         title="Admin messages"

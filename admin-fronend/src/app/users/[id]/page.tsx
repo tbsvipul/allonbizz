@@ -163,6 +163,17 @@ interface KeeperProfile {
   shops: ShopSummary[];
   offers: OfferSummary[];
   shopReviews: KeeperReview[];
+  identityProofType?: string | null;
+  identityProofNumber?: string | null;
+  identityProofImage?: string | null;
+  businessLicenseNumber?: string | null;
+  businessLicenseImage?: string | null;
+  gstCertificateImage?: string | null;
+  panCardImage?: string | null;
+  addressProofType?: string | null;
+  addressProofImage?: string | null;
+  shopFrontImage?: string | null;
+  shopInsideImage?: string | null;
 }
 
 interface AdminUserProfile {
@@ -172,6 +183,42 @@ interface AdminUserProfile {
   customer?: CustomerProfile | null;
   keeper?: KeeperProfile | null;
 }
+
+const getFullImageUrl = (path?: string | null) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+  
+  if (path.length > 200 && !path.includes('.')) {
+    try {
+      // The backend may have serialized the ASCII bytes of a PostgreSQL hex string 
+      // instead of the raw binary data. We decode the base64 to check.
+      const decodedStr = atob(path);
+      if (decodedStr.startsWith('\\x')) {
+        // It is a hex string (e.g. \x89504e47...), parse it into binary
+        const hex = decodedStr.slice(2);
+        let binary = '';
+        for (let i = 0; i < hex.length; i += 2) {
+          binary += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
+        }
+        // Encode the true binary back to base64
+        const realBase64 = btoa(binary);
+        return `data:image/png;base64,${realBase64}`;
+      }
+    } catch (e) {
+      // Ignore if it's not a valid base64 string or decode fails
+    }
+    // If it's a raw base64 string from a byte[] property
+    return `data:image/png;base64,${path}`;
+  }
+  
+  try {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5247/api/v1';
+    const origin = new URL(apiBaseUrl).origin;
+    return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
+  } catch (e) {
+    return `http://localhost:5247${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+};
 
 function formatDate(value?: string | null) {
   if (!value) {
@@ -647,6 +694,15 @@ export default function UserProfilePage() {
             {keeper && (
               <>
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card" style={{ padding: '1.5rem' }}>
+                  <style dangerouslySetInnerHTML={{ __html: `
+                    .hover-overlay {
+                      opacity: 0 !important;
+                      transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                    }
+                    .hover-overlay:hover {
+                      opacity: 1 !important;
+                    }
+                  ` }} />
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Keeper Business Details</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>
                     <div style={{ padding: '1rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.03)', border: '1px solid hsl(var(--border))' }}>
@@ -671,9 +727,135 @@ export default function UserProfilePage() {
                     </div>
                     <div style={{ padding: '1rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.03)', border: '1px solid hsl(var(--border))' }}>
                       <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Business license</p>
-                      <p style={{ marginTop: '0.4rem', fontWeight: 700 }}>{keeper.businessLicense || 'Not provided'}</p>
+                      <p style={{ marginTop: '0.4rem', fontWeight: 700 }}>
+                        {keeper.businessLicense || 'Not provided'}
+                        {keeper.businessLicenseNumber ? ` (${keeper.businessLicenseNumber})` : ''}
+                      </p>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.03)', border: '1px solid hsl(var(--border))' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Identity proof</p>
+                      <p style={{ marginTop: '0.4rem', fontWeight: 700 }}>
+                        {keeper.identityProofType || 'Not provided'}
+                        {keeper.identityProofNumber ? ` (${keeper.identityProofNumber})` : ''}
+                      </p>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.03)', border: '1px solid hsl(var(--border))' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Address proof</p>
+                      <p style={{ marginTop: '0.4rem', fontWeight: 700 }}>{keeper.addressProofType || 'Not provided'}</p>
                     </div>
                   </div>
+
+                  {/* Verification Media Proofs */}
+                  <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid hsl(var(--border))' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', marginBottom: '1rem' }}>Verification Credentials & Media Proofs</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
+                      {keeper.identityProofImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Identity Proof ({keeper.identityProofType || 'National ID'})</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>{keeper.identityProofNumber || 'N/A'}</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.identityProofImage)} alt="Identity Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.identityProofImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {keeper.businessLicenseImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Business License</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>{keeper.businessLicenseNumber || 'N/A'}</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.businessLicenseImage)} alt="Business License" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.businessLicenseImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {keeper.gstCertificateImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>GST Certificate</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>{keeper.gstNumber || 'N/A'}</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.gstCertificateImage)} alt="GST Certificate" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.gstCertificateImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {keeper.panCardImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>PAN Card</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>{keeper.panNumber || 'N/A'}</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.panCardImage)} alt="PAN Card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.panCardImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {keeper.addressProofImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Address Proof ({keeper.addressProofType || 'Utility Bill'})</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>Verified Address Proof</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.addressProofImage)} alt="Address Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.addressProofImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {keeper.shopFrontImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Shop Front View</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>Exterior Storefront Image</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.shopFrontImage)} alt="Shop Front View" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.shopFrontImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {keeper.shopInsideImage && (
+                        <div style={{ padding: '1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div>
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>Shop Inside View</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.15rem' }}>Interior Store Image</p>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
+                            <img src={getFullImageUrl(keeper.shopInsideImage)} alt="Shop Inside View" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <a href={getFullImageUrl(keeper.shopInsideImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                              View Full Image <ExternalLink size={14} style={{ marginLeft: '4px' }} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {keeper.rejectionReason && (
                     <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 'var(--radius)', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#fca5a5' }}>
                       <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Rejection reason</p>

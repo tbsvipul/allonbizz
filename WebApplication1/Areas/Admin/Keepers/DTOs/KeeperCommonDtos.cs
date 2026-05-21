@@ -20,6 +20,17 @@ public class KeeperProfileDto
     public DateTime? ApprovedAt { get; set; }
     public List<KeeperDocumentDto> Documents { get; set; } = new();
     public List<KeeperReviewMessageHistoryDto> ReviewMessages { get; set; } = new();
+    public string? IdentityProofType { get; set; }
+    public string? IdentityProofNumber { get; set; }
+    public byte[]? IdentityProofImage { get; set; }
+    public string? BusinessLicenseNumber { get; set; }
+    public byte[]? BusinessLicenseImage { get; set; }
+    public byte[]? GstCertificateImage { get; set; }
+    public byte[]? PanCardImage { get; set; }
+    public string? AddressProofType { get; set; }
+    public byte[]? AddressProofImage { get; set; }
+    public byte[]? ShopFrontImage { get; set; }
+    public byte[]? ShopInsideImage { get; set; }
 }
 
 public class KeeperDashboardDto

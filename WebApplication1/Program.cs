@@ -225,19 +225,42 @@ try
         await DatabaseMigrationBootstrapper.RepairMigrationHistoryIfNeededAsync(context, logger, app.Lifetime.ApplicationStopping);
     }
 
-    using (var migrationScope = app.Services.CreateScope())
+    try
     {
-        var context = migrationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var logger = migrationScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        await context.Database.MigrateAsync(app.Lifetime.ApplicationStopping);
-        await DatabaseMigrationBootstrapper.RepairLegacyRuntimeDataAsync(context, logger, app.Lifetime.ApplicationStopping);
+        using (var migrationScope = app.Services.CreateScope())
+        {
+            var context = migrationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await context.Database.MigrateAsync(app.Lifetime.ApplicationStopping);
+        }
+    }
+    catch (Exception ex)
+    {
+        using var loggerScope = app.Services.CreateScope();
+        var logger = loggerScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Database migration skipped or failed");
+    }
+
+    try
+    {
+        using (var repairScope = app.Services.CreateScope())
+        {
+            var context = repairScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var logger = repairScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            await DatabaseMigrationBootstrapper.RepairLegacyRuntimeDataAsync(context, logger, app.Lifetime.ApplicationStopping);
+        }
+    }
+    catch (Exception ex)
+    {
+        using var loggerScope = app.Services.CreateScope();
+        var logger = loggerScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Database legacy runtime data repair failed");
     }
 }
 catch (Exception ex)
 {
     using var loggerScope = app.Services.CreateScope();
     var logger = loggerScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    logger.LogWarning(ex, "Database migration skipped or failed");
+    logger.LogCritical(ex, "Database bootstrapping failed");
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -253,6 +276,18 @@ else
 }
 
 app.UseHttpsRedirection();
+
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
 app.UseRouting();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseCors(app.Environment.IsDevelopment() ? "Development" : "Production");

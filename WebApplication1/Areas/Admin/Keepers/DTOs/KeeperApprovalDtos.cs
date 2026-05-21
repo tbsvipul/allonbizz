@@ -112,5 +112,27 @@ public class KeeperApplicationDetailDto : KeeperApplicationListItemDto
     public string? HoldReason { get; set; }
     public DateTime? HoldUntil { get; set; }
     public DateTime? ApprovedAt { get; set; }
+
+    public string? IdentityProofType { get; set; }
+    public string? IdentityProofNumber { get; set; }
+    public byte[]? IdentityProofImage { get; set; }
+
+    public string? BusinessLicenseNumber { get; set; }
+    public byte[]? BusinessLicenseImage { get; set; }
+
+    public byte[]? GstCertificateImage { get; set; }
+
+    public byte[]? PanCardImage { get; set; }
+
+    public string? AddressProofType { get; set; }
+    public byte[]? AddressProofImage { get; set; }
+
+    public byte[]? ShopFrontImage { get; set; }
+    public byte[]? ShopInsideImage { get; set; }
+
+    public string? VerificationNotes { get; set; }
+    public bool IsVerified { get; set; }
+    public DateTime? DeletedAt { get; set; }
+
     public List<KeeperReviewMessageHistoryDto> ReviewMessages { get; set; } = new();
 }

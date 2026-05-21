@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     "MigrationId" character varying(150) NOT NULL,
     "ProductVersion" character varying(32) NOT NULL,
     CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
@@ -223,6 +223,20 @@ CREATE TABLE "Keepers" (
     "CreatedAt" timestamp with time zone NOT NULL,
     "UpdatedAt" timestamp with time zone NOT NULL,
     "ApprovedAt" timestamp with time zone,
+    "IdentityProofType" text,
+    "IdentityProofNumber" text,
+    "IdentityProofImage" text,
+    "BusinessLicenseNumber" text,
+    "BusinessLicenseImage" text,
+    "GstCertificateImage" text,
+    "PanCardImage" text,
+    "AddressProofType" text,
+    "AddressProofImage" text,
+    "ShopFrontImage" text,
+    "ShopInsideImage" text,
+    "VerificationNotes" text,
+    "IsVerified" boolean NOT NULL DEFAULT FALSE,
+    "DeletedAt" timestamp with time zone,
     CONSTRAINT "PK_Keepers" PRIMARY KEY ("KeeperId"),
     CONSTRAINT "FK_Keepers_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("UserId") ON DELETE CASCADE
 );
