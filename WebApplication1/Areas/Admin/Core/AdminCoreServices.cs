@@ -136,6 +136,7 @@ public class AdminReviewService : IAdminReviewService
             {
                 ReviewId = r.ReviewId,
                 UserName = r.User != null ? $"{r.User.FirstName} {r.User.LastName}".Trim() : "Anonymous",
+                UserAvatarUrl = r.User != null ? r.User.ProfilePhotoData : null,
                 ShopName = r.Shop != null ? r.Shop.Name : "Unknown",
                 Rating = r.Rating,
                 Comment = r.Comment,

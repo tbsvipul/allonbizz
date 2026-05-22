@@ -64,7 +64,8 @@ class TripsScreen extends ConsumerWidget {
               }
               return ListView.builder(
                 padding: const EdgeInsets.all(AppDimensions.lg),
-                itemExtent: 88, // Optimization: Avoid layout measurements during scroll
+                itemExtent:
+                    88, // Optimization: Avoid layout measurements during scroll
                 itemCount: journeys.length,
                 itemBuilder: (context, index) {
                   final journey = journeys[index];
@@ -121,8 +122,11 @@ class TripsScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history_rounded,
-              size: 64, color: theme.colorScheme.outlineVariant),
+          Icon(
+            Icons.history_rounded,
+            size: 64,
+            color: theme.colorScheme.outlineVariant,
+          ),
           const SizedBox(height: AppDimensions.md),
           Text(
             l10n.noPastJourneys,

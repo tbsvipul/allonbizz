@@ -23,9 +23,7 @@ class ShopDetailScreen extends ConsumerWidget {
     final shopAsync = ref.watch(shopDetailProvider(shopId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Shop Details'),
-      ),
+      appBar: AppBar(title: const Text('Shop Details')),
       body: shopAsync.when(
         data: (shop) => _buildContent(context, shop),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -52,23 +50,36 @@ class ShopDetailScreen extends ConsumerWidget {
           const SizedBox(height: AppDimensions.lg),
           Text(
             shop.name,
-            style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+            style: AppTextStyles.titleLarge.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.location_on_rounded, color: AppColors.grey500, size: 16),
+              const Icon(
+                Icons.location_on_rounded,
+                color: AppColors.grey500,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   shop.address ?? 'No address',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey500),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.grey500,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppDimensions.xl),
-          Text('Active Offers', style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Active Offers',
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 12),
           if (activeOffers.isEmpty)
             const Text('No active offers at this shop.')
@@ -83,12 +94,24 @@ class ShopDetailScreen extends ConsumerWidget {
                 return ListTile(
                   contentPadding: const EdgeInsets.all(12),
                   tileColor: AppColors.grey100,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  title: Text(offer.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(offer.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  title: Text(
+                    offer.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    offer.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
-                    context.push(AppRoutes.offerDetail.replaceAll(':id', offer.id), extra: offer);
+                    context.push(
+                      AppRoutes.offerDetail.replaceAll(':id', offer.id),
+                      extra: offer,
+                    );
                   },
                 );
               },

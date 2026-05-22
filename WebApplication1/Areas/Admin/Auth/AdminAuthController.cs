@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using allonbiz.AdminAPI.DTOs.Admin;
 using allonbiz.AdminAPI.DTOs.Auth;
 using allonbiz.AdminAPI.DTOs.Common;
+using allonbiz.AdminAPI.Helpers;
 using allonbiz.AdminAPI.Services.Interfaces;
 
 namespace allonbiz.AdminAPI.Controllers;
@@ -29,11 +30,11 @@ public class AdminAuthController : ControllerBase
         }
         catch (UnauthorizedAccessException ex) when (ex.Message == "2FA_REQUIRED")
         {
-            return Unauthorized(ApiResponse<object>.Fail("AUTH_2FA_REQUIRED", "Two-factor authentication is required."));
+            return this.UnauthorizedProblemResponse("Two-factor authentication is required.");
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(ApiResponse<object>.Fail("AUTH_UNAUTHORIZED", ex.Message));
+            return this.UnauthorizedProblemResponse(ex.Message);
         }
     }
 
@@ -48,7 +49,7 @@ public class AdminAuthController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(ApiResponse<object>.Fail("AUTH_INVALID_TOKEN", ex.Message));
+            return this.UnauthorizedProblemResponse(ex.Message);
         }
     }
 
@@ -122,7 +123,7 @@ public class AdminAuthController : ControllerBase
     {
         var resetToken = await _adminAuthService.ValidateOtpAsync(dto.Email, dto.Otp);
         if (resetToken == null)
-            return BadRequest(ApiResponse<object>.Fail("AUTH_INVALID_OTP", "Invalid or expired OTP."));
+            return this.ValidationProblemResponse("Invalid or expired OTP.", nameof(dto.Otp));
 
         return Ok(ApiResponse<OtpValidationResponseDto>.Ok(new OtpValidationResponseDto { ResetToken = resetToken }));
     }

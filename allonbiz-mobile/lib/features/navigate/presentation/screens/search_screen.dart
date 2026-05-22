@@ -13,6 +13,7 @@ import '../../../../core/services/current_location_provider.dart';
 import '../../../../core/services/discovery_service.dart';
 import '../../../../core/services/places_service.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../controllers/navigation_controller.dart';
 import '../widgets/search_input_fields.dart';
 import '../widgets/search_interest_tags.dart';
@@ -64,7 +65,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final locationState = ref.read(currentLocationProvider);
       if (locationState.position == null && !locationState.isLoading) {
         unawaited(
-          ref.read(currentLocationProvider.notifier).fetchCurrentLocation(
+          ref
+              .read(currentLocationProvider.notifier)
+              .fetchCurrentLocation(
                 requestPermission: false,
                 resolvePlaceName: false,
               ),
@@ -153,7 +156,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 const SizedBox(height: 20),
                 Text(
                   'What are you looking for?',
-                  style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 15),
                 Expanded(
@@ -203,8 +208,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
-  bool get _canStartJourney => !_isStartingJourney;
-
   void _handleOriginChanged(String value) {
     if (_selectedOriginLabel != null && value != _selectedOriginLabel) {
       setState(() {
@@ -219,14 +222,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       return;
     }
 
-    _debounce = Timer(
-      const Duration(milliseconds: 800),
-      () {
-        if (mounted) {
-          _runSearch(value.trim(), isOrigin: true);
-        }
-      },
-    );
+    _debounce = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _runSearch(value.trim(), isOrigin: true);
+      }
+    });
   }
 
   void _handleSearchChanged(String value) {
@@ -249,14 +249,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       return;
     }
 
-    _debounce = Timer(
-      const Duration(milliseconds: 800),
-      () {
-        if (mounted) {
-          _runSearch(trimmed);
-        }
-      },
-    );
+    _debounce = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _runSearch(trimmed);
+      }
+    });
   }
 
   Future<void> _runSearch(
@@ -441,7 +438,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _startJourney() async {
-    if (!_canStartJourney || _isStartingJourney) return;
+    if (_isStartingJourney) return;
+
+    final router = GoRouter.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (mounted) {
       setState(() {
@@ -450,14 +451,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     try {
-      final l10n = AppLocalizations.of(context)!;
+      await ref
+          .read(navigationControllerProvider.notifier)
+          .restoreActiveJourneyState(forceSync: true);
+
+      final hasActiveJourney = ref
+          .read(navigationControllerProvider)
+          .hasActiveJourney;
+      if (hasActiveJourney) {
+        if (!mounted) return;
+        AppSnackbar.showWithScaffoldMessenger(
+          scaffoldMessenger,
+          message: 'Complete your active journey before starting a new one.',
+          type: AppSnackbarType.warning,
+        );
+        router.go(AppRoutes.navigate);
+        return;
+      }
+
       final locationNotifier = ref.read(currentLocationProvider.notifier);
       var locationState = ref.read(currentLocationProvider);
 
       if (_originController.text.trim().isNotEmpty && _selectedOrigin == null) {
         final resolvedOrigin = await _resolvePendingSelection(isOrigin: true);
         if (!resolvedOrigin && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessenger.showSnackBar(
             const SnackBar(
               content: Text(
                 'Select a valid starting location from suggestions.',
@@ -475,7 +493,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           isOrigin: false,
         );
         if (!resolvedDestination && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessenger.showSnackBar(
             const SnackBar(
               content: Text(
                 'Select a valid destination from suggestions to start navigation.',
@@ -507,7 +525,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (!mounted) return;
 
       if (locationState.position == null && _selectedOrigin == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text(
               'Live location was unavailable, so the route starts from default Location.',
@@ -522,7 +540,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
       final interestQuery = _interestSearchController.text.trim();
       if (_selectedDestination != null && _selectedDestinationName != null) {
-        await ref
+        final started = await ref
             .read(navigationControllerProvider.notifier)
             .setDestination(
               origin,
@@ -532,18 +550,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               interests: _selectedInterests,
               interestQuery: interestQuery.isEmpty ? null : interestQuery,
             );
+        if (!started) {
+          return;
+        }
       } else {
-        await ref
+        final started = await ref
             .read(navigationControllerProvider.notifier)
             .startFreeRoam(
               interests: _selectedInterests,
               query: interestQuery.isEmpty ? null : interestQuery,
               currentPosition: origin,
             );
+        if (!started) {
+          return;
+        }
       }
 
       if (!mounted) return;
-      context.go(AppRoutes.navigate);
+      router.go(AppRoutes.navigate);
     } finally {
       if (mounted) {
         setState(() {
@@ -559,6 +583,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final isDark = theme.brightness == Brightness.dark;
+    final hasActiveJourney = ref.watch(
+      navigationControllerProvider.select((state) => state.hasActiveJourney),
+    );
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -599,8 +626,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       destinationFocus: _searchFocus,
                       onOriginChanged: _handleOriginChanged,
                       onDestinationChanged: _handleSearchChanged,
-                      onOriginSubmitted:
-                          (v) => _handleSearchSubmitted(v, isOrigin: true),
+                      onOriginSubmitted: (v) =>
+                          _handleSearchSubmitted(v, isOrigin: true),
                       onDestinationSubmitted: (v) => _handleSearchSubmitted(v),
                       onUseCurrentLocation: _useCurrentLocationAsStartPoint,
                       isDark: isDark,
@@ -612,7 +639,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         suggestions: _suggestions,
                         isLoading: _isLoading,
                         isDark: isDark,
-                        onSelect: (s) => _selectSuggestion(s,
+                        onSelect: (s) => _selectSuggestion(
+                          s,
                           isOrigin: _originFocus.hasFocus,
                         ),
                       ),
@@ -648,9 +676,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               isCompact: true,
                             );
                           },
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
                           error: (e, _) => const SizedBox.shrink(),
                         ),
                     const SizedBox(height: AppDimensions.xl),
@@ -675,7 +702,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _canStartJourney ? _startJourney : null,
+                  onPressed: _isStartingJourney
+                      ? null
+                      : hasActiveJourney
+                      ? () => context.go(AppRoutes.navigate)
+                      : _startJourney,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
@@ -695,11 +726,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(colorScheme.onPrimary),
+                            valueColor: AlwaysStoppedAnimation(
+                              colorScheme.onPrimary,
+                            ),
                           ),
                         )
                       : Text(
-                          'Start Journey',
+                          hasActiveJourney
+                              ? 'Complete Active Journey'
+                              : 'Start Journey',
                           style: textTheme.titleMedium?.copyWith(
                             color: colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,

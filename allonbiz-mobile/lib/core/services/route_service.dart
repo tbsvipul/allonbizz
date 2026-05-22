@@ -7,7 +7,6 @@ import '../../shared/models/offer.dart';
 import '../network/base_api.dart';
 import '../utils/background_executor.dart';
 
-
 /// Request payload for isolate computation to avoid passing separate params
 class _OfferFilterPayload {
   final List<Map<String, double>> routePoints;
@@ -52,7 +51,7 @@ class RouteService {
         final data = json.decode(response.body);
         if (data['code'] == 'Ok' && (data['routes'] as List).isNotEmpty) {
           final route = data['routes'][0];
-          
+
           final geometry = route['geometry'];
           final coordinates = geometry['coordinates'] as List;
 
@@ -61,7 +60,7 @@ class RouteService {
             final lat = (coord[1] as num).toDouble();
             return LatLng(lat, lng);
           }).toList();
-          
+
           final distanceMeters = (route['distance'] as num).toDouble();
           final durationSeconds = (route['duration'] as num).toDouble();
 
@@ -88,8 +87,6 @@ class RouteService {
       );
     }
   }
-
-
 
   /// Format distance in meters to human readable string.
   static String _formatDistance(double meters) {

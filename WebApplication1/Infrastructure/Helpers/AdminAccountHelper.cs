@@ -1,5 +1,7 @@
 using allonbiz.AdminAPI.Constants;
 using allonbiz.AdminAPI.Models.Enums;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace allonbiz.AdminAPI.Helpers;
 
@@ -71,6 +73,18 @@ public static class AdminAccountHelper
             throw new ArgumentException("Password must include upper-case, lower-case, and numeric characters.");
         }
         */
+    }
+
+    public static string ToSafeLogIdentifier(string? value)
+    {
+        var normalized = value?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return "n/a";
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return $"sha256:{Convert.ToHexString(hash)[..12]}";
     }
 
     public static List<string> ResolvePermissions(string role, IEnumerable<string>? permissions)

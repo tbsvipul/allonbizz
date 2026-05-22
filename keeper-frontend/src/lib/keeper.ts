@@ -10,6 +10,9 @@ const KEEPER_STATUS_BY_ENUM_VALUE: Record<string, string> = {
 };
 
 const MANAGEABLE_STATUSES = new Set(['approved', 'active']);
+const SUCCESS_STATUSES = new Set(['approved', 'active', 'verified', 'open', 'published']);
+const WARNING_STATUSES = new Set(['pendingapproval', 'pending', 'onhold', 'draft']);
+const DANGER_STATUSES = new Set(['rejected', 'suspended', 'inactive', 'closed', 'deactivated', 'expired']);
 
 export function normalizeKeeperStatus(status?: unknown) {
   const raw = String(status ?? '').trim();
@@ -71,15 +74,15 @@ export function getKeeperStatusMessage(keeper?: KeeperProfile | null) {
 export function statusTone(status?: unknown) {
   const normalized = normalizeKeeperStatus(status);
 
-  if (normalized === 'approved' || normalized === 'active') {
+  if (SUCCESS_STATUSES.has(normalized)) {
     return 'success';
   }
 
-  if (normalized === 'pendingapproval' || normalized === 'onhold') {
+  if (WARNING_STATUSES.has(normalized)) {
     return 'warning';
   }
 
-  if (normalized === 'rejected' || normalized === 'suspended') {
+  if (DANGER_STATUSES.has(normalized)) {
     return 'danger';
   }
 

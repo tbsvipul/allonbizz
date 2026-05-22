@@ -75,10 +75,7 @@ class OffersRepository {
     try {
       await _apiClient.post(
         '/user/offer/$offerId/rate',
-        body: {
-          'rating': rating,
-          'comment': comment,
-        },
+        body: {'rating': rating, 'comment': comment},
       );
       await _invalidateOfferCaches(offerId);
     } on ServerFailure catch (error) {

@@ -297,7 +297,7 @@ const getFullImageUrl = (path?: string | null) => {
         const realBase64 = btoa(binary);
         return `data:image/png;base64,${realBase64}`;
       }
-    } catch (e) {
+    } catch {
       // Ignore if it's not a valid base64 string or decode fails
     }
     // If it's a raw base64 string from a byte[] property
@@ -308,7 +308,7 @@ const getFullImageUrl = (path?: string | null) => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5247/api/v1';
     const origin = new URL(apiBaseUrl).origin;
     return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
-  } catch (e) {
+  } catch {
     return `http://localhost:5247${path.startsWith('/') ? '' : '/'}${path}`;
   }
 };

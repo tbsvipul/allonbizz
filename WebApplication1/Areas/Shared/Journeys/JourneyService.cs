@@ -19,6 +19,14 @@ public class JourneyService : IJourneyService
 
     public async Task<Guid> StartJourneyAsync(Guid userId, StartJourneyDto dto)
     {
+        var normalizedType = NormalizeJourneyType(dto.Type);
+        var normalizedTags = NormalizeTags(dto.Tags);
+        var startName = string.IsNullOrWhiteSpace(dto.StartName)
+            ? (normalizedType.Equals("freeRoam", StringComparison.OrdinalIgnoreCase)
+                ? "Free Roam Start"
+                : "Current Location")
+            : dto.StartName.Trim();
+
         // Ensure user exists (Admins acting as users might not be in the Users table)
         if (!await _db.Users.AnyAsync(u => u.UserId == userId))
         {
@@ -42,19 +50,34 @@ public class JourneyService : IJourneyService
             }
         }
 
+        var existingActiveJourney = await _db.Journeys
+            .AsNoTracking()
+            .AnyAsync(j => j.UserId == userId && j.Status == "active");
+
+        if (existingActiveJourney)
+        {
+            throw new InvalidOperationException("You already have an active journey. Complete it before starting a new one.");
+        }
+
         var journey = new Journey
         {
             UserId = userId,
-            StartName = dto.StartName,
+            StartName = startName,
             StartLat = dto.StartLat,
             StartLng = dto.StartLng,
-            Type = dto.Type,
+            Type = normalizedType,
             Status = "active",
-            TagsJson = JsonSerializer.Serialize(dto.Tags),
+            TagsJson = JsonSerializer.Serialize(normalizedTags),
             StartTime = DateTime.UtcNow,
-            EndName = dto.DestinationName,
-            EndLat = dto.DestLat,
-            EndLng = dto.DestLng,
+            EndName = normalizedType.Equals("destination", StringComparison.OrdinalIgnoreCase)
+                ? dto.DestinationName
+                : null,
+            EndLat = normalizedType.Equals("destination", StringComparison.OrdinalIgnoreCase)
+                ? dto.DestLat
+                : null,
+            EndLng = normalizedType.Equals("destination", StringComparison.OrdinalIgnoreCase)
+                ? dto.DestLng
+                : null,
             PathJson = JsonSerializer.Serialize(new List<double[]>
             {
                 new[] { dto.StartLat, dto.StartLng }
@@ -65,6 +88,21 @@ public class JourneyService : IJourneyService
         await _db.SaveChangesAsync();
         await _firestore.SyncJourneyAsync(journey);
         return journey.JourneyId;
+    }
+
+    private static string NormalizeJourneyType(string? rawType)
+    {
+        var normalized = rawType?.Trim().ToLowerInvariant();
+
+        return normalized switch
+        {
+            "destination" => "destination",
+            "freeroam" => "freeRoam",
+            "free_roam" => "freeRoam",
+            "free-roam" => "freeRoam",
+            "free roam" => "freeRoam",
+            _ => "freeRoam"
+        };
     }
 
     public async Task<List<JourneyRecommendationResponse>> GetNearByShopsAsync(Guid journeyId, double lat, double lng, double radiusKm = 5)

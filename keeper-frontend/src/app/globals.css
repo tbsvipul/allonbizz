@@ -672,6 +672,125 @@ th {
   font-weight: 700;
 }
 
+.media-uploader {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.media-dropzone {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  text-align: center;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--field-border);
+  background: var(--surface-muted);
+}
+
+.media-dropzone input {
+  max-width: 100%;
+}
+
+.media-preview-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.media-preview-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--soft-surface);
+}
+
+.media-preview-card-compact {
+  max-width: 280px;
+}
+
+.media-preview-frame {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.media-preview-trigger {
+  padding: 0;
+  width: 100%;
+  cursor: zoom-in;
+}
+
+.media-preview-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.media-preview-meta,
+.reason-stack {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.media-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.media-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(10, 14, 24, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.media-lightbox-content {
+  position: relative;
+  width: min(92vw, 980px);
+  max-height: 88vh;
+  padding: 0.9rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(17, 24, 39, 0.92);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+}
+
+.media-lightbox-image {
+  max-width: 100%;
+  max-height: calc(88vh - 1.8rem);
+  border-radius: calc(var(--radius-lg) - 2px);
+  display: block;
+  object-fit: contain;
+}
+
+.media-lightbox-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
 .toast-viewport {
   position: fixed;
   top: 1rem;

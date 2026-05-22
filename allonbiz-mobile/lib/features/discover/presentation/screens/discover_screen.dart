@@ -238,7 +238,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                       Text(
                                         deal.shopName,
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.8),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
                                           fontSize: 10,
                                         ),
                                         maxLines: 1,

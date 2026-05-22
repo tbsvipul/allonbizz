@@ -38,7 +38,7 @@ public class UserJourneysController : ControllerBase
         var result = await _journeyService.GetJourneyDetailAsync(journeyId, User.GetUserId());
         if (result == null)
         {
-            return NotFound(ApiResponse<object?>.Fail("NOT_FOUND", "Journey not found"));
+            return this.NotFoundProblemResponse("Journey not found.");
         }
 
         return Ok(ApiResponse<JourneyDetailDto>.Ok(result));
@@ -57,7 +57,7 @@ public class UserJourneysController : ControllerBase
         var success = await _journeyService.UpdateJourneyProgressAsync(journeyId, dto);
         if (!success)
         {
-            return NotFound(ApiResponse<object?>.Fail("NOT_FOUND", "Journey not found or inactive"));
+            return this.NotFoundProblemResponse("Journey not found or inactive.");
         }
 
         return Ok(ApiResponse<object?>.Ok(null, "Progress updated"));
@@ -69,7 +69,7 @@ public class UserJourneysController : ControllerBase
         var success = await _journeyService.EndJourneyAsync(journeyId, dto);
         if (!success)
         {
-            return NotFound(ApiResponse<object?>.Fail("NOT_FOUND", "Journey not found"));
+            return this.NotFoundProblemResponse("Journey not found.");
         }
 
         return Ok(ApiResponse<object?>.Ok(null, "Journey completed successfully"));

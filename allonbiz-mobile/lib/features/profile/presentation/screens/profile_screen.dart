@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/models/journey_model.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_section_header.dart';
@@ -18,7 +19,17 @@ import '../widgets/profile_tile_widget.dart';
 import '../widgets/profile_switch_tile_widget.dart';
 import '../widgets/profile_vertical_divider_widget.dart';
 import '../../../../core/services/preference_providers.dart';
+import '../../../trips/data/repositories/journeys_repository.dart';
 import 'edit_profile_screen.dart';
+import 'journey_detail_screen.dart';
+import '../widgets/journey_card.dart';
+
+final recentJourneysProvider = FutureProvider<List<JourneyModel>>((ref) async {
+  final page = await ref
+      .watch(journeysRepositoryProvider)
+      .getJourneys(page: 1, pageSize: 3);
+  return page.items.take(3).toList(growable: false);
+});
 
 /// User profile, statistics, and settings.
 class ProfileScreen extends ConsumerWidget {
@@ -36,6 +47,7 @@ class ProfileScreen extends ConsumerWidget {
     final String tripsCount = '${user?.totalTrips ?? 0}';
     final String totalSaved =
         '\$${(user?.totalSaved ?? 0.0).toStringAsFixed(2)}';
+    final recentJourneysAsync = ref.watch(recentJourneysProvider);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -74,7 +86,11 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    ),
                     icon: const Icon(Icons.edit_rounded, size: 16),
                     label: const Text('Edit Profile'),
                     style: ElevatedButton.styleFrom(
@@ -227,6 +243,77 @@ class ProfileScreen extends ConsumerWidget {
 
                 const SizedBox(height: AppDimensions.xl),
 
+                AppSectionHeader(
+                  title: 'Recent Journeys',
+                  icon: Icons.route_rounded,
+                  onActionPressed: () => context.push(AppRoutes.pastJourneys),
+                  actionLabel: 'View all',
+                  padding: const EdgeInsets.only(bottom: AppDimensions.sm),
+                ),
+
+                recentJourneysAsync.when(
+                  data: (journeys) {
+                    if (journeys.isEmpty) {
+                      return AppSurface(
+                        padding: const EdgeInsets.all(AppDimensions.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'No journeys yet',
+                              style: AppTextStyles.titleSmall.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppDimensions.xs),
+                            Text(
+                              'Your recent journeys will appear here after you start navigating.',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.grey600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: journeys
+                          .map(
+                            (journey) => JourneyCard(
+                              journey: journey,
+                              onTap: journey.id == null
+                                  ? null
+                                  : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => JourneyDetailScreen(
+                                          journeyId: journey.id!,
+                                          initialJourney: journey,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          )
+                          .toList(growable: false),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppDimensions.lg),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (error, stackTrace) => AppSurface(
+                    padding: const EdgeInsets.all(AppDimensions.lg),
+                    child: Text(
+                      'Recent journeys could not be loaded right now.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.grey600,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppDimensions.xl),
+
                 // ── Regional ───────────────────────────────────────
                 const AppSectionHeader(
                   title: 'Regional Settings',
@@ -271,10 +358,7 @@ class ProfileScreen extends ConsumerWidget {
                   onPressed: () {
                     ref.read(authControllerProvider.notifier).signOut();
                   },
-                  icon: Icon(
-                    Icons.logout_rounded,
-                    color: colorScheme.error,
-                  ),
+                  icon: Icon(Icons.logout_rounded, color: colorScheme.error),
                   label: Text(
                     l10n.signOut,
                     style: textTheme.labelLarge?.copyWith(

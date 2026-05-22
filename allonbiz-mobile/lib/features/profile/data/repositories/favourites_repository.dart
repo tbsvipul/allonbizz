@@ -83,8 +83,8 @@ class FavouritesRepository {
       await _apiClient.post(
         '/user/favourites',
         body: {
-          if (shopId != null) 'shopId': shopId,
-          if (offerId != null) 'offerId': offerId,
+          ...?shopId == null ? null : {'shopId': shopId},
+          ...?offerId == null ? null : {'offerId': offerId},
           'type': shopId != null ? 'shop' : 'offer',
         },
       );

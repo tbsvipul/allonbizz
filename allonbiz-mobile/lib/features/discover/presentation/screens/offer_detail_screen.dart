@@ -41,7 +41,9 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
 
   void _updateAppBar() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(appBarProvider.notifier).setConfig(
+      ref
+          .read(appBarProvider.notifier)
+          .setConfig(
             AppBarConfig(
               title: Text(widget.initialOffer?.title ?? 'Offer Details'),
               centerTitle: true,
@@ -70,18 +72,20 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
         if (!widget.isSheet) {
           // Update app bar with real title if we didn't have it
           if (widget.initialOffer == null) {
-             WidgetsBinding.instance.addPostFrameCallback((_) {
-                ref.read(appBarProvider.notifier).setConfig(
-                  AppBarConfig(
-                    title: Text(offer.title),
-                    centerTitle: true,
-                    leading: IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () => Navigator.pop(context),
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref
+                  .read(appBarProvider.notifier)
+                  .setConfig(
+                    AppBarConfig(
+                      title: Text(offer.title),
+                      centerTitle: true,
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ),
-                  ),
-                );
-             });
+                  );
+            });
           }
         }
         return _buildContent(context, offer, l10n);
@@ -91,12 +95,16 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, Offer offer, AppLocalizations l10n) {
+  Widget _buildContent(
+    BuildContext context,
+    Offer offer,
+    AppLocalizations l10n,
+  ) {
     final typeColor = offer.category == 'food'
         ? AppColors.pinFood
         : offer.category == 'shopping'
-            ? AppColors.pinShopping
-            : AppColors.pinSightseeing;
+        ? AppColors.pinShopping
+        : AppColors.pinSightseeing;
 
     return CustomScrollView(
       slivers: [
@@ -132,7 +140,10 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: typeColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -146,36 +157,58 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                       ),
                     ),
                     const Spacer(),
-                    const Icon(Icons.star_rounded, color: AppColors.secondary, size: 18),
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppColors.secondary,
+                      size: 18,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '4.8',
-                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Text(
                   offer.title,
-                  style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded, color: AppColors.grey500, size: 16),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColors.grey500,
+                      size: 16,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       offer.shopName,
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey500),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.grey500,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppDimensions.xl),
-                Text(l10n.details, style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  l10n.details,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   offer.description,
-                  style: AppTextStyles.bodyMedium.copyWith(height: 1.5, color: AppColors.grey700),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    height: 1.5,
+                    color: AppColors.grey700,
+                  ),
                 ),
                 const SizedBox(height: AppDimensions.xl),
                 Row(
@@ -184,36 +217,61 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           try {
-                            await ref.read(offersRepositoryProvider).redeemOffer(offer.id);
+                            await ref
+                                .read(offersRepositoryProvider)
+                                .redeemOffer(offer.id);
                             if (context.mounted) {
-                              AppSnackbar.show(context, message: l10n.offerRedeemedSuccess, type: AppSnackbarType.success);
+                              AppSnackbar.show(
+                                context,
+                                message: l10n.offerRedeemedSuccess,
+                                type: AppSnackbarType.success,
+                              );
                             }
                           } catch (e) {
-                             if (context.mounted) {
-                              AppSnackbar.show(context, message: 'Failed to redeem offer', type: AppSnackbarType.error);
+                            if (context.mounted) {
+                              AppSnackbar.show(
+                                context,
+                                message: 'Failed to redeem offer',
+                                type: AppSnackbarType.error,
+                              );
                             }
                           }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           minimumSize: const Size(double.infinity, 54),
                         ),
-                        child: Text('Claim Offer', style: AppTextStyles.titleSmall),
+                        child: Text(
+                          'Claim Offer',
+                          style: AppTextStyles.titleSmall,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     IconButton.filledTonal(
                       onPressed: () async {
                         try {
-                          await ref.read(offersRepositoryProvider).saveOffer(offer.id);
+                          await ref
+                              .read(offersRepositoryProvider)
+                              .saveOffer(offer.id);
                           if (context.mounted) {
-                            AppSnackbar.show(context, message: 'Offer saved!', type: AppSnackbarType.success);
+                            AppSnackbar.show(
+                              context,
+                              message: 'Offer saved!',
+                              type: AppSnackbarType.success,
+                            );
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            AppSnackbar.show(context, message: 'Failed to save offer', type: AppSnackbarType.error);
+                            AppSnackbar.show(
+                              context,
+                              message: 'Failed to save offer',
+                              type: AppSnackbarType.error,
+                            );
                           }
                         }
                       },

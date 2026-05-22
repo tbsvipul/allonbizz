@@ -22,8 +22,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.initState();
     final user = ref.read(authControllerProvider).user;
     final nameParts = (user?.displayName ?? '').split(' ');
-    _firstNameController = TextEditingController(text: nameParts.isNotEmpty ? nameParts.first : '');
-    _lastNameController = TextEditingController(text: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '');
+    _firstNameController = TextEditingController(
+      text: nameParts.isNotEmpty ? nameParts.first : '',
+    );
+    _lastNameController = TextEditingController(
+      text: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
+    );
     _phoneController = TextEditingController(text: user?.phone ?? '');
   }
 
@@ -36,11 +40,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _save() async {
-    await ref.read(profileControllerProvider.notifier).updateProfile(
-      firstName: _firstNameController.text,
-      lastName: _lastNameController.text,
-      phoneNumber: _phoneController.text,
-    );
+    await ref
+        .read(profileControllerProvider.notifier)
+        .updateProfile(
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
+          phoneNumber: _phoneController.text,
+        );
     if (mounted && ref.read(profileControllerProvider).error == null) {
       Navigator.of(context).pop();
     }
@@ -55,11 +61,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         title: const Text('Edit Profile'),
         actions: [
           if (state.isLoading)
-            const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(strokeWidth: 2)))
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
           else
             TextButton(
               onPressed: _save,
-              child: const Text('Save', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
         ],
       ),
@@ -85,7 +102,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             if (state.error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: Text(state.error!, style: const TextStyle(color: Colors.red)),
+                child: Text(
+                  state.error!,
+                  style: const TextStyle(color: Colors.red),
+                ),
               ),
           ],
         ),

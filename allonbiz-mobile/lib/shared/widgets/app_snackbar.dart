@@ -18,8 +18,22 @@ abstract final class AppSnackbar {
     final scaffold = ScaffoldMessenger.maybeOf(context);
     if (scaffold == null) return;
 
-    scaffold.hideCurrentSnackBar();
-    scaffold.showSnackBar(
+    showWithScaffoldMessenger(
+      scaffold,
+      message: message,
+      type: type,
+      duration: duration,
+    );
+  }
+
+  static void showWithScaffoldMessenger(
+    ScaffoldMessengerState scaffoldMessenger, {
+    required String message,
+    AppSnackbarType type = AppSnackbarType.info,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Row(
           children: [

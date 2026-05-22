@@ -25,7 +25,7 @@ public class UserHomeController : ControllerBase
     {
         if (lat == null || lng == null)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Latitude and longitude are required."));
+            return this.ValidationProblemResponse("Latitude and longitude are required.");
         }
 
         return Ok(ApiResponse<UserHomeDto>.Ok(await _profileService.GetHomeDataAsync(User.GetUserId(), lat, lng)));

@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import React, { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -13,6 +15,7 @@ import { PERMISSIONS } from '@/lib/permissions';
 interface Review {
   reviewId: string;
   userName: string;
+  userAvatarUrl?: string | null;
   shopName: string;
   rating: number;
   comment: string;
@@ -159,8 +162,12 @@ export default function ReviewsPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'hsl(var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <User size={20} />
+                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'hsl(var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {review.userAvatarUrl ? (
+                            <img src={review.userAvatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          ) : (
+                            <User size={20} />
+                          )}
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>

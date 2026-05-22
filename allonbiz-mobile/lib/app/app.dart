@@ -8,8 +8,8 @@ import '../l10n/app_localizations.dart';
 import 'routes/app_router.dart';
 
 /// Root application widget with Riverpod + GoRouter + L10N.
-class allonbizApp extends ConsumerWidget {
-  const allonbizApp({super.key});
+class AllonbizApp extends ConsumerWidget {
+  const AllonbizApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

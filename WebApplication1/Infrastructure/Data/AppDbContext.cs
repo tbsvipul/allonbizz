@@ -48,8 +48,8 @@ public class AppDbContext : DbContext
 
         // Entity configurations are applied from the assembly (Data/Configurations/*.cs)
 
-        // Fix for JsonDocument with In-Memory Database
-        if (Database.IsInMemory())
+        // Keep JsonDocument compatible with the EF in-memory provider without taking a runtime package dependency on it.
+        if (string.Equals(Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
         {
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {

@@ -35,11 +35,11 @@ public class KeeperOffersController : ControllerBase
     public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Title))
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Offer title is required."));
+            return this.ValidationProblemResponse("Offer title is required.", nameof(dto.Title));
         if (dto.ShopId == Guid.Empty)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Create a shop first and then select it before creating an offer."));
+            return this.ValidationProblemResponse("Create a shop first and then select it before creating an offer.", nameof(dto.ShopId));
         if (dto.EndDate <= dto.StartDate)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "End date must be after start date."));
+            return this.ValidationProblemResponse("End date must be after start date.", nameof(dto.EndDate));
 
         var keeper = await _keeperContextService.GetRequiredActiveKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         var offerId = await _offerService.CreateOfferAsync(keeper.KeeperId, dto);
@@ -53,7 +53,7 @@ public class KeeperOffersController : ControllerBase
         var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         var offer = await _offerService.GetOfferDetailAsync(keeper.KeeperId, offerId);
         if (offer == null)
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", $"Offer {offerId} not found."));
+            return this.NotFoundProblemResponse($"Offer {offerId} not found.");
         return Ok(ApiResponse<KeeperOfferDetailDto>.Ok(offer));
     }
 
@@ -62,7 +62,7 @@ public class KeeperOffersController : ControllerBase
     public async Task<IActionResult> UpdateOffer(Guid offerId, [FromBody] CreateOfferDto dto)
     {
         if (dto.ShopId == Guid.Empty)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Select a valid shop before updating the offer."));
+            return this.ValidationProblemResponse("Select a valid shop before updating the offer.", nameof(dto.ShopId));
         var keeper = await _keeperContextService.GetRequiredActiveKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         await _offerService.UpdateOfferAsync(keeper.KeeperId, offerId, dto);
         return Ok(ApiResponse<object?>.Ok(null, "Offer updated"));
@@ -82,13 +82,13 @@ public class KeeperOffersController : ControllerBase
     public async Task<IActionResult> BulkUploadOffers(IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "CSV file is required."));
+            return this.ValidationProblemResponse("CSV file is required.", nameof(file));
 
         var allowedMimeTypes = new[] { "text/csv", "application/csv", "application/vnd.ms-excel" };
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
         if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()) || extension != ".csv")
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Invalid file type. Only CSV files are allowed."));
+            return this.ValidationProblemResponse("Invalid file type. Only CSV files are allowed.", nameof(file));
 
         var keeper = await _keeperContextService.GetRequiredActiveKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         using var stream = file.OpenReadStream();

@@ -46,24 +46,25 @@ public class AdminAuthService : IAdminAuthService
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto dto, string? ipAddress = null)
     {
         var normalizedEmail = AdminAccountHelper.NormalizeEmail(dto.Email);
+        var safeIdentifier = AdminAccountHelper.ToSafeLogIdentifier(normalizedEmail);
         var admin = await _db.AdminAccounts.FirstOrDefaultAsync(a => a.Email == normalizedEmail);
 
         if (admin == null)
         {
-            _logger.LogWarning("Admin login attempt for non-existent email: {Email}", normalizedEmail);
+            _logger.LogWarning("Admin login attempt for unknown account {AdminIdentifier}", safeIdentifier);
             await _auditService.LogAsync(Guid.Empty, "ADMIN_LOGIN_FAILED_UNKNOWN", "Auth", normalizedEmail, ipAddress, "N/A");
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
         if (!admin.IsActive)
         {
-            _logger.LogWarning("Admin login attempt for inactive account: {Email}", normalizedEmail);
+            _logger.LogWarning("Admin login attempt for inactive account {AdminIdentifier}", safeIdentifier);
             throw new UnauthorizedAccessException("Account is disabled. Please contact system administrator.");
         }
 
         if (admin.LockoutEnd.HasValue && admin.LockoutEnd.Value > DateTime.UtcNow)
         {
-            _logger.LogWarning("Admin login attempt for locked account: {Email}", normalizedEmail);
+            _logger.LogWarning("Admin login attempt for locked account {AdminIdentifier}", safeIdentifier);
             throw new UnauthorizedAccessException($"Account is locked until {admin.LockoutEnd.Value:HH:mm:ss UTC}.");
         }
 
@@ -327,7 +328,9 @@ public class AdminAuthService : IAdminAuthService
 
         await _db.SaveChangesAsync();
         await _emailService.SendOtpEmailAsync(normalizedEmail, otp);
-        _logger.LogInformation("Password reset OTP sent to admin: {Email}", normalizedEmail);
+        _logger.LogInformation(
+            "Password reset OTP sent to admin {AdminIdentifier}",
+            AdminAccountHelper.ToSafeLogIdentifier(normalizedEmail));
     }
 
     public async Task<string?> ValidateOtpAsync(string email, string otp)
@@ -403,7 +406,9 @@ public class AdminAuthService : IAdminAuthService
         {
             admin.LockoutEnd = DateTime.UtcNow.Add(LockoutDuration);
             admin.FailedLoginAttempts = 0;
-            _logger.LogWarning("Admin account {Email} locked due to multiple failed attempts", admin.Email);
+            _logger.LogWarning(
+                "Admin account {AdminIdentifier} locked due to multiple failed attempts",
+                AdminAccountHelper.ToSafeLogIdentifier(admin.Email));
         }
 
         admin.UpdatedAt = DateTime.UtcNow;

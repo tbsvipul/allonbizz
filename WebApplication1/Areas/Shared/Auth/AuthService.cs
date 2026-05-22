@@ -351,23 +351,24 @@ public class AuthService : IAuthService
     public async Task<UserLoginResponseDto> UserLoginAsync(UserLoginRequestDto dto, string? ipAddress = null)
     {
         var normalizedEmail = AdminAccountHelper.NormalizeEmail(dto.Email);
+        var safeIdentifier = AdminAccountHelper.ToSafeLogIdentifier(normalizedEmail);
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email != null && EF.Functions.ILike(u.Email, normalizedEmail));
 
         if (user == null)
         {
-            _logger.LogWarning("Failed login attempt for non-existent user: {Email}", normalizedEmail);
+            _logger.LogWarning("Failed login attempt for unknown user {UserIdentifier}", safeIdentifier);
             throw new UnauthorizedAccessException("Invalid credentials.");
         }
 
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
         {
-            _logger.LogWarning("Login attempt for locked out user: {Email}", normalizedEmail);
+            _logger.LogWarning("Login attempt for locked user {UserIdentifier}", safeIdentifier);
             throw new UnauthorizedAccessException("Account is temporarily locked. Please try again later.");
         }
 
         if (string.IsNullOrWhiteSpace(user.PasswordHash) || !PasswordHelper.VerifyPassword(dto.Password, user.PasswordHash))
         {
-            _logger.LogWarning("Invalid password for user: {Email}", normalizedEmail);
+            _logger.LogWarning("Invalid password for user {UserIdentifier}", safeIdentifier);
             await RegisterFailedUserLoginAsync(user);
             throw new UnauthorizedAccessException("Invalid credentials.");
         }
@@ -527,7 +528,9 @@ public class AuthService : IAuthService
             return;
         }
 
-        _logger.LogWarning("Login attempt for inactive user: {Email}", normalizedEmail);
+        _logger.LogWarning(
+            "Login attempt for inactive user {UserIdentifier}",
+            AdminAccountHelper.ToSafeLogIdentifier(normalizedEmail));
 
         throw user.Status switch
         {

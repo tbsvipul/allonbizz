@@ -7,7 +7,7 @@ public interface IUserProfileService
 {
     Task<UserProfileDto> GetProfileAsync(Guid userId);
     Task UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto);
-    Task<string> UploadPhotoAsync(Guid userId, Stream photoStream, string fileName);
+    Task<string> UploadPhotoAsync(Guid userId, Stream photoStream, string contentType);
     Task UpdateFcmTokenAsync(Guid userId, string token);
     Task<UserHomeDto> GetHomeDataAsync(Guid userId, double? lat, double? lng);
 }

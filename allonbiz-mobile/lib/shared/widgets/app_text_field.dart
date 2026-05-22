@@ -129,9 +129,7 @@ class _AppTextFieldState extends State<AppTextField> {
           validator: widget.validator,
           onChanged: widget.onChanged,
           onFieldSubmitted: widget.onSubmitted,
-          style: textTheme.bodyLarge?.copyWith(
-            color: colorScheme.onSurface,
-          ),
+          style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: widget.hint,
             hintStyle: textTheme.bodyLarge?.copyWith(
@@ -144,12 +142,12 @@ class _AppTextFieldState extends State<AppTextField> {
                 ? IconButton(
                     icon: Icon(
                       _obscureText
-                           ? Icons.visibility_off_rounded
-                           : Icons.visibility_rounded,
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
                       color: colorScheme.onSurfaceVariant,
                     ),
                     onPressed: () =>
-                                setState(() => _obscureText = !_obscureText),
+                        setState(() => _obscureText = !_obscureText),
                   )
                 : widget.suffixIcon,
             filled: true,
@@ -163,13 +161,17 @@ class _AppTextFieldState extends State<AppTextField> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
-                color: isSearch ? Colors.transparent : colorScheme.outlineVariant,
+                color: isSearch
+                    ? Colors.transparent
+                    : colorScheme.outlineVariant,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
-                color: isSearch ? Colors.transparent : colorScheme.outlineVariant,
+                color: isSearch
+                    ? Colors.transparent
+                    : colorScheme.outlineVariant,
               ),
             ),
             focusedBorder: OutlineInputBorder(

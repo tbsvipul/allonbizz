@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import React, { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +17,15 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
+
+function getProfileErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const response = (err as { response?: { data?: { message?: string } } }).response;
+    return response?.data?.message || fallback;
+  }
+
+  return fallback;
+}
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
@@ -39,8 +50,8 @@ export default function ProfilePage() {
       await api.put('/admin/auth/profile', { firstName, lastName, email });
       updateUser({ firstName, lastName, email });
       setStatus({ type: 'success', text: 'Profile updated successfully.' });
-    } catch (err: any) {
-      setStatus({ type: 'error', text: err.response?.data?.message || 'Failed to update profile.' });
+    } catch (err) {
+      setStatus({ type: 'error', text: getProfileErrorMessage(err, 'Failed to update profile.') });
     } finally {
       setSavingProfile(false);
       setTimeout(() => setStatus(null), 3000);
@@ -63,8 +74,8 @@ export default function ProfilePage() {
       setStatus({ type: 'success', text: 'Password changed successfully.' });
       setCurrentPassword('');
       setNewPassword('');
-    } catch (err: any) {
-      setStatus({ type: 'error', text: err.response?.data?.message || 'Failed to change password.' });
+    } catch (err) {
+      setStatus({ type: 'error', text: getProfileErrorMessage(err, 'Failed to change password.') });
     } finally {
       setSavingPassword(false);
       setTimeout(() => setStatus(null), 3000);
@@ -106,8 +117,12 @@ export default function ProfilePage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
           <div className="glass-card" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid hsl(var(--border))' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'hsl(var(--primary))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)' }}>
-                {initials}
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'hsl(var(--primary))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)', overflow: 'hidden' }}>
+                {user?.profilePhotoUrl ? (
+                  <img src={user.profilePhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  initials
+                )}
               </div>
               <div>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{firstName} {lastName}</h2>

@@ -168,81 +168,59 @@ List<JsonMap> extractEnvelopeDataList(Object? response) {
 
 Offer parseOfferJson(JsonMap json) {
   return Offer(
-    id: stringValue(
-      json,
-      ['id', 'offerId', 'OfferId', 'shopId', 'ShopId'],
-    ),
+    id: stringValue(json, ['id', 'offerId', 'OfferId', 'shopId', 'ShopId']),
     shopId: nullableStringValue(json, ['shopId', 'ShopId']),
-    title: stringValue(
-      json,
-      ['title', 'name', 'Title', 'Name'],
-      fallback: 'Deal',
-    ),
-    description: stringValue(
-      json,
-      ['description', 'Description'],
-    ),
-    category: stringValue(
-      json,
-      ['category', 'Category'],
-      fallback: 'misc',
-    ),
-    discountPercent: doubleValue(
-      json,
-      [
-        'discountPercent',
-        'discountPercentage',
-        'DiscountPercent',
-        'DiscountPercentage',
-      ],
-    ),
-    shopName: stringValue(
-      json,
-      ['shopName', 'name', 'ShopName', 'Name'],
-      fallback: 'Local Shop',
-    ),
-    shopAddress: nullableStringValue(
-      json,
-      ['shopAddress', 'address', 'ShopAddress', 'Address'],
-    ),
-    latitude: doubleValue(
-      json,
-      ['latitude', 'lat', 'Latitude'],
-    ),
-    longitude: doubleValue(
-      json,
-      ['longitude', 'lng', 'lon', 'Longitude'],
-    ),
+    title: stringValue(json, [
+      'title',
+      'name',
+      'Title',
+      'Name',
+    ], fallback: 'Deal'),
+    description: stringValue(json, ['description', 'Description']),
+    category: stringValue(json, ['category', 'Category'], fallback: 'misc'),
+    discountPercent: doubleValue(json, [
+      'discountPercent',
+      'discountPercentage',
+      'DiscountPercent',
+      'DiscountPercentage',
+    ]),
+    shopName: stringValue(json, [
+      'shopName',
+      'name',
+      'ShopName',
+      'Name',
+    ], fallback: 'Local Shop'),
+    shopAddress: nullableStringValue(json, [
+      'shopAddress',
+      'address',
+      'ShopAddress',
+      'Address',
+    ]),
+    latitude: doubleValue(json, ['latitude', 'lat', 'Latitude']),
+    longitude: doubleValue(json, ['longitude', 'lng', 'lon', 'Longitude']),
     imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
     expiresAt: nullableDateValue(json, ['expiresAt', 'EndDate', 'ExpiresAt']),
-    terms: nullableStringValue(
-      json,
-      ['terms', 'TermsAndConditions', 'Terms'],
-    ),
+    terms: nullableStringValue(json, ['terms', 'TermsAndConditions', 'Terms']),
     keeperId: nullableStringValue(json, ['keeperId', 'KeeperId']),
     keeperName: nullableStringValue(json, ['keeperName', 'KeeperName']),
     keeperPhone: nullableStringValue(json, ['keeperPhone', 'KeeperPhone']),
     isActive: boolValue(json, ['isActive', 'IsActive'], fallback: true),
-    loyaltyPoints: intValue(
-      json,
-      ['loyaltyPoints', 'LoyaltyPoints'],
-    ),
+    loyaltyPoints: intValue(json, ['loyaltyPoints', 'LoyaltyPoints']),
     rating: nullableDoubleValue(json, ['rating', 'Rating']),
     reviewCount: nullableIntValue(json, ['reviewCount', 'ReviewCount']),
     createdAt:
         nullableDateValue(json, ['createdAt', 'CreatedAt']) ?? DateTime.now(),
-    distance: nullableStringValue(
-      json,
-      ['distance', 'distanceKm', 'DistanceKm'],
-    ),
+    distance: nullableStringValue(json, [
+      'distance',
+      'distanceKm',
+      'DistanceKm',
+    ]),
     tags: parseStringList(firstPresent(json, ['tags', 'Tags'])),
   );
 }
 
 List<Offer> parseOfferList(Object? rawList) {
-  return asJsonMapList(rawList)
-      .map(parseOfferJson)
-      .toList(growable: false);
+  return asJsonMapList(rawList).map(parseOfferJson).toList(growable: false);
 }
 
 List<Offer> parseOffersEnvelope(Object? response) {
@@ -258,33 +236,17 @@ List<Offer> parseRecommendedOffersFromHomeResponse(Object? response) {
 
 Shop parseShopJson(JsonMap json) {
   return Shop(
-    id: stringValue(
-      json,
-      ['shopId', 'ShopId', 'id'],
-    ),
-    name: stringValue(
-      json,
-      ['name', 'Name'],
-      fallback: 'Unknown Shop',
-    ),
-    description: nullableStringValue(
-      json,
-      ['description', 'Description'],
-    ),
+    id: stringValue(json, ['shopId', 'ShopId', 'id']),
+    name: stringValue(json, ['name', 'Name'], fallback: 'Unknown Shop'),
+    description: nullableStringValue(json, ['description', 'Description']),
     address: nullableStringValue(json, ['address', 'Address']),
-    phoneNumber: nullableStringValue(
-      json,
-      ['phoneNumber', 'PhoneNumber'],
-    ),
+    phoneNumber: nullableStringValue(json, ['phoneNumber', 'PhoneNumber']),
     email: nullableStringValue(json, ['email', 'Email']),
     imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
     latitude: doubleValue(json, ['latitude', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'Longitude']),
     offers: parseOfferList(
-      firstPresent(
-        json,
-        ['offers', 'Offers', 'recentOffers', 'RecentOffers'],
-      ),
+      firstPresent(json, ['offers', 'Offers', 'recentOffers', 'RecentOffers']),
     ),
   );
 }
@@ -301,11 +263,12 @@ CategoryModel parseCategoryJson(JsonMap json) {
         nullableIntValue(json, ['iconCode', 'IconCode']) ??
         int.tryParse(stringValue(json, ['icon', 'Icon'])) ??
         Icons.help_outline.codePoint,
-    colorHex: stringValue(
-      json,
-      ['colorHex', 'color', 'ColorHex', 'Color'],
-      fallback: '0xFF9E9E9E',
-    ),
+    colorHex: stringValue(json, [
+      'colorHex',
+      'color',
+      'ColorHex',
+      'Color',
+    ], fallback: '0xFF9E9E9E'),
   );
 }
 

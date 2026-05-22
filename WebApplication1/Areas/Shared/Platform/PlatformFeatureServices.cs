@@ -52,6 +52,7 @@ public class PlatformFeatureService : IReviewService, ILoyaltyService, IAdminPan
                 ReviewId = r.ReviewId,
                 UserId = r.UserId,
                 UserFullName = r.User != null ? $"{r.User.FirstName} {r.User.LastName}" : "Unknown",
+                UserAvatarUrl = r.User != null ? r.User.ProfilePhotoData : null,
                 ShopId = r.ShopId,
                 ShopName = r.Shop != null ? r.Shop.Name : "Unknown",
                 OfferId = r.OfferId,

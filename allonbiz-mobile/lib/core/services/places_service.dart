@@ -234,11 +234,14 @@ class PlacesService {
         return const <PlaceSuggestion>[];
       }
 
-      final data = response['data'] ?? response['results'] ?? response['places'];
+      final data =
+          response['data'] ?? response['results'] ?? response['places'];
       if (data is List) {
         return data
             .whereType<Map>()
-            .map((json) => _suggestionFromApiJson(Map<String, dynamic>.from(json)))
+            .map(
+              (json) => _suggestionFromApiJson(Map<String, dynamic>.from(json)),
+            )
             .toList();
       }
 
@@ -307,9 +310,9 @@ class PlacesService {
   }
 
   Future<List<PlaceSuggestion>> _fetchPhotonSuggestions(String query) async {
-    final url = Uri.parse(BaseApi.photonSearchUrl).replace(
-      queryParameters: {'q': query, 'limit': '8'},
-    );
+    final url = Uri.parse(
+      BaseApi.photonSearchUrl,
+    ).replace(queryParameters: {'q': query, 'limit': '8'});
 
     try {
       final response = await http

@@ -14,6 +14,7 @@ public class AnalyticsService : IAnalyticsService
     private readonly IRepository<User> _userRepo;
     private readonly IRepository<Keeper> _keeperRepo;
     private readonly IRepository<Shop> _shopRepo;
+    private readonly IRepository<Offer> _offerRepo;
     private readonly IRepository<Journey> _journeyRepo;
     private readonly IRepository<Redemption> _redemptionRepo;
     private readonly IRepository<ModerationQueueItem> _moderationRepo;
@@ -22,6 +23,7 @@ public class AnalyticsService : IAnalyticsService
         IRepository<User> userRepo,
         IRepository<Keeper> keeperRepo,
         IRepository<Shop> shopRepo,
+        IRepository<Offer> offerRepo,
         IRepository<Journey> journeyRepo,
         IRepository<Redemption> redemptionRepo,
         IRepository<ModerationQueueItem> moderationRepo)
@@ -29,6 +31,7 @@ public class AnalyticsService : IAnalyticsService
         _userRepo = userRepo;
         _keeperRepo = keeperRepo;
         _shopRepo = shopRepo;
+        _offerRepo = offerRepo;
         _journeyRepo = journeyRepo;
         _redemptionRepo = redemptionRepo;
         _moderationRepo = moderationRepo;
@@ -192,6 +195,58 @@ public class AnalyticsService : IAnalyticsService
             CurrentRequestsPerMinute = null,
             RequestsPerMinuteAvailable = false
         };
+    }
+
+    public async Task<List<TrendingAdminOfferDto>> GetTrendingOffersAsync(CancellationToken ct = default)
+    {
+        return await _offerRepo.Query()
+            .AsNoTracking()
+            .Include(offer => offer.Shop)
+            .OrderByDescending(offer => offer.CurrentRedemptions)
+            .Take(10)
+            .Select(offer => new TrendingAdminOfferDto
+            {
+                OfferId = offer.OfferId,
+                Title = offer.Title,
+                CurrentRedemptions = offer.CurrentRedemptions,
+                ShopName = offer.Shop != null ? offer.Shop.Name : "Unknown"
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<TrendingAdminShopDto>> GetTrendingShopsAsync(CancellationToken ct = default)
+    {
+        return await _shopRepo.Query()
+            .AsNoTracking()
+            .Include(shop => shop.Reviews)
+            .Select(shop => new TrendingAdminShopDto
+            {
+                ShopId = shop.ShopId,
+                Name = shop.Name,
+                ReviewCount = shop.Reviews.Count(),
+                AvgRating = shop.Reviews.Any() ? shop.Reviews.Average(review => (double)(int)review.Rating) : 0d
+            })
+            .OrderByDescending(shop => shop.AvgRating)
+            .ThenByDescending(shop => shop.ReviewCount)
+            .Take(10)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<TrendingAdminJourneyDto>> GetTrendingJourneysAsync(CancellationToken ct = default)
+    {
+        return await _journeyRepo.Query()
+            .AsNoTracking()
+            .Select(journey => new TrendingAdminJourneyDto
+            {
+                JourneyId = journey.JourneyId,
+                Name = journey.StartName ?? string.Empty,
+                LikesCount = journey.LikesCount,
+                ViewsCount = journey.ViewsCount,
+                Score = journey.LikesCount * 2 + journey.ViewsCount
+            })
+            .OrderByDescending(journey => journey.Score)
+            .Take(10)
+            .ToListAsync(ct);
     }
 
     public async Task<byte[]> GetPrebuiltReportCsvAsync(string reportType, AnalyticsRangeQueryDto? query, CancellationToken ct = default)

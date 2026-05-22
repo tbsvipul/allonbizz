@@ -43,12 +43,14 @@ class MainLayout extends ConsumerWidget {
                   if (!appBarConfig.showAppBar) return const SizedBox.shrink();
 
                   final Widget titleWidget =
-                      appBarConfig.title ?? _getDefaultTitle(currentIndex, l10n);
+                      appBarConfig.title ??
+                      _getDefaultTitle(currentIndex, l10n);
 
                   return AppBar(
                     title: titleWidget,
                     actions: [
-                      if (appBarConfig.actions != null) ...appBarConfig.actions!,
+                      if (appBarConfig.actions != null)
+                        ...appBarConfig.actions!,
                       IconButton(
                         icon: const Icon(Icons.notifications_none_rounded),
                         onPressed: () {

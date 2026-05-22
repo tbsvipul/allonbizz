@@ -12,6 +12,7 @@ public class RegisterShopDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? ImageUrl { get; set; }
+    public List<string> ShopImages { get; set; } = new();
     public Guid? CategoryId { get; set; }
     public bool IsOpen { get; set; } = true;
     public double? NotificationRadius { get; set; }

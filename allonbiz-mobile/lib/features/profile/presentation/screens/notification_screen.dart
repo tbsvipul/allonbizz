@@ -6,9 +6,13 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../data/repositories/notifications_repository.dart';
 import 'package:intl/intl.dart';
 
-final notificationsListProvider = FutureProvider.family<List<UserNotification>, int>((ref, page) {
-  return ref.watch(notificationsRepositoryProvider).getNotifications(page: page).then((value) => value.items);
-});
+final notificationsListProvider =
+    FutureProvider.family<List<UserNotification>, int>((ref, page) {
+      return ref
+          .watch(notificationsRepositoryProvider)
+          .getNotifications(page: page)
+          .then((value) => value.items);
+    });
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -22,12 +26,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final notificationsAsync = ref.watch(notificationsListProvider(_currentPage));
+    final notificationsAsync = ref.watch(
+      notificationsListProvider(_currentPage),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-      ),
+      appBar: AppBar(title: const Text('Notifications')),
       body: notificationsAsync.when(
         data: (notifications) {
           if (notifications.isEmpty) {
@@ -44,17 +48,24 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: 0,
-                      color: n.isRead ? Colors.transparent : AppColors.primary.withValues(alpha: 0.05),
+                      color: n.isRead
+                          ? Colors.transparent
+                          : AppColors.primary.withValues(alpha: 0.05),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: const BorderSide(color: AppColors.grey200),
                       ),
                       child: ListTile(
                         leading: Icon(
-                          n.type == 'Offer' ? Icons.local_offer_rounded : Icons.notifications_rounded,
+                          n.type == 'Offer'
+                              ? Icons.local_offer_rounded
+                              : Icons.notifications_rounded,
                           color: AppColors.primary,
                         ),
-                        title: Text(n.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(
+                          n.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -63,7 +74,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                             const SizedBox(height: 8),
                             Text(
                               DateFormat.yMMMd().add_jm().format(n.sentAt),
-                              style: AppTextStyles.labelSmall.copyWith(color: AppColors.grey500),
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.grey500,
+                              ),
                             ),
                           ],
                         ),
@@ -73,19 +86,25 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 ),
               ),
               if (_currentPage > 1 || notifications.length >= 10)
-                 Padding(
-                   padding: const EdgeInsets.all(16.0),
-                   child: Row(
-                     mainAxisAlignment: MainAxisAlignment.center,
-                     children: [
-                       if (_currentPage > 1)
-                         TextButton(onPressed: () => setState(() => _currentPage--), child: const Text('Previous')),
-                       Text('Page $_currentPage'),
-                       if (notifications.length >= 10)
-                         TextButton(onPressed: () => setState(() => _currentPage++), child: const Text('Next')),
-                     ],
-                   ),
-                 )
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_currentPage > 1)
+                        TextButton(
+                          onPressed: () => setState(() => _currentPage--),
+                          child: const Text('Previous'),
+                        ),
+                      Text('Page $_currentPage'),
+                      if (notifications.length >= 10)
+                        TextButton(
+                          onPressed: () => setState(() => _currentPage++),
+                          child: const Text('Next'),
+                        ),
+                    ],
+                  ),
+                ),
             ],
           );
         },

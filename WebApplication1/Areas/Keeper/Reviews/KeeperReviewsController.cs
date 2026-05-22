@@ -41,7 +41,7 @@ public class KeeperReviewsController : ControllerBase
     public async Task<IActionResult> ReplyToReview(Guid reviewId, [FromBody] ReviewReplyDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Reply))
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Reply text is required."));
+            return this.ValidationProblemResponse("Reply text is required.", nameof(dto.Reply));
         var keeper = await _keeperContextService.GetRequiredActiveKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         await _reviewService.ReplyToReviewAsync(reviewId, dto, keeper.KeeperId);
         return Ok(ApiResponse<object?>.Ok(null, "Reply submitted"));
@@ -52,7 +52,7 @@ public class KeeperReviewsController : ControllerBase
     public async Task<IActionResult> GetLoyaltyProgram([FromQuery] Guid? shopId)
     {
         if (shopId == null || shopId == Guid.Empty)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "shopId is required."));
+            return this.ValidationProblemResponse("shopId is required.", nameof(shopId));
         var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         var result = await _loyaltyService.GetLoyaltyProgramAsync(keeper.KeeperId, shopId.Value);
         return Ok(ApiResponse<LoyaltyProgramDto>.Ok(result));

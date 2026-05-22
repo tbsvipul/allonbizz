@@ -4,3 +4,9 @@ build/
 dist/
 .env
 *.log
+test_out/
+WebApplication1/logs/
+WebApplication1/uploads/
+WebApplication1/audit_build_*/
+WebApplication1/build_verify_*/
+WebApplication1/*.csproj.user

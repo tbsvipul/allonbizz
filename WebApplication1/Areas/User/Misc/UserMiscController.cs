@@ -54,12 +54,12 @@ public class UserMiscController : ControllerBase
     {
         if (dto.Rating < 1 || dto.Rating > 5)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Rating must be between 1 and 5."));
+            return this.ValidationProblemResponse("Rating must be between 1 and 5.", nameof(dto.Rating));
         }
 
         if (!dto.ShopId.HasValue && !dto.OfferId.HasValue)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Either ShopId or OfferId is required."));
+            return this.ValidationProblemResponse("Either ShopId or OfferId is required.");
         }
 
         var userId = User.GetUserId();

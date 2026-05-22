@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +8,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { InlineNotice } from '@/components/InlineNotice';
 import api from '@/lib/api';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
+import { resolveMediaSource } from '@/lib/media';
+import { getShopListingStatusLabel, getShopVerificationStatusLabel } from '@/lib/shop-status';
 import { ShopSummary } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { StatusPill } from '@/components/StatusPill';
@@ -87,20 +90,41 @@ export default function ShopsPage() {
                 {shops.map((shop) => (
                   <tr key={shop.id}>
                     <td>
-                      <div className="item-stack">
-                        <strong>{shop.name}</strong>
-                        <span className="muted-text tiny-text">{shop.businessName}</span>
+                      <div className="inline-row" style={{ alignItems: 'center', gap: '0.9rem' }}>
+                        <div
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '16px',
+                            overflow: 'hidden',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface-muted)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {shop.imageUrl ? (
+                            <img src={resolveMediaSource(shop.imageUrl)} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : null}
+                        </div>
+                        <div className="item-stack">
+                          <strong>{shop.name}</strong>
+                          <span className="muted-text tiny-text">{shop.businessName}</span>
+                          {shop.rejectionReason ? <span className="tiny-text" style={{ color: 'var(--danger)' }}>Rejected: {shop.rejectionReason}</span> : null}
+                          {!shop.rejectionReason && shop.deactivateReason ? <span className="tiny-text muted-text">Inactive reason: {shop.deactivateReason}</span> : null}
+                        </div>
                       </div>
                     </td>
                     <td>{shop.category}</td>
                     <td>{shop.location}</td>
                     <td>
-                      <StatusPill status={shop.isVerified ? 'Approved' : 'PendingApproval'} />
+                      <StatusPill status={getShopVerificationStatusLabel(shop.verifyStatus, shop.isVerified)} />
                     </td>
-                    <td>{shop.status}</td>
+                    <td>
+                      <StatusPill status={getShopListingStatusLabel(shop.status, shop.status.toLowerCase() === 'active')} />
+                    </td>
                     <td>
                       <Link href={`/shops/${shop.id}`} className="button-ghost">
-                        View details
+                        Manage shop
                       </Link>
                     </td>
                   </tr>

@@ -35,7 +35,7 @@ public class KeeperDashboardController : ControllerBase
     public async Task<IActionResult> GetTraffic([FromQuery] Guid? shopId)
     {
         if (shopId == null || shopId == Guid.Empty)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "shopId is required."));
+            return this.ValidationProblemResponse("shopId is required.", nameof(shopId));
         var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
         var result = await _dashboardService.GetTrafficAnalyticsAsync(keeper.KeeperId, shopId.Value);
         return Ok(ApiResponse<KeeperTrafficDto>.Ok(result));

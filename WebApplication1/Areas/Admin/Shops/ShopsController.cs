@@ -4,6 +4,7 @@ using allonbiz.AdminAPI.Constants;
 using allonbiz.AdminAPI.DTOs.Common;
 using allonbiz.AdminAPI.DTOs.Shops;
 using allonbiz.AdminAPI.Filters;
+using allonbiz.AdminAPI.Helpers;
 using allonbiz.AdminAPI.Services.Interfaces;
 
 namespace allonbiz.AdminAPI.Controllers;
@@ -35,7 +36,7 @@ public class ShopsController : ControllerBase
         var shop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
         if (shop == null)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
 
         return Ok(ApiResponse<ShopDetailDto>.Ok(shop));
@@ -52,22 +53,22 @@ public class ShopsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
     }
 
     [HttpPost("{shopId:guid}/verify")]
     [RequirePermission(Permissions.ShopsApprove)]
-    public async Task<IActionResult> VerifyShop(Guid shopId)
+    public async Task<IActionResult> VerifyShop(Guid shopId, [FromBody] VerifyShopRequestDto dto)
     {
         try
         {
-            await _shopService.VerifyShopAsync(shopId, HttpContext.RequestAborted);
+            await _shopService.VerifyShopAsync(shopId, dto, HttpContext.RequestAborted);
             return Ok(ApiResponse<object?>.Ok(null, "Shop verified successfully."));
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
     }
 
@@ -82,7 +83,7 @@ public class ShopsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
     }
 
@@ -97,7 +98,7 @@ public class ShopsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
     }
 
@@ -112,7 +113,7 @@ public class ShopsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
     }
 }

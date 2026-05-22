@@ -46,8 +46,7 @@ class Shop {
           json['description']?.toString() ?? json['Description']?.toString(),
       address: json['address']?.toString() ?? json['Address']?.toString(),
       phoneNumber:
-          json['phoneNumber']?.toString() ??
-          json['PhoneNumber']?.toString(),
+          json['phoneNumber']?.toString() ?? json['PhoneNumber']?.toString(),
       email: json['email']?.toString() ?? json['Email']?.toString(),
       imageUrl: json['imageUrl']?.toString() ?? json['ImageUrl']?.toString(),
       latitude:
@@ -58,7 +57,8 @@ class Shop {
           (json['longitude'] as num?)?.toDouble() ??
           (json['Longitude'] as num?)?.toDouble() ??
           0.0,
-      offers: (rawOffers as List?)
+      offers:
+          (rawOffers as List?)
               ?.map((offer) => Offer.fromJson(Map<String, dynamic>.from(offer)))
               .toList() ??
           [],

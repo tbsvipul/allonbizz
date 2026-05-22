@@ -12,6 +12,7 @@ public class AdminReviewSummaryDto
 {
     public Guid ReviewId { get; set; }
     public string UserName { get; set; } = string.Empty;
+    public string? UserAvatarUrl { get; set; }
     public string ShopName { get; set; } = string.Empty;
     public int Rating { get; set; }
     public string? Comment { get; set; }

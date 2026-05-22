@@ -658,6 +658,7 @@ public class UserService : IUserService
                 ReviewId = r.ReviewId,
                 UserId = r.UserId,
                 UserFullName = $"{user.FirstName} {user.LastName}".Trim(),
+                UserAvatarUrl = user.ProfilePhotoData,
                 ShopId = r.ShopId,
                 ShopName = r.Shop != null ? r.Shop.Name : "Unknown",
                 OfferId = r.OfferId,
@@ -691,25 +692,28 @@ public class UserService : IUserService
             return null;
         }
 
-        var shops = await _db.Shops
+        var dbShops = await _db.Shops
             .AsNoTracking()
             .Include(s => s.Category)
             .Where(s => s.KeeperId == keeper.KeeperId)
             .OrderByDescending(s => s.CreatedAt)
-            .Select(s => new ShopSummaryDto
-            {
-                Id = s.ShopId,
-                Name = s.Name,
-                BusinessName = keeper.BusinessName,
-                Location = s.Address ?? "Unknown",
-                Category = s.Category != null ? s.Category.Name : "Uncategorized",
-                Status = s.IsActive ? "Active" : "Inactive",
-                IsVerified = s.IsVerified,
-                Latitude = s.Latitude,
-                Longitude = s.Longitude,
-                ImageUrl = s.ImageUrl
-            })
             .ToListAsync(ct);
+
+        var shops = dbShops.Select(s => new ShopSummaryDto
+        {
+            Id = s.ShopId,
+            Name = s.Name,
+            BusinessName = keeper.BusinessName,
+            Location = s.Address ?? "Unknown",
+            Category = s.Category != null ? s.Category.Name : "Uncategorized",
+            Status = s.IsActive ? "Active" : "Inactive",
+            IsVerified = s.IsVerified,
+            Latitude = s.Latitude,
+            Longitude = s.Longitude,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            RejectionReason = s.RejectionReason,
+            DeactivateReason = s.DeactivateReason
+        }).ToList();
 
         var offers = await _db.Offers
             .AsNoTracking()

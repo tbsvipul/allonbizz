@@ -151,9 +151,11 @@ public static class DatabaseMigrationBootstrapper
             UPDATE "Shops"
             SET "Amenities" = COALESCE("Amenities", ARRAY[]::text[]),
                 "Tags" = COALESCE("Tags", ARRAY[]::text[]),
+                "ShopImages" = COALESCE("ShopImages", ARRAY[]::bytea[]),
                 "UpdatedAt" = NOW()
             WHERE "Amenities" IS NULL
-               OR "Tags" IS NULL;
+               OR "Tags" IS NULL
+               OR "ShopImages" IS NULL;
             """,
             ct);
 

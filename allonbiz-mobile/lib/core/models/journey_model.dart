@@ -1,11 +1,34 @@
-// No imports needed for standard types
-
 enum JourneyType { destination, freeRoam }
+
+class JourneyPathPoint {
+  final double latitude;
+  final double longitude;
+
+  const JourneyPathPoint({required this.latitude, required this.longitude});
+
+  factory JourneyPathPoint.fromJson(Map<String, dynamic> json) {
+    return JourneyPathPoint(
+      latitude:
+          (json['latitude'] as num?)?.toDouble() ??
+          (json['lat'] as num?)?.toDouble() ??
+          0.0,
+      longitude:
+          (json['longitude'] as num?)?.toDouble() ??
+          (json['lng'] as num?)?.toDouble() ??
+          0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'latitude': latitude, 'longitude': longitude};
+  }
+}
 
 class JourneyModel {
   final String? id;
   final String userId;
   final String userEmail;
+  final String status;
   final JourneyType type;
   final double startLat;
   final double startLng;
@@ -19,11 +42,13 @@ class JourneyModel {
   final int duration; // seconds
   final List<String> shopsEncountered;
   final List<String> tags;
+  final List<JourneyPathPoint> pathPoints;
 
   JourneyModel({
     this.id,
     required this.userId,
     required this.userEmail,
+    this.status = '',
     required this.type,
     required this.startLat,
     required this.startLng,
@@ -37,26 +62,39 @@ class JourneyModel {
     this.duration = 0,
     this.shopsEncountered = const [],
     this.tags = const [],
+    this.pathPoints = const [],
   });
+
+  bool get isCompleted => endTimeDate != null;
 
   factory JourneyModel.fromJson(Map<String, dynamic> json, {String? id}) {
     return JourneyModel(
       id: id ?? json['id']?.toString() ?? json['journeyId']?.toString(),
       userId: json['userId']?.toString() ?? '',
       userEmail: json['userEmail'] ?? '',
-      type: JourneyType.values.byName(json['type'] ?? 'freeRoam'),
+      status: json['status']?.toString() ?? '',
+      type: _parseType(json['type']),
       startLat: (json['startLat'] as num?)?.toDouble() ?? 0.0,
       startLng: (json['startLng'] as num?)?.toDouble() ?? 0.0,
       endLat: (json['endLat'] as num?)?.toDouble(),
       endLng: (json['endLng'] as num?)?.toDouble(),
       startName: json['startName'],
       endName: json['endName'],
-      startTimeDate: _parseDate(json['startTimeDate'] ?? json['startTime']) ?? DateTime.now(),
+      startTimeDate:
+          _parseDate(json['startTimeDate'] ?? json['startTime']) ??
+          DateTime.now(),
       endTimeDate: _parseDate(json['endTimeDate'] ?? json['endTime']),
-      distance: (json['distance'] ?? 0.0).toDouble(),
-      duration: json['duration'] ?? 0,
-      shopsEncountered: List<String>.from(json['shopsEncountered'] ?? []),
-      tags: List<String>.from(json['tags'] ?? []),
+      distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
+      duration: (json['duration'] as num?)?.toInt() ?? 0,
+      shopsEncountered: List<String>.from(json['shopsEncountered'] ?? const []),
+      tags: List<String>.from(json['tags'] ?? const []),
+      pathPoints: (json['pathPoints'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (point) =>
+                JourneyPathPoint.fromJson(Map<String, dynamic>.from(point)),
+          )
+          .toList(growable: false),
     );
   }
 
@@ -65,6 +103,7 @@ class JourneyModel {
       if (id != null) 'id': id,
       'userId': userId,
       'userEmail': userEmail,
+      'status': status,
       'type': type.name,
       'startLat': startLat,
       'startLng': startLng,
@@ -74,11 +113,21 @@ class JourneyModel {
       'duration': duration,
       'shopsEncountered': shopsEncountered,
       'tags': tags,
+      'pathPoints': pathPoints.map((point) => point.toJson()).toList(),
       if (endLat != null) 'endLat': endLat,
       if (endLng != null) 'endLng': endLng,
       if (endName != null) 'endName': endName,
       if (endTimeDate != null) 'endTimeDate': endTimeDate!.toIso8601String(),
     };
+  }
+
+  static JourneyType _parseType(dynamic value) {
+    final normalized = value?.toString().trim().toLowerCase();
+    if (normalized == JourneyType.destination.name.toLowerCase()) {
+      return JourneyType.destination;
+    }
+
+    return JourneyType.freeRoam;
   }
 
   static DateTime? _parseDate(dynamic field) {

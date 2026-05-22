@@ -265,7 +265,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("ParentCategoryId");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ChatMessage", b =>
@@ -441,7 +441,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Favourites");
+                    b.ToTable("Favourites", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Journey", b =>
@@ -516,7 +516,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Journeys");
+                    b.ToTable("Journeys", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Keeper", b =>
@@ -614,7 +614,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Keepers");
+                    b.ToTable("Keepers", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperAuditSchedule", b =>
@@ -959,7 +959,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.NotificationDeliveryJob", b =>
@@ -1106,7 +1106,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("ShopId");
 
-                    b.ToTable("Offers");
+                    b.ToTable("Offers", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.PlatformRule", b =>
@@ -1180,7 +1180,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Redemptions");
+                    b.ToTable("Redemptions", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.RefreshToken", b =>
@@ -1270,7 +1270,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Reviews");
+                    b.ToTable("Reviews", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.RouteRecord", b =>
@@ -1366,7 +1366,8 @@ namespace allonbiz.AdminAPI.Migrations
                         .HasColumnType("bytea");
 
                     b.Property<string>("ImageUrl")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("ShopProfileImage");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -1399,6 +1400,12 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Property<string>("RejectionReason")
                         .HasColumnType("text");
 
+                    b.Property<List<string>>("ShopImages")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("ARRAY[]::text[]");
+
                     b.Property<List<string>>("Tags")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1414,7 +1421,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasIndex("KeeperId");
 
-                    b.ToTable("Shops");
+                    b.ToTable("Shops", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
@@ -1489,7 +1496,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasKey("TagId");
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.User", b =>
@@ -1575,7 +1582,7 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.UserReport", b =>

@@ -39,21 +39,21 @@ public class UserProfileController : ControllerBase
     public async Task<IActionResult> UploadPhoto(IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "File is required."));
+            return this.ValidationProblemResponse("File is required.", nameof(file));
 
         if (file.Length > 5 * 1024 * 1024) // 5MB limit
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "File size must be under 5MB."));
+            return this.ValidationProblemResponse("File size must be under 5MB.", nameof(file));
 
         var allowedMimeTypes = new[] { "image/jpeg", "image/png", "image/webp" };
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
         if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()) || !allowedExtensions.Contains(extension))
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Invalid file type. Only JPG, PNG, and WEBP images are allowed."));
+            return this.ValidationProblemResponse("Invalid file type. Only JPG, PNG, and WEBP images are allowed.", nameof(file));
 
         var userId = User.GetUserId();
         using var stream = file.OpenReadStream();
-        var url = await _profileService.UploadPhotoAsync(userId, stream, file.FileName);
+        var url = await _profileService.UploadPhotoAsync(userId, stream, file.ContentType);
         return Ok(ApiResponse<object>.Ok(new { photoUrl = url }));
     }
 
@@ -62,7 +62,7 @@ public class UserProfileController : ControllerBase
     public async Task<IActionResult> UpdateFcmToken([FromBody] UpdateFcmTokenDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Token))
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Token is required."));
+            return this.ValidationProblemResponse("Token is required.", nameof(dto.Token));
 
         var userId = User.GetUserId();
         await _profileService.UpdateFcmTokenAsync(userId, dto.Token);

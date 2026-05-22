@@ -28,6 +28,31 @@ public class RealTimeMetricsDto
     public bool RequestsPerMinuteAvailable { get; set; }
 }
 
+public class TrendingAdminOfferDto
+{
+    public Guid OfferId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public int CurrentRedemptions { get; set; }
+    public string ShopName { get; set; } = string.Empty;
+}
+
+public class TrendingAdminShopDto
+{
+    public Guid ShopId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int ReviewCount { get; set; }
+    public double AvgRating { get; set; }
+}
+
+public class TrendingAdminJourneyDto
+{
+    public Guid JourneyId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int LikesCount { get; set; }
+    public int ViewsCount { get; set; }
+    public int Score { get; set; }
+}
+
 public class CustomAnalyticsReportDto
 {
     public string Dataset { get; set; } = string.Empty;

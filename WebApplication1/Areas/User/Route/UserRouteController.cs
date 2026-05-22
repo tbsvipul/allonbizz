@@ -30,7 +30,7 @@ public class UserRouteController : ControllerBase
     public async Task<IActionResult> GetRouteOffers([FromQuery] Guid routeId)
     {
         if (routeId == Guid.Empty)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Valid routeId is required."));
+            return this.ValidationProblemResponse("Valid routeId is required.", nameof(routeId));
         var result = await _routeService.GetOffersAlongRouteAsync(routeId);
         return Ok(ApiResponse<List<OfferSummaryDto>>.Ok(result));
     }
@@ -40,7 +40,7 @@ public class UserRouteController : ControllerBase
     public async Task<IActionResult> OptimizeRoute([FromQuery] Guid routeId)
     {
         if (routeId == Guid.Empty)
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Valid routeId is required."));
+            return this.ValidationProblemResponse("Valid routeId is required.", nameof(routeId));
         var result = await _routeService.OptimizeRouteAsync(routeId);
         return Ok(ApiResponse<RouteResponseDto>.Ok(result));
     }
@@ -52,7 +52,7 @@ public class UserRouteController : ControllerBase
         var userId = User.GetUserId();
         var result = await _routeService.GetActiveRouteAsync(userId);
         if (result == null)
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "No active route found."));
+            return this.NotFoundProblemResponse("No active route found.");
         return Ok(ApiResponse<RouteResponseDto>.Ok(result));
     }
 

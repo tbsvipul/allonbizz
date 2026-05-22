@@ -139,7 +139,7 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
     final colorScheme = theme.colorScheme;
 
     final filteredTags = _getFilteredTags();
-    
+
     // In compact mode, show only 5 tags. In paginated mode, show visible count.
     final visibleTags = widget.isCompact
         ? filteredTags.take(5).toList()
@@ -210,24 +210,25 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
                             child: Center(
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation(AppColors.primary),
+                                valueColor: AlwaysStoppedAnimation(
+                                  AppColors.primary,
+                                ),
                               ),
                             ),
                           )
                         : showAddButton
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.add_circle_outline_rounded,
-                                  color: AppColors.primary,
-                                ),
-                                tooltip: "Add new tag '$queryText'",
-                                onPressed: _handleAddNewTag,
-                              ).animate().scale(
-                                  duration: 200.ms,
-                                  curve: Curves.easeOutBack,
-                                )
-                            : null,
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: AppColors.primary,
+                            ),
+                            tooltip: "Add new tag '$queryText'",
+                            onPressed: _handleAddNewTag,
+                          ).animate().scale(
+                            duration: 200.ms,
+                            curve: Curves.easeOutBack,
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -340,22 +341,24 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
   Widget _buildTagChip(TagModel tag) {
     final isSelected = widget.selectedInterests.contains(tag.name);
     return FilterChip(
-      label: Text(tag.name),
-      selected: isSelected,
-      onSelected: (_) => widget.onToggleInterest(tag.name),
-      avatar: Icon(
-        tag.icon,
-        size: 16,
-        color: isSelected ? Colors.white : AppColors.grey600,
-      ),
-      backgroundColor: tag.displayColor.withValues(alpha: 0.1),
-      selectedColor: tag.displayColor,
-      checkmarkColor: Colors.white,
-      labelStyle: AppTextStyles.labelSmall.copyWith(
-        color: isSelected ? Colors.white : AppColors.grey700,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-    ).animate(target: isSelected ? 1 : 0).scale(
+          label: Text(tag.name),
+          selected: isSelected,
+          onSelected: (_) => widget.onToggleInterest(tag.name),
+          avatar: Icon(
+            tag.icon,
+            size: 16,
+            color: isSelected ? Colors.white : AppColors.grey600,
+          ),
+          backgroundColor: tag.displayColor.withValues(alpha: 0.1),
+          selectedColor: tag.displayColor,
+          checkmarkColor: Colors.white,
+          labelStyle: AppTextStyles.labelSmall.copyWith(
+            color: isSelected ? Colors.white : AppColors.grey700,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        )
+        .animate(target: isSelected ? 1 : 0)
+        .scale(
           duration: 150.ms,
           begin: const Offset(0.95, 0.95),
           end: const Offset(1.0, 1.0),

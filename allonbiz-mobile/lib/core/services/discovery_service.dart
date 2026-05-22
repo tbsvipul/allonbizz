@@ -78,10 +78,7 @@ class DiscoveryService {
     try {
       final response = await _apiClient.post(
         '/public/tags',
-        body: {
-          'name': name,
-          'type': 'public',
-        },
+        body: {'name': name, 'type': 'public'},
       );
       final envelope = asJsonMap(response);
       final data = envelope['data'] ?? envelope['Data'];

@@ -31,7 +31,7 @@ public class UserSearchController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Search query is required."));
+            return this.ValidationProblemResponse("Search query is required.", nameof(query));
         }
 
         return Ok(ApiResponse<List<PlaceSearchResponseDto>>.Ok(await _placesService.SearchPlacesAsync(query)));
@@ -51,7 +51,7 @@ public class UserSearchController : ControllerBase
         var userId = User.GetUserId();
         if (dto.ShopId == null && dto.OfferId == null)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Either ShopId or OfferId is required."));
+            return this.ValidationProblemResponse("Either ShopId or OfferId is required.");
         }
 
         await _favouriteService.ToggleFavouriteAsync(userId, dto);
@@ -65,7 +65,7 @@ public class UserSearchController : ControllerBase
         var shop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
         if (shop == null)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
 
         return Ok(ApiResponse<ShopDetailDto>.Ok(shop));

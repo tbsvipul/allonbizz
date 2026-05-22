@@ -38,7 +38,9 @@ class JourneysRepository {
         },
       );
       final data = response['data'];
-      if (data == null || data['journeyId'] == null) throw const DatabaseFailure('Failed to start journey');
+      if (data == null || data['journeyId'] == null) {
+        throw const DatabaseFailure('Failed to start journey');
+      }
       return data['journeyId'].toString();
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);
@@ -93,14 +95,35 @@ class JourneysRepository {
     }
   }
 
-  Future<ApiPage<JourneyModel>> getJourneys({int page = 1, int pageSize = 10}) async {
+  Future<ApiPage<JourneyModel>> getJourneys({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
     try {
-      return _apiClient.getPage<JourneyModel>(
-        '/user/journeys?pageNumber=$page&pageSize=$pageSize',
-        parser: JourneyModel.fromJson,
-        options: ApiReadOptions(
-          cacheKey: 'journeys:page=$page:size=$pageSize',
-          ttl: const Duration(minutes: 5),
+      final journeys = await getJourneyHistory();
+      final safePage = page < 1 ? 1 : page;
+      final safePageSize = pageSize < 1 ? 10 : pageSize;
+      final startIndex = (safePage - 1) * safePageSize;
+      final endIndex = startIndex + safePageSize > journeys.length
+          ? journeys.length
+          : startIndex + safePageSize;
+
+      final items = startIndex >= journeys.length
+          ? const <JourneyModel>[]
+          : journeys.sublist(startIndex, endIndex);
+      final totalPages = journeys.isEmpty
+          ? 0
+          : (journeys.length / safePageSize).ceil();
+
+      return ApiPage<JourneyModel>(
+        items: items,
+        pagination: PaginationMeta(
+          page: safePage,
+          pageSize: safePageSize,
+          totalCount: journeys.length,
+          totalPages: totalPages,
+          hasNextPage: startIndex + safePageSize < journeys.length,
+          hasPreviousPage: safePage > 1,
         ),
       );
     } on ServerFailure catch (e) {
@@ -108,9 +131,73 @@ class JourneysRepository {
     }
   }
 
-  Future<List<dynamic>> getNearbyShops(String journeyId, double lat, double lng) async {
+  Future<List<JourneyModel>> getJourneyHistory() async {
     try {
-      final response = await _apiClient.get('/user/journeys/$journeyId/near?lat=$lat&lng=$lng');
+      return _apiClient.getList<JourneyModel>(
+        '/user/journeys',
+        parser: JourneyModel.fromJson,
+        options: const ApiReadOptions(
+          cacheKey: 'journeys:history',
+          ttl: Duration(minutes: 5),
+          decodeInBackground: true,
+        ),
+      );
+    } on ServerFailure catch (e) {
+      throw DatabaseFailure(e.message);
+    }
+  }
+
+  Future<List<JourneyModel>> getRecentJourneys({
+    int limit = 3,
+    bool completedOnly = false,
+  }) async {
+    if (limit <= 0) {
+      return const <JourneyModel>[];
+    }
+
+    final journeys = await getJourneyHistory();
+    final filteredJourneys = completedOnly
+        ? journeys.where((journey) => journey.isCompleted)
+        : journeys;
+    return filteredJourneys.take(limit).toList(growable: false);
+  }
+
+  Future<JourneyModel?> getActiveJourney() async {
+    final journeys = await getJourneyHistory();
+    for (final journey in journeys) {
+      if (!journey.isCompleted) {
+        return journey;
+      }
+    }
+
+    return null;
+  }
+
+  Future<JourneyModel> getJourneyDetail(String journeyId) async {
+    try {
+      return _apiClient.getObject<JourneyModel>(
+        '/user/journeys/$journeyId',
+        parser: JourneyModel.fromJson,
+        options: ApiReadOptions(
+          cacheKey: 'journey-detail:$journeyId',
+          ttl: const Duration(minutes: 5),
+          decodeInBackground: true,
+        ),
+      );
+    } on ServerFailure catch (e) {
+      throw DatabaseFailure(e.message);
+    }
+  }
+
+  Future<List<dynamic>> getNearbyShops(
+    String journeyId,
+    double lat,
+    double lng,
+  ) async {
+    try {
+      final response = await _apiClient.get(
+        '/user/journeys/$journeyId/near?lat=$lat&lng=$lng',
+      );
       return response['data'] ?? [];
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);

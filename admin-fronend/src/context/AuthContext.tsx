@@ -19,6 +19,7 @@ interface User {
   email: string;
   role: string;
   permissions: string[];
+  profilePhotoUrl?: string | null;
   is2FAEnabled?: boolean;
   lastLoginAt?: string | null;
 }

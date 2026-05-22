@@ -53,10 +53,11 @@ public interface IShopService {
     Task UpdateShopAsync(Guid shopId, UpdateShopRequestDto dto, CancellationToken ct = default);
     Task DeleteShopAsync(Guid shopId, CancellationToken ct = default);
     Task UpdateShopStatusAsync(Guid shopId, UpdateShopStatusDto dto, CancellationToken ct = default);
-    Task VerifyShopAsync(Guid shopId, CancellationToken ct = default);
+    Task VerifyShopAsync(Guid shopId, VerifyShopRequestDto dto, CancellationToken ct = default);
     Task UnverifyShopAsync(Guid shopId, CancellationToken ct = default);
     Task ApproveShopAsync(Guid shopId, CancellationToken ct = default);
     Task RejectShopAsync(Guid shopId, RejectShopRequestDto dto, CancellationToken ct = default);
+    Task ReapplyShopAsync(Guid shopId, CancellationToken ct = default);
     Task<List<ShopSummaryDto>> GetShopsByKeeperAsync(Guid keeperId, CancellationToken ct = default);
     Task AssignTagsAsync(Guid shopId, AssignTagsDto dto, CancellationToken ct = default);
 }

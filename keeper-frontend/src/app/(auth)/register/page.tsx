@@ -9,6 +9,103 @@ import { useToast } from '@/context/ToastContext';
 import { AuthHero } from '@/components/AuthHero';
 import { InlineNotice } from '@/components/InlineNotice';
 
+interface RegisterFormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  businessName: string;
+  businessLicense: string;
+  identityProofType: string;
+  identityProofNumber: string;
+  identityProofImage: File | null;
+  businessLicenseNumber: string;
+  businessLicenseImage: File | null;
+  gstCertificateImage: File | null;
+  panCardImage: File | null;
+  addressProofType: string;
+  addressProofImage: File | null;
+  shopFrontImage: File | null;
+  shopInsideImage: File | null;
+}
+
+type RegisterFileField =
+  | 'identityProofImage'
+  | 'businessLicenseImage'
+  | 'gstCertificateImage'
+  | 'panCardImage'
+  | 'addressProofImage'
+  | 'shopFrontImage'
+  | 'shopInsideImage';
+
+function FileUploadField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: File | null;
+  onChange: (files: FileList | null) => void;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <div
+        className="upload-dropzone"
+        style={{
+          border: '2px dashed var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '1.25rem',
+          textAlign: 'center',
+          background: 'var(--field-bg)',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          position: 'relative',
+        }}
+      >
+        <input
+          id={id}
+          type="file"
+          accept="image/*"
+          onChange={(event) => onChange(event.target.files)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            opacity: 0,
+            cursor: 'pointer',
+          }}
+        />
+        {value ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '0.85rem' }}>Selected</span>
+            <span className="tiny-text muted-text" style={{ wordBreak: 'break-all' }}>{value.name}</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--text-muted)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span className="tiny-text muted-text">Click or drag image file</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const { login } = useAuth();
   const { showToast } = useToast();
@@ -16,37 +113,31 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RegisterFormState>({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
     businessName: '',
     businessLicense: '',
-    
     identityProofType: 'Aadhaar Card',
     identityProofNumber: '',
-    identityProofImage: null as File | null,
-
+    identityProofImage: null,
     businessLicenseNumber: '',
-    businessLicenseImage: null as File | null,
-
-    gstCertificateImage: null as File | null,
-
-    panCardImage: null as File | null,
-
+    businessLicenseImage: null,
+    gstCertificateImage: null,
+    panCardImage: null,
     addressProofType: 'Electricity Bill',
-    addressProofImage: null as File | null,
-
-    shopFrontImage: null as File | null,
-    shopInsideImage: null as File | null,
+    addressProofImage: null,
+    shopFrontImage: null,
+    shopInsideImage: null,
   });
 
-  function updateField<Key extends keyof typeof form>(key: Key, value: typeof form[Key]) {
+  function updateField<Key extends keyof RegisterFormState>(key: Key, value: RegisterFormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function handleFileChange(key: keyof typeof form, files: FileList | null) {
+  function handleFileChange(key: RegisterFileField, files: FileList | null) {
     if (files && files.length > 0) {
       updateField(key, files[0]);
     }
@@ -54,12 +145,27 @@ export default function RegisterPage() {
 
   function validateStep(currentStep: number): boolean {
     if (currentStep === 1) {
-      if (!form.firstName.trim()) { setError('First name is required'); return false; }
-      if (!form.lastName.trim()) { setError('Last name is required'); return false; }
-      if (!form.email.trim()) { setError('Email is required'); return false; }
-      if (!form.password || form.password.length < 8) { setError('Password must be at least 8 characters'); return false; }
+      if (!form.firstName.trim()) {
+        setError('First name is required');
+        return false;
+      }
+      if (!form.lastName.trim()) {
+        setError('Last name is required');
+        return false;
+      }
+      if (!form.email.trim()) {
+        setError('Email is required');
+        return false;
+      }
+      if (!form.password || form.password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return false;
+      }
     } else if (currentStep === 2) {
-      if (!form.businessName.trim()) { setError('Business name is required'); return false; }
+      if (!form.businessName.trim()) {
+        setError('Business name is required');
+        return false;
+      }
       if (form.businessLicenseNumber && !form.businessLicenseImage) {
         setError('Please upload the Business License Image when Business License Number is provided');
         return false;
@@ -74,24 +180,27 @@ export default function RegisterPage() {
         return false;
       }
     }
+
     setError('');
     return true;
   }
 
   function nextStep() {
     if (validateStep(step)) {
-      setStep((s) => s + 1);
+      setStep((currentStep) => currentStep + 1);
     }
   }
 
   function prevStep() {
     setError('');
-    setStep((s) => s - 1);
+    setStep((currentStep) => currentStep - 1);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!validateStep(step)) return;
+    if (step < 4 || !validateStep(step)) {
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -103,11 +212,11 @@ export default function RegisterPage() {
       formData.append('email', form.email.trim());
       formData.append('password', form.password);
       formData.append('businessName', form.businessName.trim());
-      
+
       if (form.businessLicense) {
         formData.append('businessLicense', form.businessLicense.trim());
       }
-      
+
       if (form.identityProofType) {
         formData.append('identityProofType', form.identityProofType);
       }
@@ -168,73 +277,6 @@ export default function RegisterPage() {
     }
   }
 
-  // File Upload Helper Component
-  const FileUploadField = ({ 
-    id, 
-    label, 
-    value, 
-    onChange 
-  }: { 
-    id: string; 
-    label: string; 
-    value: File | null; 
-    onChange: (files: FileList | null) => void 
-  }) => (
-    <div className="field">
-      <label>{label}</label>
-      <div 
-        className="upload-dropzone" 
-        style={{
-          border: '2px dashed var(--border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '1.25rem',
-          textAlign: 'center',
-          background: 'var(--field-bg)',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          position: 'relative'
-        }}
-      >
-        <input 
-          id={id}
-          type="file" 
-          accept="image/*"
-          onChange={(e) => onChange(e.target.files)}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            opacity: 0,
-            cursor: 'pointer'
-          }}
-        />
-        {value ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-            <span style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '0.85rem' }}>✓ Selected</span>
-            <span className="tiny-text muted-text" style={{ wordBreak: 'break-all' }}>{value.name}</span>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-            <svg 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="var(--text-muted)" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span className="tiny-text muted-text">Click or drag image file</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div className="auth-grid">
       <AuthHero
@@ -252,23 +294,27 @@ export default function RegisterPage() {
       <section className="auth-card" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'grid', gap: '0.45rem' }}>
           <h2>Register as Keeper</h2>
-          <p className="muted-text">Step {step} of 4: {
-            step === 1 ? 'Owner Info' :
-            step === 2 ? 'Business Details' :
-            step === 3 ? 'Identity & Address' : 'Taxes & Shop Images'
-          }</p>
-          
-          {/* Stepped Progress Bar */}
+          <p className="muted-text">
+            Step {step} of 4:{' '}
+            {step === 1
+              ? 'Owner Info'
+              : step === 2
+                ? 'Business Details'
+                : step === 3
+                  ? 'Identity & Address'
+                  : 'Taxes & Shop Images'}
+          </p>
+
           <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            {[1, 2, 3, 4].map((i) => (
-              <div 
-                key={i} 
+            {[1, 2, 3, 4].map((progressStep) => (
+              <div
+                key={progressStep}
                 style={{
                   flex: 1,
                   height: '6px',
                   borderRadius: '3px',
-                  background: i <= step ? 'linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%)' : 'var(--border)',
-                  transition: 'background 0.3s ease'
+                  background: progressStep <= step ? 'linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%)' : 'var(--border)',
+                  transition: 'background 0.3s ease',
                 }}
               />
             ))}
@@ -277,8 +323,8 @@ export default function RegisterPage() {
 
         {error ? <InlineNotice tone="error" message={error} /> : null}
 
-        <form className="form-stack" onSubmit={(e) => e.preventDefault()}>
-          {step === 1 && (
+        <form className="form-stack" onSubmit={handleSubmit}>
+          {step === 1 ? (
             <div className="field-stack">
               <div className="field-grid">
                 <div className="field">
@@ -308,9 +354,9 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-          )}
+          ) : null}
 
-          {step === 2 && (
+          {step === 2 ? (
             <div className="field-stack">
               <div className="field">
                 <label htmlFor="businessName">Business name</label>
@@ -327,17 +373,17 @@ export default function RegisterPage() {
                   <label htmlFor="businessLicenseNumber">License number</label>
                   <input id="businessLicenseNumber" value={form.businessLicenseNumber} onChange={(event) => updateField('businessLicenseNumber', event.target.value)} />
                 </div>
-                <FileUploadField 
-                  id="businessLicenseImage" 
-                  label="License certificate" 
-                  value={form.businessLicenseImage} 
-                  onChange={(files) => handleFileChange('businessLicenseImage', files)} 
+                <FileUploadField
+                  id="businessLicenseImage"
+                  label="License certificate"
+                  value={form.businessLicenseImage}
+                  onChange={(files) => handleFileChange('businessLicenseImage', files)}
                 />
               </div>
             </div>
-          )}
+          ) : null}
 
-          {step === 3 && (
+          {step === 3 ? (
             <div className="field-stack">
               <div className="field-grid">
                 <div className="field">
@@ -345,7 +391,7 @@ export default function RegisterPage() {
                   <select id="identityProofType" value={form.identityProofType} onChange={(event) => updateField('identityProofType', event.target.value)}>
                     <option value="Aadhaar Card">Aadhaar Card</option>
                     <option value="Passport">Passport</option>
-                    <option value="Driver's License">Driver's License</option>
+                    <option value="Driver's License">Driver&apos;s License</option>
                     <option value="Voter ID">Voter ID</option>
                   </select>
                 </div>
@@ -354,12 +400,12 @@ export default function RegisterPage() {
                   <input id="identityProofNumber" value={form.identityProofNumber} onChange={(event) => updateField('identityProofNumber', event.target.value)} />
                 </div>
               </div>
-              
-              <FileUploadField 
-                id="identityProofImage" 
-                label="Identity proof image" 
-                value={form.identityProofImage} 
-                onChange={(files) => handleFileChange('identityProofImage', files)} 
+
+              <FileUploadField
+                id="identityProofImage"
+                label="Identity proof image"
+                value={form.identityProofImage}
+                onChange={(files) => handleFileChange('identityProofImage', files)}
               />
 
               <div className="field">
@@ -372,63 +418,62 @@ export default function RegisterPage() {
                 </select>
               </div>
 
-              <FileUploadField 
-                id="addressProofImage" 
-                label="Address proof image" 
-                value={form.addressProofImage} 
-                onChange={(files) => handleFileChange('addressProofImage', files)} 
+              <FileUploadField
+                id="addressProofImage"
+                label="Address proof image"
+                value={form.addressProofImage}
+                onChange={(files) => handleFileChange('addressProofImage', files)}
               />
             </div>
-          )}
+          ) : null}
 
-          {step === 4 && (
+          {step === 4 ? (
             <div className="field-stack">
               <div className="field-grid">
-                <FileUploadField 
-                  id="gstCertificateImage" 
-                  label="GST Certificate" 
-                  value={form.gstCertificateImage} 
-                  onChange={(files) => handleFileChange('gstCertificateImage', files)} 
+                <FileUploadField
+                  id="gstCertificateImage"
+                  label="GST Certificate"
+                  value={form.gstCertificateImage}
+                  onChange={(files) => handleFileChange('gstCertificateImage', files)}
                 />
-                <FileUploadField 
-                  id="panCardImage" 
-                  label="PAN Card Image" 
-                  value={form.panCardImage} 
-                  onChange={(files) => handleFileChange('panCardImage', files)} 
+                <FileUploadField
+                  id="panCardImage"
+                  label="PAN Card Image"
+                  value={form.panCardImage}
+                  onChange={(files) => handleFileChange('panCardImage', files)}
                 />
               </div>
 
               <div className="field-grid">
-                <FileUploadField 
-                  id="shopFrontImage" 
-                  label="Shop Front Image" 
-                  value={form.shopFrontImage} 
-                  onChange={(files) => handleFileChange('shopFrontImage', files)} 
+                <FileUploadField
+                  id="shopFrontImage"
+                  label="Shop Front Image"
+                  value={form.shopFrontImage}
+                  onChange={(files) => handleFileChange('shopFrontImage', files)}
                 />
-                <FileUploadField 
-                  id="shopInsideImage" 
-                  label="Shop Inside Image" 
-                  value={form.shopInsideImage} 
-                  onChange={(files) => handleFileChange('shopInsideImage', files)} 
+                <FileUploadField
+                  id="shopInsideImage"
+                  label="Shop Inside Image"
+                  value={form.shopInsideImage}
+                  onChange={(files) => handleFileChange('shopInsideImage', files)}
                 />
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Form Action Buttons */}
           <div className="button-row" style={{ marginTop: '1.25rem' }}>
-            {step > 1 && (
+            {step > 1 ? (
               <button type="button" className="button-secondary" onClick={prevStep} style={{ flex: 1 }}>
                 Back
               </button>
-            )}
-            
+            ) : null}
+
             {step < 4 ? (
               <button type="button" className="button" onClick={nextStep} style={{ flex: 2 }}>
                 Next Step
               </button>
             ) : (
-              <button type="button" className="button" onClick={(e) => handleSubmit(e as any)} disabled={loading} style={{ flex: 2 }}>
+              <button type="submit" className="button" disabled={loading} style={{ flex: 2 }}>
                 {loading ? 'Submitting registration...' : 'Submit & Register'}
               </button>
             )}

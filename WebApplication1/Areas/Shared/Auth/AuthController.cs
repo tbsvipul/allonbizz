@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using allonbiz.AdminAPI.DTOs.Admin;
 using allonbiz.AdminAPI.DTOs.Auth;
 using allonbiz.AdminAPI.DTOs.Common;
+using allonbiz.AdminAPI.Helpers;
 using allonbiz.AdminAPI.Services.Interfaces;
 
 namespace allonbiz.AdminAPI.Controllers;
@@ -70,7 +71,7 @@ public class AuthController : ControllerBase
         var resetToken = await _authService.ValidateOtpAsync(dto.Email, dto.Otp);
         return resetToken is not null
             ? Ok(ApiResponse<OtpValidationResponseDto>.Ok(new OtpValidationResponseDto { ResetToken = resetToken }, "OTP verified"))
-            : BadRequest(ApiResponse<object>.Fail("AUTH001", "Invalid or expired OTP"));
+            : this.ValidationProblemResponse("Invalid or expired OTP.", nameof(dto.Otp));
     }
 
     [HttpPost("reset-password")]

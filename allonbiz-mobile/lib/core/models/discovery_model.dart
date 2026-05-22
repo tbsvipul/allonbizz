@@ -139,7 +139,12 @@ class TagModel {
   final String? color;
   final int iconCode;
 
-  TagModel({required this.id, required this.name, this.color, required this.iconCode});
+  TagModel({
+    required this.id,
+    required this.name,
+    this.color,
+    required this.iconCode,
+  });
 
   factory TagModel.fromJson(Map<String, dynamic> json, {String? id}) {
     return TagModel(

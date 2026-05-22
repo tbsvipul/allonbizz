@@ -2,12 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 
-final profileControllerProvider = StateNotifierProvider<ProfileController, ProfileState>((ref) {
-  return ProfileController(
-    profileRepository: ref.watch(profileRepositoryProvider),
-    ref: ref,
-  );
-});
+final profileControllerProvider =
+    StateNotifierProvider<ProfileController, ProfileState>((ref) {
+      return ProfileController(
+        profileRepository: ref.watch(profileRepositoryProvider),
+        ref: ref,
+      );
+    });
 
 class ProfileState {
   final bool isLoading;
@@ -16,10 +17,7 @@ class ProfileState {
   ProfileState({this.isLoading = false, this.error});
 
   ProfileState copyWith({bool? isLoading, String? error}) {
-    return ProfileState(
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
+    return ProfileState(isLoading: isLoading ?? this.isLoading, error: error);
   }
 }
 

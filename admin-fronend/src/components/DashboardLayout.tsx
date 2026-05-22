@@ -1,8 +1,10 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -16,7 +18,6 @@ import {
   X,
   Bell,
   Search,
-  ChevronRight,
   ShieldCheck,
   FolderTree,
   AlertCircle,
@@ -54,7 +55,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -120,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav style={{ flex: 1, padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           {visibleItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
                 <div
@@ -224,8 +228,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>{user ? `${user.firstName} ${user.lastName}`.trim() : ''}</p>
                 <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>{user?.role || ''}</p>
               </div>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'hsl(var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                {user?.firstName?.[0] || user?.email?.[0] || '?'}
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'hsl(var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, overflow: 'hidden' }}>
+                {user?.profilePhotoUrl ? (
+                  <img src={user.profilePhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  user?.firstName?.[0] || user?.email?.[0] || '?'
+                )}
               </div>
             </Link>
           </div>

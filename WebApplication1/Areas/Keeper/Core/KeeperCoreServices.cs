@@ -268,7 +268,11 @@ public class KeeperProfileService : IKeeperProfileService
             Email = NormalizeOptional(dto.Email),
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
-            ImageUrl = NormalizeOptional(dto.ImageUrl),
+            ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ImageUrl),
+            ShopImages = dto.ShopImages?
+                .Select(ImageConversionHelper.ParseBase64Image)
+                .OfType<byte[]>()
+                .ToList() ?? new List<byte[]>(),
             CategoryId = dto.CategoryId,
             IsOpen = dto.IsOpen,
             NotificationRadius = dto.NotificationRadius,
@@ -284,24 +288,27 @@ public class KeeperProfileService : IKeeperProfileService
 
     public async Task<List<ShopSummaryDto>> GetMyShopsAsync(Guid keeperId)
     {
-        return await _db.Shops
+        var shops = await _db.Shops
             .Include(s => s.Keeper)
             .Include(s => s.Category)
             .Where(s => s.KeeperId == keeperId)
-            .Select(s => new ShopSummaryDto
-            {
-                Id = s.ShopId,
-                Name = s.Name,
-                BusinessName = s.Keeper != null ? s.Keeper.BusinessName : "N/A",
-                Location = s.Address ?? "Unknown",
-                Category = s.Category != null ? s.Category.Name : "Uncategorized",
-                Status = s.IsActive ? "Active" : "Inactive",
-                IsVerified = s.IsVerified,
-                Latitude = s.Latitude,
-                Longitude = s.Longitude,
-                ImageUrl = s.ImageUrl
-            })
             .ToListAsync();
+
+        return shops.Select(s => new ShopSummaryDto
+        {
+            Id = s.ShopId,
+            Name = s.Name,
+            BusinessName = s.Keeper != null ? s.Keeper.BusinessName : "N/A",
+            Location = s.Address ?? "Unknown",
+            Category = s.Category != null ? s.Category.Name : "Uncategorized",
+            Status = s.IsActive ? "Active" : "Inactive",
+            IsVerified = s.IsVerified,
+            Latitude = s.Latitude,
+            Longitude = s.Longitude,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            RejectionReason = s.RejectionReason,
+            DeactivateReason = s.DeactivateReason
+        }).ToList();
     }
 
     public async Task SyncWithGoogleBusinessAsync(Guid shopId)

@@ -120,7 +120,8 @@ public class UsersController : ControllerBase
         var requiredPermission = ResolveBulkActionPermission(dto.Action);
         if (!User.HasPermission(requiredPermission))
         {
-            return Forbid();
+            return this.ForbiddenProblemResponse(
+                $"The authenticated principal does not have the required permission '{requiredPermission}'.");
         }
 
         await _userService.BulkActionAsync(dto, HttpContext.RequestAborted);

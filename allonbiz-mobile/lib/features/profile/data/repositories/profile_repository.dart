@@ -30,11 +30,14 @@ class ProfileRepository {
     String? phoneNumber,
   }) async {
     try {
-      await _apiClient.put('/user/profile', body: {
-        'firstName': firstName,
-        'lastName': lastName,
-        'phoneNumber': phoneNumber,
-      });
+      await _apiClient.put(
+        '/user/profile',
+        body: {
+          'firstName': firstName,
+          'lastName': lastName,
+          'phoneNumber': phoneNumber,
+        },
+      );
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);
     }

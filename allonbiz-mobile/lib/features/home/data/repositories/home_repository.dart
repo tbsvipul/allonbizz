@@ -26,10 +26,7 @@ final homeOffersProvider = StreamProvider<List<Offer>>((ref) {
     return repo.watchRecommendedOffers();
   }
 
-  return repo.watchNearbyOffers(
-    position.latitude,
-    position.longitude,
-  );
+  return repo.watchNearbyOffers(position.latitude, position.longitude);
 });
 
 final homeTagsProvider = StreamProvider<List<dynamic>>((ref) {

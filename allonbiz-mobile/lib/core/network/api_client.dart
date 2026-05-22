@@ -2,12 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
-    show
-        debugPrint,
-        kDebugMode,
-        kIsWeb,
-        kProfileMode,
-        visibleForTesting;
+    show debugPrint, kDebugMode, kIsWeb, kProfileMode, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -29,11 +24,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(baseUrl: baseUrl, storageService: storageService);
 });
 
-enum ApiCacheSource {
-  memory,
-  disk,
-  network,
-}
+enum ApiCacheSource { memory, disk, network }
 
 class ApiReadOptions {
   const ApiReadOptions({
@@ -114,10 +105,7 @@ class _MemoryCacheEntry {
 }
 
 class _DecodedPayload {
-  const _DecodedPayload({
-    required this.rawPayload,
-    required this.decodedBody,
-  });
+  const _DecodedPayload({required this.rawPayload, required this.decodedBody});
 
   final String rawPayload;
   final Object? decodedBody;
@@ -156,12 +144,12 @@ class ApiClient {
 
     httpClient.badCertificateCallback =
         (X509Certificate cert, String host, int port) {
-      if (kDebugMode || kProfileMode) {
-        final isLocalHost = BaseApi.isTrustedDevelopmentHost(host);
-        return isLocalHost;
-      }
-      return false;
-    };
+          if (kDebugMode || kProfileMode) {
+            final isLocalHost = BaseApi.isTrustedDevelopmentHost(host);
+            return isLocalHost;
+          }
+          return false;
+        };
 
     return IOClient(httpClient);
   }
@@ -373,9 +361,8 @@ class ApiClient {
   }) {
     return getParsed<List<T>>(
       endpoint,
-      parser: (response) => extractEnvelopeDataList(response)
-          .map(parser)
-          .toList(growable: false),
+      parser: (response) =>
+          extractEnvelopeDataList(response).map(parser).toList(growable: false),
       options: options,
     );
   }
@@ -387,9 +374,8 @@ class ApiClient {
   }) {
     return watchParsed<List<T>>(
       endpoint,
-      parser: (response) => extractEnvelopeDataList(response)
-          .map(parser)
-          .toList(growable: false),
+      parser: (response) =>
+          extractEnvelopeDataList(response).map(parser).toList(growable: false),
       options: options,
     );
   }
@@ -568,7 +554,11 @@ class ApiClient {
       }
     }
 
-    final requestFuture = _sendGetResponseUncached(endpoint, uri, isRetry: false);
+    final requestFuture = _sendGetResponseUncached(
+      endpoint,
+      uri,
+      isRetry: false,
+    );
     if (!dedupeInFlight) {
       return requestFuture;
     }
@@ -739,7 +729,8 @@ class ApiClient {
   }
 
   String _authScopeKey() {
-    final tokenSeed = storageService.backendRefreshToken ??
+    final tokenSeed =
+        storageService.backendRefreshToken ??
         storageService.backendAccessToken ??
         'anonymous';
     final encoded = base64UrlEncode(utf8.encode(tokenSeed));
@@ -769,8 +760,8 @@ class ApiClient {
     final networkMs = metrics.networkDuration.inMilliseconds;
     final decodeMs = metrics.decodeDuration.inMilliseconds;
     final parseMs = metrics.parseDuration.inMilliseconds;
-    final background = metrics.usedBackgroundDecode ||
-        metrics.usedBackgroundParse;
+    final background =
+        metrics.usedBackgroundDecode || metrics.usedBackgroundParse;
 
     // Lightweight observability for local profiling without pulling in
     // a full telemetry dependency.
@@ -804,7 +795,9 @@ class ApiClient {
     }
 
     if (fields != null && fields.isNotEmpty) {
-      debugPrint('[AuthApi] request-fields ${_logValue(_redactSensitive(fields))}');
+      debugPrint(
+        '[AuthApi] request-fields ${_logValue(_redactSensitive(fields))}',
+      );
       return;
     }
 

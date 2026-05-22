@@ -1,22 +1,51 @@
 import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes/app_router.dart';
+import '../../app/routes/app_routes.dart';
 import '../constants/app_colors.dart';
 
 class NotificationService {
+  NotificationService([this._ref]);
+
+  static const int activeJourneyNotificationId = 888;
+  static const String _dealsChannelId = 'deals_channel';
+  static const String _journeyChannelId = 'active_journey_channel';
+  static const String _backgroundJourneyChannelId = 'location_channel';
+  static const String _defaultJourneyTitle = 'Journey Active';
+  static const String _defaultJourneyBody =
+      'Your current journey is still running.';
+
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   final Ref? _ref;
-
-  NotificationService([this._ref]);
+  Future<void>? _initFuture;
+  bool _isInitialized = false;
 
   Future<void> init() async {
-    // Local notifications setup
+    if (_isInitialized) {
+      return;
+    }
+    if (_initFuture != null) {
+      return _initFuture!;
+    }
+
+    _initFuture = _initialize();
+    await _initFuture;
+  }
+
+  Future<void> _initialize() async {
+    if (kIsWeb) {
+      _isInitialized = true;
+      return;
+    }
+
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -33,9 +62,10 @@ class NotificationService {
         }
       },
     );
+
+    await _createNotificationChannels();
+    _isInitialized = true;
   }
-
-
 
   Future<void> showNotification({
     required int id,
@@ -43,8 +73,14 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await init();
+
     const androidDetails = AndroidNotificationDetails(
-      'deals_channel',
+      _dealsChannelId,
       'Nearby Deals',
       channelDescription:
           'Notifications for offers discovered along your route.',
@@ -57,57 +93,191 @@ class NotificationService {
       id,
       title,
       body,
-      const NotificationDetails(android: androidDetails),
+      const NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
       payload: payload,
     );
   }
 
-  /// Initialize + Start Background Service
-  Future<void> initBackgroundService() async {
+  Future<void> startJourneyTracking({
+    required String title,
+    required String body,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await init();
+    await showActiveJourneyNotification(title: title, body: body);
+    await initBackgroundService(title: title, body: body);
+  }
+
+  Future<void> updateJourneyTracking({
+    required String title,
+    required String body,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await init();
+    await showActiveJourneyNotification(title: title, body: body);
+
     final service = FlutterBackgroundService();
+    if (await service.isRunning()) {
+      service.invoke('updateJourneyNotification', {
+        'title': title,
+        'content': body,
+      });
+    }
+  }
+
+  Future<void> stopJourneyTracking() async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await init();
+    final service = FlutterBackgroundService();
+    if (await service.isRunning()) {
+      service.invoke('stopService');
+    }
+
+    await _notifications.cancel(activeJourneyNotificationId);
+  }
+
+  Future<void> showActiveJourneyNotification({
+    required String title,
+    required String body,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await init();
+    const androidDetails = AndroidNotificationDetails(
+      _journeyChannelId,
+      'Active Journey',
+      channelDescription:
+          'Persistent status for an active journey in progress.',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: true,
+      onlyAlertOnce: true,
+      autoCancel: false,
+      showWhen: false,
+      channelShowBadge: false,
+      color: AppColors.primary,
+    );
+
+    await _notifications.show(
+      activeJourneyNotificationId,
+      title,
+      body,
+      const NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: false,
+          presentSound: false,
+        ),
+      ),
+      payload: AppRoutes.navigate,
+    );
+  }
+
+  Future<void> initBackgroundService({
+    String title = _defaultJourneyTitle,
+    String body = _defaultJourneyBody,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await init();
+    final service = FlutterBackgroundService();
+    if (await service.isRunning()) {
+      service.invoke('updateJourneyNotification', {
+        'title': title,
+        'content': body,
+      });
+      return;
+    }
 
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
-        autoStart: true,
+        autoStart: false,
         isForegroundMode: true,
-        notificationChannelId: 'location_channel',
-        initialNotificationTitle: 'Locator',
-        initialNotificationContent: 'Tracking location for active trip...',
-        foregroundServiceNotificationId: 888,
+        notificationChannelId: _backgroundJourneyChannelId,
+        initialNotificationTitle: title,
+        initialNotificationContent: body,
+        foregroundServiceNotificationId: activeJourneyNotificationId,
         foregroundServiceTypes: [AndroidForegroundType.location],
       ),
       iosConfiguration: IosConfiguration(
-        autoStart: true,
+        autoStart: false,
         onForeground: onStart,
         onBackground: onIosBackground,
       ),
     );
 
-    // Start the service
     await service.startService();
+    service.invoke('updateJourneyNotification', {
+      'title': title,
+      'content': body,
+    });
+  }
+
+  Future<void> _createNotificationChannels() async {
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _journeyChannelId,
+        'Active Journey',
+        description: 'Persistent notifications for journeys in progress.',
+        importance: Importance.low,
+        playSound: false,
+      ),
+    );
+
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _backgroundJourneyChannelId,
+        'Location Tracking',
+        description: 'Used for background location and active journey status.',
+        importance: Importance.low,
+        playSound: false,
+        showBadge: false,
+      ),
+    );
   }
 }
 
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async => true;
 
-/// Background service entry point
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
-  // 1. MUST BE FIRST: Initialize plugin bridge for isolate
   DartPluginRegistrant.ensureInitialized();
-  // 2. MUST BE SECOND: Initialize Flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
 
+  String title = NotificationService._defaultJourneyTitle;
+  String content = NotificationService._defaultJourneyBody;
+
   if (service is AndroidServiceInstance) {
-    // Create the notification channel from Dart side
     final FlutterLocalNotificationsPlugin notificationsPlugin =
         FlutterLocalNotificationsPlugin();
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'location_channel',
+      NotificationService._backgroundJourneyChannelId,
       'Location Tracking',
-      description: 'Used for background location & trip tracking',
+      description: 'Used for background location and active journey status.',
       importance: Importance.low,
       playSound: false,
       enableVibration: false,
@@ -121,28 +291,38 @@ void onStart(ServiceInstance service) async {
         ?.createNotificationChannel(channel);
 
     await service.setAsForegroundService();
-    await service.setForegroundNotificationInfo(
-      title: 'Locator Active Trip',
-      content: 'Running in background',
-    );
+    await service.setForegroundNotificationInfo(title: title, content: content);
   }
 
-  // Periodic background logic (e.g., location/notification updates)
-  Timer? timer;
-  timer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+  service.on('updateJourneyNotification').listen((event) async {
+    title = event?['title']?.toString().trim().isNotEmpty == true
+        ? event!['title'].toString()
+        : NotificationService._defaultJourneyTitle;
+    content = event?['content']?.toString().trim().isNotEmpty == true
+        ? event!['content'].toString()
+        : NotificationService._defaultJourneyBody;
+
     if (service is AndroidServiceInstance) {
-      if (await service.isForegroundService()) {
-        await service.setForegroundNotificationInfo(
-          title: 'Locator Tracking Active',
-          content: 'Updated: ${DateTime.now().hour}:${DateTime.now().minute}',
-        );
-      }
+      await service.setForegroundNotificationInfo(
+        title: title,
+        content: content,
+      );
     }
   });
 
-  // Consolidate stop service logic
+  Timer? heartbeat;
+  heartbeat = Timer.periodic(const Duration(minutes: 1), (_) async {
+    if (service is AndroidServiceInstance &&
+        await service.isForegroundService()) {
+      await service.setForegroundNotificationInfo(
+        title: title,
+        content: content,
+      );
+    }
+  });
+
   service.on('stopService').listen((event) {
-    timer?.cancel();
+    heartbeat?.cancel();
     service.stopSelf();
   });
 }

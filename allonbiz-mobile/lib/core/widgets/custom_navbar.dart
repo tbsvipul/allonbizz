@@ -118,7 +118,9 @@ class CustomNavBar extends ConsumerWidget {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: isJourneyActive ? AppColors.error : AppColors.primary,
+                    color: isJourneyActive
+                        ? AppColors.error
+                        : AppColors.primary,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isDark ? AppColors.surfaceDark : AppColors.white,
@@ -126,14 +128,20 @@ class CustomNavBar extends ConsumerWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: (isJourneyActive ? AppColors.error : AppColors.primary).withValues(alpha: 0.3),
+                        color:
+                            (isJourneyActive
+                                    ? AppColors.error
+                                    : AppColors.primary)
+                                .withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Icon(
-                    isJourneyActive ? Icons.close_rounded : Icons.navigation_rounded,
+                    isJourneyActive
+                        ? Icons.close_rounded
+                        : Icons.navigation_rounded,
                     color: AppColors.white,
                     size: 32,
                   ),

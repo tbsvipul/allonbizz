@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../navigate/presentation/controllers/navigation_controller.dart';
 
 class NavigateCardWidget extends ConsumerWidget {
   const NavigateCardWidget({super.key, required this.l10n});
@@ -14,10 +15,14 @@ class NavigateCardWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationState = ref.watch(currentLocationProvider);
+    final navigationState = ref.watch(navigationControllerProvider);
+    final hasActiveJourney = navigationState.hasActiveJourney;
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: () => context.push(AppRoutes.search),
+      onTap: () => context.push(
+        hasActiveJourney ? AppRoutes.navigate : AppRoutes.search,
+      ),
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.lg),
         decoration: BoxDecoration(
@@ -38,7 +43,7 @@ class NavigateCardWidget extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.startJourney,
+                    hasActiveJourney ? 'Continue Journey' : l10n.startJourney,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.w700,
@@ -46,7 +51,11 @@ class NavigateCardWidget extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    l10n.discoverDealsDesc,
+                    hasActiveJourney
+                        ? (navigationState.isFreeRoam
+                              ? 'Exploration is active in the background.'
+                              : 'Your active trip is still running.')
+                        : l10n.discoverDealsDesc,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppColors.white.withValues(alpha: 0.85),
                     ),
@@ -75,7 +84,17 @@ class NavigateCardWidget extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            locationState.placeName ?? l10n.fetchingLocation,
+                            hasActiveJourney
+                                ? (navigationState
+                                              .destinationName
+                                              ?.isNotEmpty ==
+                                          true
+                                      ? navigationState.destinationName!
+                                      : navigationState.isFreeRoam
+                                      ? 'Exploring Nearby'
+                                      : 'Journey in progress')
+                                : (locationState.placeName ??
+                                      l10n.fetchingLocation),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: AppColors.white,
                             ),
@@ -91,7 +110,9 @@ class NavigateCardWidget extends ConsumerWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '?',
+                          hasActiveJourney
+                              ? (navigationState.isFreeRoam ? 'Active' : 'Open')
+                              : '?',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: AppColors.white.withValues(alpha: 0.7),
                           ),

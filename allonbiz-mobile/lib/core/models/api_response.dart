@@ -4,12 +4,7 @@ class ApiResponse<T> {
   final String? message;
   final ApiError? error;
 
-  ApiResponse({
-    required this.success,
-    this.data,
-    this.message,
-    this.error,
-  });
+  ApiResponse({required this.success, this.data, this.message, this.error});
 
   factory ApiResponse.fromJson(
     Map<String, dynamic> json,
@@ -29,11 +24,7 @@ class ApiError {
   final String message;
   final dynamic details;
 
-  ApiError({
-    required this.code,
-    required this.message,
-    this.details,
-  });
+  ApiError({required this.code, required this.message, this.details});
 
   factory ApiError.fromJson(Map<String, dynamic> json) {
     return ApiError(
@@ -48,18 +39,17 @@ class ApiPage<T> {
   final List<T> items;
   final PaginationMeta pagination;
 
-  ApiPage({
-    required this.items,
-    required this.pagination,
-  });
+  ApiPage({required this.items, required this.pagination});
 
   factory ApiPage.fromJson(
     Map<String, dynamic> json,
     T Function(Object? json) fromJsonT,
   ) {
     // If the JSON is the top-level ApiResponse, look inside its 'data' field
-    final pagedData = json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : json;
-    
+    final pagedData = json['data'] is Map<String, dynamic>
+        ? json['data'] as Map<String, dynamic>
+        : json;
+
     final items = pagedData['data'] ?? pagedData['items'];
     final pagination = pagedData['pagination'];
 

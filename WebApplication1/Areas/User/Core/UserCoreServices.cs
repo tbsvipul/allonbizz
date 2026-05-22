@@ -76,9 +76,14 @@ public class UserProfileService : IUserProfileService
         }
     }
 
-    public async Task<string> UploadPhotoAsync(Guid userId, Stream photoStream, string fileName)
+    public async Task<string> UploadPhotoAsync(Guid userId, Stream photoStream, string contentType)
     {
-        var photoUrl = $"/uploads/profiles/{userId}_{fileName}";
+        using var memoryStream = new MemoryStream();
+        await photoStream.CopyToAsync(memoryStream);
+
+        var bytes = memoryStream.ToArray();
+        var normalizedContentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType.Trim();
+        var photoUrl = $"data:{normalizedContentType};base64,{Convert.ToBase64String(bytes)}";
         var user = await _db.Users.FindAsync(userId);
         if (user != null)
         {
@@ -100,7 +105,7 @@ public class UserProfileService : IUserProfileService
 
     public async Task<UserHomeDto> GetHomeDataAsync(Guid userId, double? lat, double? lng)
     {
-        var trending = await _db.Offers
+        var trendingOffers = await _db.Offers
             .AsNoTracking()
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
@@ -108,26 +113,27 @@ public class UserProfileService : IUserProfileService
             .Where(o => o.IsActive && o.Shop != null)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
-            .Select(o => new OfferSummaryDto
-            {
-                OfferId = o.OfferId,
-                Title = o.Title,
-                Description = o.Description,
-                ShopName = o.Shop!.Name,
-                Category = o.Category != null
-                    ? o.Category.Name
-                    : o.Shop.Category != null
-                        ? o.Shop.Category.Name
-                        : "General",
-                Address = o.Shop.Address,
-                Latitude = o.Shop.Latitude,
-                Longitude = o.Shop.Longitude,
-                ImageUrl = o.ImageUrl ?? o.Shop.ImageUrl,
-                DiscountPercentage = o.DiscountPercentage,
-                EndDate = o.EndDate,
-                Tags = o.Tags,
-            })
             .ToListAsync();
+
+        var trending = trendingOffers.Select(o => new OfferSummaryDto
+        {
+            OfferId = o.OfferId,
+            Title = o.Title,
+            Description = o.Description,
+            ShopName = o.Shop!.Name,
+            Category = o.Category != null
+                ? o.Category.Name
+                : o.Shop.Category != null
+                    ? o.Shop.Category.Name
+                    : "General",
+            Address = o.Shop.Address,
+            Latitude = o.Shop.Latitude,
+            Longitude = o.Shop.Longitude,
+            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl),
+            DiscountPercentage = o.DiscountPercentage,
+            EndDate = o.EndDate,
+            Tags = o.Tags,
+        }).ToList();
 
         List<Shop> nearby;
         if (lat.HasValue && lng.HasValue)
@@ -216,7 +222,7 @@ public class UserProfileService : IUserProfileService
                 DistanceKm = lat.HasValue && lng.HasValue && s.Latitude.HasValue && s.Longitude.HasValue
                     ? Math.Round(GeoHelper.CalculateDistanceKm(lat.Value, lng.Value, s.Latitude.Value, s.Longitude.Value), 2)
                     : 0,
-                ImageUrl = s.ImageUrl,
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
             }).ToList(),
             Categories = categories,
         };
@@ -246,33 +252,34 @@ public class RouteService : IRouteService
 
     public async Task<List<OfferSummaryDto>> GetOffersAlongRouteAsync(Guid routeId)
     {
-        return await _db.Offers
+        var offers = await _db.Offers
             .AsNoTracking()
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
             .Where(o => o.IsActive && o.Shop != null)
             .Take(100)
-            .Select(o => new OfferSummaryDto
-            {
-                OfferId = o.OfferId,
-                ShopId = o.ShopId,
-                Title = o.Title,
-                Description = o.Description,
-                ShopName = o.Shop!.Name,
-                Category = o.Category != null
-                    ? o.Category.Name
-                    : o.Shop.Category != null
-                        ? o.Shop.Category.Name
-                        : "General",
-                Address = o.Shop.Address,
-                Latitude = o.Shop.Latitude,
-                Longitude = o.Shop.Longitude,
-                ImageUrl = o.ImageUrl ?? o.Shop.ImageUrl,
-                DiscountPercentage = o.DiscountPercentage,
-                EndDate = o.EndDate,
-            })
             .ToListAsync();
+
+        return offers.Select(o => new OfferSummaryDto
+        {
+            OfferId = o.OfferId,
+            ShopId = o.ShopId,
+            Title = o.Title,
+            Description = o.Description,
+            ShopName = o.Shop!.Name,
+            Category = o.Category != null
+                ? o.Category.Name
+                : o.Shop.Category != null
+                    ? o.Shop.Category.Name
+                    : "General",
+            Address = o.Shop.Address,
+            Latitude = o.Shop.Latitude,
+            Longitude = o.Shop.Longitude,
+            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl),
+            DiscountPercentage = o.DiscountPercentage,
+            EndDate = o.EndDate,
+        }).ToList();
     }
 
     public async Task<RouteResponseDto> OptimizeRouteAsync(Guid routeId)
@@ -402,7 +409,7 @@ public class UserOfferService : IOfferService
                 Address = candidate.Shop.Address,
                 Latitude = candidate.Shop.Latitude,
                 Longitude = candidate.Shop.Longitude,
-                ImageUrl = candidate.Offer.ImageUrl ?? candidate.Shop.ImageUrl,
+                ImageUrl = candidate.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl),
                 DiscountPercentage = candidate.Offer.DiscountPercentage,
                 EndDate = candidate.Offer.EndDate,
                 Tags = candidate.Offer.Tags
@@ -430,7 +437,7 @@ public class UserOfferService : IOfferService
             ShopAddress = offer.Shop?.Address,
             Latitude = offer.Shop?.Latitude,
             Longitude = offer.Shop?.Longitude,
-            ImageUrl = offer.ImageUrl ?? offer.Shop?.ImageUrl,
+            ImageUrl = offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl),
             TermsAndConditions = offer.TermsAndConditions,
             DiscountPercentage = offer.DiscountPercentage,
             MinOrderValue = offer.MinOrderValue,
@@ -625,7 +632,7 @@ public class FavouriteService : IFavouriteService
                     Address = shop?.Address,
                     Latitude = shop?.Latitude,
                     Longitude = shop?.Longitude,
-                    ImageUrl = favourite.Offer.ImageUrl ?? shop?.ImageUrl,
+                    ImageUrl = favourite.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl),
                     DiscountPercentage = favourite.Offer.DiscountPercentage,
                     EndDate = favourite.Offer.EndDate,
                     IsVerified = shop?.IsVerified ?? false,
@@ -644,7 +651,7 @@ public class FavouriteService : IFavouriteService
                 Address = shopOnly?.Address,
                 Latitude = shopOnly?.Latitude,
                 Longitude = shopOnly?.Longitude,
-                ImageUrl = shopOnly?.ImageUrl,
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(shopOnly?.ImageUrl),
                 IsVerified = shopOnly?.IsVerified ?? false,
                 SavedAt = favourite.CreatedAt
             };

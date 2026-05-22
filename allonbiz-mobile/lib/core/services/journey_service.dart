@@ -54,8 +54,8 @@ class JourneyService {
         await _apiClient.invalidateCacheByPrefix('journeys:');
         return res['data']['journeyId']?.toString();
       }
-    } catch (_) {
-      // Return a temporary local ID if needed? For now, just return null if fail.
+    } catch (e) {
+      debugPrint('Start journey failed: $e');
     }
     return null;
   }
@@ -84,7 +84,7 @@ class JourneyService {
     }
   }
 
-  Future<void> endJourney({
+  Future<bool> endJourney({
     required String journeyId,
     required double endLat,
     required double endLng,
@@ -106,8 +106,10 @@ class JourneyService {
         },
       );
       await _apiClient.invalidateCacheByPrefix('journeys:');
+      return true;
     } catch (e) {
       debugPrint('End journey failed: $e');
+      return false;
     }
   }
 
@@ -137,18 +139,31 @@ class JourneyService {
     }
   }
 
-  Stream<List<JourneyModel>> getUserJourneys() async* {
+  Future<List<JourneyModel>> fetchUserJourneys({bool useCache = true}) async {
     try {
-      final response = await _apiClient.get('/user/journeys');
-      if (_isSuccess(response) && response['data'] != null) {
-        final List<dynamic> list = response['data'];
-        yield list.map((json) => JourneyModel.fromJson(json)).toList();
-      } else {
-        yield [];
-      }
+      return _apiClient.getParsed<List<JourneyModel>>(
+        '/user/journeys',
+        parser: (response) => extractEnvelopeDataList(
+          response,
+        ).map(JourneyModel.fromJson).toList(growable: false),
+        options: useCache
+            ? const ApiReadOptions(
+                cacheKey: 'journeys:history',
+                ttl: Duration(minutes: 5),
+                decodeInBackground: true,
+              )
+            : const ApiReadOptions(
+                decodeInBackground: true,
+                dedupeInFlight: false,
+              ),
+      );
     } catch (_) {
-      yield [];
+      return const <JourneyModel>[];
     }
+  }
+
+  Stream<List<JourneyModel>> getUserJourneys() async* {
+    yield await fetchUserJourneys();
   }
 
   bool _isSuccess(dynamic response) {

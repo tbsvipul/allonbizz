@@ -14,10 +14,7 @@ Future<void> main() async {
   final container = ProviderContainer();
 
   // Parallelize basic service initialization
-  await Future.wait([
-    dotenv.load(fileName: '.env'),
-    StorageService.init(),
-  ]);
+  await Future.wait([dotenv.load(fileName: '.env'), StorageService.init()]);
 
   // Set status bar style
   SystemChrome.setSystemUIOverlayStyle(
@@ -36,10 +33,7 @@ Future<void> main() async {
   ]);
 
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const allonbizApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const AllonbizApp()),
   );
 
   // Defer non-critical plugin setup until the first frame is visible.

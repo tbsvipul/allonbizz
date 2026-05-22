@@ -35,6 +35,9 @@ public interface IAnalyticsService {
     Task<JourneyAnalyticsResponseDto> GetJourneyAnalyticsAsync(AnalyticsRangeQueryDto? query, CancellationToken ct = default);
     Task<RevenueAnalyticsDto> GetRevenueAnalyticsAsync(AnalyticsRangeQueryDto? query, CancellationToken ct = default);
     Task<RealTimeMetricsDto> GetRealTimeMetricsAsync(CancellationToken ct = default);
+    Task<List<TrendingAdminOfferDto>> GetTrendingOffersAsync(CancellationToken ct = default);
+    Task<List<TrendingAdminShopDto>> GetTrendingShopsAsync(CancellationToken ct = default);
+    Task<List<TrendingAdminJourneyDto>> GetTrendingJourneysAsync(CancellationToken ct = default);
     Task<byte[]> GetPrebuiltReportCsvAsync(string reportType, AnalyticsRangeQueryDto? query, CancellationToken ct = default);
     Task<CustomAnalyticsReportDto> GenerateCustomReportAsync(GenerateCustomReportDto dto, CancellationToken ct = default);
     Task<byte[]> GenerateCustomReportCsvAsync(GenerateCustomReportDto dto, CancellationToken ct = default);

@@ -19,62 +19,63 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('SWR providers', () {
-    test('categoriesProvider emits cached data first and then fresh data', () async {
-      final service = _FakeDiscoveryService(
-        categoryStream: Stream<List<CategoryModel>>.fromIterable([
+    test(
+      'categoriesProvider emits cached data first and then fresh data',
+      () async {
+        final service = _FakeDiscoveryService(
+          categoryStream: Stream<List<CategoryModel>>.fromIterable([
+            [
+              CategoryModel(
+                id: '1',
+                label: 'Food',
+                iconCode: 0xe51c,
+                colorHex: '#FF0000',
+              ),
+            ],
+            [
+              CategoryModel(
+                id: '1',
+                label: 'Food',
+                iconCode: 0xe51c,
+                colorHex: '#FF0000',
+              ),
+              CategoryModel(
+                id: '2',
+                label: 'Cafe',
+                iconCode: 0xe362,
+                colorHex: '#00FF00',
+              ),
+            ],
+          ]),
+        );
+
+        final container = ProviderContainer(
+          overrides: [discoveryServiceProvider.overrideWithValue(service)],
+        );
+        addTearDown(container.dispose);
+
+        final emissions = await _collectDataEmissions(
+          container,
+          categoriesProvider,
+          expectedCount: 2,
+        );
+
+        expect(
+          emissions
+              .map((items) => items.map((item) => item.label).toList())
+              .toList(),
           [
-            CategoryModel(
-              id: '1',
-              label: 'Food',
-              iconCode: 0xe51c,
-              colorHex: '#FF0000',
-            ),
+            ['Food'],
+            ['Food', 'Cafe'],
           ],
-          [
-            CategoryModel(
-              id: '1',
-              label: 'Food',
-              iconCode: 0xe51c,
-              colorHex: '#FF0000',
-            ),
-            CategoryModel(
-              id: '2',
-              label: 'Cafe',
-              iconCode: 0xe362,
-              colorHex: '#00FF00',
-            ),
-          ],
-        ]),
-      );
-
-      final container = ProviderContainer(
-        overrides: [
-          discoveryServiceProvider.overrideWithValue(service),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final emissions = await _collectDataEmissions(
-        container,
-        categoriesProvider,
-        expectedCount: 2,
-      );
-
-      expect(
-        emissions.map((items) => items.map((item) => item.label).toList()).toList(),
-        [
-          ['Food'],
-          ['Food', 'Cafe'],
-        ],
-      );
-    });
+        );
+      },
+    );
 
     test('tagsProvider emits cached data first and then fresh data', () async {
       final service = _FakeDiscoveryService(
         tagStream: Stream<List<TagModel>>.fromIterable([
-          [
-            TagModel(id: '1', name: 'Coffee', iconCode: 0xe362),
-          ],
+          [TagModel(id: '1', name: 'Coffee', iconCode: 0xe362)],
           [
             TagModel(id: '1', name: 'Coffee', iconCode: 0xe362),
             TagModel(id: '2', name: 'Breakfast', iconCode: 0xeb48),
@@ -83,9 +84,7 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [
-          discoveryServiceProvider.overrideWithValue(service),
-        ],
+        overrides: [discoveryServiceProvider.overrideWithValue(service)],
       );
       addTearDown(container.dispose);
 
@@ -96,7 +95,9 @@ void main() {
       );
 
       expect(
-        emissions.map((items) => items.map((item) => item.name).toList()).toList(),
+        emissions
+            .map((items) => items.map((item) => item.name).toList())
+            .toList(),
         [
           ['Coffee'],
           ['Coffee', 'Breakfast'],
@@ -104,175 +105,201 @@ void main() {
       );
     });
 
-    test('dealsProvider uses the current location and emits cached then fresh offers', () async {
-      final repo = _FakeDealsRepository(
-        streamFactory: ({
-          double? lat,
-          double? lng,
-          double? radiusKm,
-          String? category,
-          List<String> tags = const [],
-        }) {
-          return Stream<List<Offer>>.fromIterable([
-            [_offer(id: '1', title: 'Cached Deal')],
-            [_offer(id: '1', title: 'Fresh Deal')],
-          ]);
-        },
-      );
+    test(
+      'dealsProvider uses the current location and emits cached then fresh offers',
+      () async {
+        final repo = _FakeDealsRepository(
+          streamFactory:
+              ({
+                double? lat,
+                double? lng,
+                double? radiusKm,
+                String? category,
+                List<String> tags = const [],
+              }) {
+                return Stream<List<Offer>>.fromIterable([
+                  [_offer(id: '1', title: 'Cached Deal')],
+                  [_offer(id: '1', title: 'Fresh Deal')],
+                ]);
+              },
+        );
 
-      final position = _position(latitude: 23.0225, longitude: 72.5714);
-      final container = ProviderContainer(
-        overrides: [
-          dealsRepositoryProvider.overrideWithValue(repo),
-          currentLocationProvider.overrideWith((ref) {
-            final notifier = CurrentLocationNotifier(_FakeLocationService(), ref);
-            notifier.state = CurrentLocationState(position: position);
-            return notifier;
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
+        final position = _position(latitude: 23.0225, longitude: 72.5714);
+        final container = ProviderContainer(
+          overrides: [
+            dealsRepositoryProvider.overrideWithValue(repo),
+            currentLocationProvider.overrideWith((ref) {
+              final notifier = CurrentLocationNotifier(
+                _FakeLocationService(),
+                ref,
+              );
+              notifier.state = CurrentLocationState(position: position);
+              return notifier;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final emissions = await _collectDataEmissions(
-        container,
-        dealsProvider,
-        expectedCount: 2,
-      );
+        final emissions = await _collectDataEmissions(
+          container,
+          dealsProvider,
+          expectedCount: 2,
+        );
 
-      expect(repo.lastLat, position.latitude);
-      expect(repo.lastLng, position.longitude);
-      expect(
-        emissions.map((items) => items.single.title).toList(),
-        ['Cached Deal', 'Fresh Deal'],
-      );
-    });
+        expect(repo.lastLat, position.latitude);
+        expect(repo.lastLng, position.longitude);
+        expect(emissions.map((items) => items.single.title).toList(), [
+          'Cached Deal',
+          'Fresh Deal',
+        ]);
+      },
+    );
 
-    test('homeOffersProvider uses recommended offers when location is unavailable', () async {
-      final repo = _FakeHomeRepository(
-        recommendedStream: Stream<List<Offer>>.fromIterable([
-          [_offer(id: '1', title: 'Cached Home Deal')],
-          [_offer(id: '1', title: 'Fresh Home Deal')],
-        ]),
-      );
+    test(
+      'homeOffersProvider uses recommended offers when location is unavailable',
+      () async {
+        final repo = _FakeHomeRepository(
+          recommendedStream: Stream<List<Offer>>.fromIterable([
+            [_offer(id: '1', title: 'Cached Home Deal')],
+            [_offer(id: '1', title: 'Fresh Home Deal')],
+          ]),
+        );
 
-      final container = ProviderContainer(
-        overrides: [
-          homeRepositoryProvider.overrideWithValue(repo),
-          currentLocationProvider.overrideWith((ref) {
-            final notifier = CurrentLocationNotifier(_FakeLocationService(), ref);
-            notifier.state = const CurrentLocationState(
-              position: null,
-              isLoading: false,
-            );
-            return notifier;
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            homeRepositoryProvider.overrideWithValue(repo),
+            currentLocationProvider.overrideWith((ref) {
+              final notifier = CurrentLocationNotifier(
+                _FakeLocationService(),
+                ref,
+              );
+              notifier.state = const CurrentLocationState(
+                position: null,
+                isLoading: false,
+              );
+              return notifier;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final emissions = await _collectDataEmissions(
-        container,
-        homeOffersProvider,
-        expectedCount: 2,
-      );
+        final emissions = await _collectDataEmissions(
+          container,
+          homeOffersProvider,
+          expectedCount: 2,
+        );
 
-      expect(repo.recommendedCalls, 1);
-      expect(repo.nearbyCalls, 0);
-      expect(
-        emissions.map((items) => items.single.title).toList(),
-        ['Cached Home Deal', 'Fresh Home Deal'],
-      );
-    });
+        expect(repo.recommendedCalls, 1);
+        expect(repo.nearbyCalls, 0);
+        expect(emissions.map((items) => items.single.title).toList(), [
+          'Cached Home Deal',
+          'Fresh Home Deal',
+        ]);
+      },
+    );
 
-    test('homeOffersProvider uses nearby offers when location is available', () async {
-      final repo = _FakeHomeRepository(
-        nearbyStream: Stream<List<Offer>>.fromIterable([
-          [_offer(id: '1', title: 'Cached Nearby Deal')],
-          [_offer(id: '1', title: 'Fresh Nearby Deal')],
-        ]),
-      );
+    test(
+      'homeOffersProvider uses nearby offers when location is available',
+      () async {
+        final repo = _FakeHomeRepository(
+          nearbyStream: Stream<List<Offer>>.fromIterable([
+            [_offer(id: '1', title: 'Cached Nearby Deal')],
+            [_offer(id: '1', title: 'Fresh Nearby Deal')],
+          ]),
+        );
 
-      final position = _position(latitude: 19.0760, longitude: 72.8777);
-      final container = ProviderContainer(
-        overrides: [
-          homeRepositoryProvider.overrideWithValue(repo),
-          currentLocationProvider.overrideWith((ref) {
-            final notifier = CurrentLocationNotifier(_FakeLocationService(), ref);
-            notifier.state = CurrentLocationState(position: position);
-            return notifier;
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
+        final position = _position(latitude: 19.0760, longitude: 72.8777);
+        final container = ProviderContainer(
+          overrides: [
+            homeRepositoryProvider.overrideWithValue(repo),
+            currentLocationProvider.overrideWith((ref) {
+              final notifier = CurrentLocationNotifier(
+                _FakeLocationService(),
+                ref,
+              );
+              notifier.state = CurrentLocationState(position: position);
+              return notifier;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final emissions = await _collectDataEmissions(
-        container,
-        homeOffersProvider,
-        expectedCount: 2,
-      );
+        final emissions = await _collectDataEmissions(
+          container,
+          homeOffersProvider,
+          expectedCount: 2,
+        );
 
-      expect(repo.recommendedCalls, 0);
-      expect(repo.nearbyCalls, 1);
-      expect(repo.lastLat, position.latitude);
-      expect(repo.lastLng, position.longitude);
-      expect(
-        emissions.map((items) => items.single.title).toList(),
-        ['Cached Nearby Deal', 'Fresh Nearby Deal'],
-      );
-    });
+        expect(repo.recommendedCalls, 0);
+        expect(repo.nearbyCalls, 1);
+        expect(repo.lastLat, position.latitude);
+        expect(repo.lastLng, position.longitude);
+        expect(emissions.map((items) => items.single.title).toList(), [
+          'Cached Nearby Deal',
+          'Fresh Nearby Deal',
+        ]);
+      },
+    );
 
-    test('featuredDealsProvider uses recommended offers when location is unavailable', () async {
-      final dealsRepo = _FakeDealsRepository(
-        streamFactory: ({
-          double? lat,
-          double? lng,
-          double? radiusKm,
-          String? category,
-          List<String> tags = const [],
-        }) {
-          return Stream<List<Offer>>.fromIterable([
-            [_offer(id: '1', title: 'Nearby Deal')],
-          ]);
-        },
-      );
-      final homeRepo = _FakeHomeRepository(
-        recommendedStream: Stream<List<Offer>>.fromIterable([
-          [_offer(id: '1', title: 'Cached Featured Deal')],
-          [_offer(id: '1', title: 'Fresh Featured Deal')],
-        ]),
-      );
+    test(
+      'featuredDealsProvider uses recommended offers when location is unavailable',
+      () async {
+        final dealsRepo = _FakeDealsRepository(
+          streamFactory:
+              ({
+                double? lat,
+                double? lng,
+                double? radiusKm,
+                String? category,
+                List<String> tags = const [],
+              }) {
+                return Stream<List<Offer>>.fromIterable([
+                  [_offer(id: '1', title: 'Nearby Deal')],
+                ]);
+              },
+        );
+        final homeRepo = _FakeHomeRepository(
+          recommendedStream: Stream<List<Offer>>.fromIterable([
+            [_offer(id: '1', title: 'Cached Featured Deal')],
+            [_offer(id: '1', title: 'Fresh Featured Deal')],
+          ]),
+        );
 
-      final container = ProviderContainer(
-        overrides: [
-          dealsRepositoryProvider.overrideWithValue(dealsRepo),
-          homeRepositoryProvider.overrideWithValue(homeRepo),
-          currentLocationProvider.overrideWith((ref) {
-            final notifier = CurrentLocationNotifier(_FakeLocationService(), ref);
-            notifier.state = const CurrentLocationState(
-              position: null,
-              isLoading: false,
-            );
-            return notifier;
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            dealsRepositoryProvider.overrideWithValue(dealsRepo),
+            homeRepositoryProvider.overrideWithValue(homeRepo),
+            currentLocationProvider.overrideWith((ref) {
+              final notifier = CurrentLocationNotifier(
+                _FakeLocationService(),
+                ref,
+              );
+              notifier.state = const CurrentLocationState(
+                position: null,
+                isLoading: false,
+              );
+              return notifier;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final emissions = await _collectDataEmissions(
-        container,
-        featuredDealsProvider,
-        expectedCount: 2,
-      );
+        final emissions = await _collectDataEmissions(
+          container,
+          featuredDealsProvider,
+          expectedCount: 2,
+        );
 
-      expect(homeRepo.recommendedCalls, 1);
-      expect(dealsRepo.watchOffersCalls, 0);
-      expect(dealsRepo.lastLat, isNull);
-      expect(dealsRepo.lastLng, isNull);
-      expect(
-        emissions.map((items) => items.single.title).toList(),
-        ['Cached Featured Deal', 'Fresh Featured Deal'],
-      );
-    });
+        expect(homeRepo.recommendedCalls, 1);
+        expect(dealsRepo.watchOffersCalls, 0);
+        expect(dealsRepo.lastLat, isNull);
+        expect(dealsRepo.lastLng, isNull);
+        expect(emissions.map((items) => items.single.title).toList(), [
+          'Cached Featured Deal',
+          'Fresh Featured Deal',
+        ]);
+      },
+    );
   });
 }
 
@@ -389,10 +416,7 @@ ApiClient _dummyApiClient() {
   );
 }
 
-Offer _offer({
-  required String id,
-  required String title,
-}) {
+Offer _offer({required String id, required String title}) {
   return Offer(
     id: id,
     title: title,
@@ -405,10 +429,7 @@ Offer _offer({
   );
 }
 
-Position _position({
-  required double latitude,
-  required double longitude,
-}) {
+Position _position({required double latitude, required double longitude}) {
   return Position(
     longitude: longitude,
     latitude: latitude,
@@ -432,19 +453,15 @@ Future<List<T>> _collectDataEmissions<T>(
   final completer = Completer<List<T>>();
 
   late final ProviderSubscription<AsyncValue<T>> subscription;
-  subscription = container.listen<AsyncValue<T>>(
-    provider,
-    (previous, next) {
-      next.whenData((value) {
-        values.add(value);
-        if (values.length >= expectedCount && !completer.isCompleted) {
-          completer.complete(List<T>.unmodifiable(values));
-          subscription.close();
-        }
-      });
-    },
-    fireImmediately: true,
-  );
+  subscription = container.listen<AsyncValue<T>>(provider, (previous, next) {
+    next.whenData((value) {
+      values.add(value);
+      if (values.length >= expectedCount && !completer.isCompleted) {
+        completer.complete(List<T>.unmodifiable(values));
+        subscription.close();
+      }
+    });
+  }, fireImmediately: true);
 
   return completer.future.timeout(const Duration(seconds: 5));
 }

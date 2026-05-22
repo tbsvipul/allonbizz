@@ -18,9 +18,7 @@ class SavedOffersScreen extends ConsumerWidget {
     final favsAsync = ref.watch(favouritesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Saved Items'),
-      ),
+      appBar: AppBar(title: const Text('Saved Items')),
       body: favsAsync.when(
         data: (favs) {
           if (favs.isEmpty) {
@@ -35,7 +33,10 @@ class SavedOffersScreen extends ConsumerWidget {
 
               if (type == 'offer' && fav.offerId != null) {
                 return ListTile(
-                  leading: const Icon(Icons.local_offer_rounded, color: AppColors.primary),
+                  leading: const Icon(
+                    Icons.local_offer_rounded,
+                    color: AppColors.primary,
+                  ),
                   title: Text(fav.title),
                   subtitle: Text(fav.subtitle),
                   onTap: () => context.push(
@@ -44,7 +45,10 @@ class SavedOffersScreen extends ConsumerWidget {
                 );
               } else if (type == 'shop' && fav.shopId != null) {
                 return ListTile(
-                  leading: const Icon(Icons.store_rounded, color: AppColors.secondary),
+                  leading: const Icon(
+                    Icons.store_rounded,
+                    color: AppColors.secondary,
+                  ),
                   title: Text(fav.title),
                   subtitle: Text(fav.address ?? fav.subtitle),
                   onTap: () => context.push(

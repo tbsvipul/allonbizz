@@ -68,7 +68,9 @@ class SearchSuggestionsList extends StatelessWidget {
               suggestion.description,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.labelSmall.copyWith(color: AppColors.grey500),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.grey500,
+              ),
             ),
             onTap: () => onSelect(suggestion),
           );

@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -136,6 +138,7 @@ interface OfferSummary {
 interface KeeperReview {
   reviewId: string;
   userName: string;
+  userAvatarUrl?: string | null;
   shopName: string;
   rating: number;
   comment?: string | null;
@@ -204,7 +207,7 @@ const getFullImageUrl = (path?: string | null) => {
         const realBase64 = btoa(binary);
         return `data:image/png;base64,${realBase64}`;
       }
-    } catch (e) {
+    } catch {
       // Ignore if it's not a valid base64 string or decode fails
     }
     // If it's a raw base64 string from a byte[] property
@@ -215,7 +218,7 @@ const getFullImageUrl = (path?: string | null) => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5247/api/v1';
     const origin = new URL(apiBaseUrl).origin;
     return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
-  } catch (e) {
+  } catch {
     return `http://localhost:5247${path.startsWith('/') ? '' : '/'}${path}`;
   }
 };
@@ -436,9 +439,14 @@ export default function UserProfilePage() {
                     justifyContent: 'center',
                     fontSize: '2rem',
                     fontWeight: 700,
+                    overflow: 'hidden',
                   }}
                 >
-                  {summary.firstName?.[0] || summary.email?.[0] || '?'}
+                  {summary.avatarUrl ? (
+                    <img src={summary.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    summary.firstName?.[0] || summary.email?.[0] || '?'
+                  )}
                 </div>
 
                 <div style={{ flex: 1, minWidth: '220px' }}>
@@ -966,11 +974,20 @@ export default function UserProfilePage() {
                       {keeper.shopReviews.map((review) => (
                         <div key={review.reviewId} style={{ padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div>
-                              <p style={{ fontWeight: 700 }}>{review.userName}</p>
-                              <p style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.25rem' }}>
-                                {review.shopName} | Rating {review.rating}/5
-                              </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'hsl(var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, overflow: 'hidden', flex: '0 0 auto' }}>
+                                {review.userAvatarUrl ? (
+                                  <img src={review.userAvatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                ) : (
+                                  review.userName?.[0] || '?'
+                                )}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontWeight: 700 }}>{review.userName}</p>
+                                <p style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.25rem' }}>
+                                  {review.shopName} | Rating {review.rating}/5
+                                </p>
+                              </div>
                             </div>
                             <span style={{ padding: '0.3rem 0.7rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, ...getStatusStyle(review.status) }}>
                               {review.status}

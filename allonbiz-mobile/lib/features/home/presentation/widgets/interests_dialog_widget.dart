@@ -6,6 +6,7 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../navigate/presentation/controllers/navigation_controller.dart';
 
 import '../../../../core/services/discovery_service.dart';
@@ -23,6 +24,7 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
   final _searchController = TextEditingController();
   final List<String> _selectedTags = [];
   final List<TagModel> _customTags = [];
+  bool _isStartingJourney = false;
 
   @override
   void initState() {
@@ -98,7 +100,8 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
       ),
-      backgroundColor: theme.dialogTheme.backgroundColor ?? colorScheme.surfaceContainerHigh,
+      backgroundColor:
+          theme.dialogTheme.backgroundColor ?? colorScheme.surfaceContainerHigh,
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.lg),
         child: Column(
@@ -116,10 +119,10 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
               hint: 'Enter interest (e.g. Pizza)',
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: IconButton(
-                  icon: Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: colorScheme.primary,
-                  ),
+                icon: Icon(
+                  Icons.add_circle_outline_rounded,
+                  color: colorScheme.primary,
+                ),
                 onPressed: () => _addCustomTag(_searchController.text),
               ),
               onSubmitted: _addCustomTag,
@@ -138,9 +141,11 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
                   data: (tags) {
                     final query = _searchController.text.toLowerCase().trim();
                     var allChips = [...tags, ..._customTags];
-                    
+
                     if (query.isNotEmpty) {
-                      allChips = allChips.where((t) => t.name.toLowerCase().contains(query)).toList();
+                      allChips = allChips
+                          .where((t) => t.name.toLowerCase().contains(query))
+                          .toList();
                     }
 
                     return SizedBox(
@@ -217,24 +222,126 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
                 ),
             const SizedBox(height: AppDimensions.lg),
             ElevatedButton(
-              onPressed: () {
-                final query = _searchController.text.trim();
-                final currentPos = ref.read(currentLocationProvider).position;
-                final latLng = currentPos != null
-                    ? LatLng(currentPos.latitude, currentPos.longitude)
-                    : null;
+              onPressed: _isStartingJourney
+                  ? null
+                  : () async {
+                      if (_isStartingJourney) {
+                        return;
+                      }
 
-                ref
-                    .read(navigationControllerProvider.notifier)
-                    .startFreeRoam(
-                      interests: _selectedTags,
-                      query: query.isEmpty ? null : query,
-                      currentPosition: latLng,
-                    );
+                      setState(() {
+                        _isStartingJourney = true;
+                      });
 
-                Navigator.pop(context);
-                context.go(AppRoutes.navigate);
-              },
+                      final query = _searchController.text.trim();
+                      final locationNotifier = ref.read(
+                        currentLocationProvider.notifier,
+                      );
+                      var locationState = ref.read(currentLocationProvider);
+                      LatLng? latLng = locationState.position != null
+                          ? LatLng(
+                              locationState.position!.latitude,
+                              locationState.position!.longitude,
+                            )
+                          : null;
+                      final navigator = Navigator.of(context);
+                      final router = GoRouter.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.maybeOf(
+                        context,
+                      );
+
+                      try {
+                        await ref
+                            .read(navigationControllerProvider.notifier)
+                            .restoreActiveJourneyState(forceSync: true);
+
+                        if (!mounted) return;
+
+                        if (ref
+                            .read(navigationControllerProvider)
+                            .hasActiveJourney) {
+                          if (scaffoldMessenger != null) {
+                            AppSnackbar.showWithScaffoldMessenger(
+                              scaffoldMessenger,
+                              message:
+                                  'Complete your active journey before starting a new one.',
+                              type: AppSnackbarType.warning,
+                            );
+                          }
+                          if (navigator.mounted) {
+                            navigator.pop();
+                          }
+                          router.go(AppRoutes.navigate);
+                          return;
+                        }
+
+                        if (latLng == null) {
+                          await locationNotifier.fetchCurrentLocation(
+                            requestPermission: true,
+                            resolvePlaceName: false,
+                            forceRefresh: true,
+                          );
+                          locationState = ref.read(currentLocationProvider);
+                          final currentPos = locationState.position;
+                          if (currentPos != null) {
+                            latLng = LatLng(
+                              currentPos.latitude,
+                              currentPos.longitude,
+                            );
+                          }
+                        }
+
+                        if (latLng == null) {
+                          if (scaffoldMessenger != null) {
+                            AppSnackbar.showWithScaffoldMessenger(
+                              scaffoldMessenger,
+                              message:
+                                  locationState.errorMessage ??
+                                  'Turn on location access to start exploring nearby.',
+                              type: AppSnackbarType.warning,
+                            );
+                          }
+                          return;
+                        }
+
+                        final started = await ref
+                            .read(navigationControllerProvider.notifier)
+                            .startFreeRoam(
+                              interests: _selectedTags,
+                              query: query.isEmpty ? null : query,
+                              currentPosition: latLng,
+                            );
+
+                        if (!mounted) return;
+
+                        if (!started) {
+                          final message =
+                              ref
+                                  .read(navigationControllerProvider)
+                                  .errorMessage ??
+                              'Unable to start exploring right now. Please try again.';
+                          if (scaffoldMessenger != null) {
+                            AppSnackbar.showWithScaffoldMessenger(
+                              scaffoldMessenger,
+                              message: message,
+                              type: AppSnackbarType.error,
+                            );
+                          }
+                          return;
+                        }
+
+                        if (navigator.mounted) {
+                          navigator.pop();
+                        }
+                        router.go(AppRoutes.navigate);
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isStartingJourney = false;
+                          });
+                        }
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
@@ -243,12 +350,21 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
                   borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                 ),
               ),
-              child: const Text(
-                'Start Exploring',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _isStartingJourney
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(
+                          colorScheme.onPrimary,
+                        ),
+                      ),
+                    )
+                  : const Text(
+                      'Start Exploring',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ),
           ],
         ),

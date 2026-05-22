@@ -190,7 +190,6 @@ class AuthController extends StateNotifier<AuthState> {
       // If refresh fails due to 401, _repo already updates state to null
     }
   }
-
 }
 
 /// Riverpod provider for AuthController.

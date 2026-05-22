@@ -38,7 +38,7 @@ public class UserOffersController : ControllerBase
     {
         if (routeId == null || routeId == Guid.Empty)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Valid routeId is required."));
+            return this.ValidationProblemResponse("Valid routeId is required.", nameof(routeId));
         }
 
         var result = await _routeService.GetOffersAlongRouteAsync(routeId.Value);
@@ -74,7 +74,7 @@ public class UserOffersController : ControllerBase
     {
         if (dto.Rating < 1 || dto.Rating > 5)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Rating must be between 1 and 5."));
+            return this.ValidationProblemResponse("Rating must be between 1 and 5.", nameof(dto.Rating));
         }
 
         var userId = User.GetUserId();

@@ -1,9 +1,12 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
+import { readFilesAsDataUrls, resolveMediaSource } from '@/lib/media';
+import { getShopListingStatusLabel, getShopVerificationStatusLabel } from '@/lib/shop-status';
 import { CategoryTree, ShopDetail } from '@/lib/types';
 import { useToast } from '@/context/ToastContext';
 import { InlineNotice } from '@/components/InlineNotice';
@@ -22,6 +25,7 @@ interface ShopFormState {
   phoneNumber: string;
   email: string;
   imageUrl: string;
+  shopImages: string[];
   categoryId: string;
   latitude: string;
   longitude: string;
@@ -49,6 +53,7 @@ function toFormState(shop: ShopDetail | null): ShopFormState {
     phoneNumber: shop?.phoneNumber || '',
     email: shop?.email || '',
     imageUrl: shop?.imageUrl || '',
+    shopImages: shop?.shopImages || [],
     categoryId: shop?.categoryId || '',
     latitude: shop?.latitude != null ? String(shop.latitude) : '',
     longitude: shop?.longitude != null ? String(shop.longitude) : '',
@@ -68,6 +73,10 @@ function toNumberOrNull(value: string) {
   return Number(trimmed);
 }
 
+function hasOnlyImageFiles(files: File[]) {
+  return files.every((file) => file.type.startsWith('image/'));
+}
+
 export function ShopEditor({ shopId }: { shopId?: string }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -75,46 +84,63 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [reapplying, setReapplying] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   const [error, setError] = useState('');
   const [shop, setShop] = useState<ShopDetail | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [availableTags, setAvailableTags] = useState<{ tagId: string; name: string }[]>([]);
   const [form, setForm] = useState<ShopFormState>(toFormState(null));
-  
+
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [tagInputValue, setTagInputValue] = useState('');
+  const [activePreviewImage, setActivePreviewImage] = useState<string | null>(null);
 
   const categoryOptions = useMemo(() => categories, [categories]);
 
+  function updateField<Key extends keyof ShopFormState>(key: Key, value: ShopFormState[Key]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function setShopFromDetail(detail: ShopDetail | null) {
+    setShop(detail);
+    setForm(toFormState(detail));
+  }
+
+  async function fetchShopDetail(currentShopId: string) {
+    const shopResponse = await api.get(`/keeper/shop/${currentShopId}`);
+    return unwrapApiData<ShopDetail>(shopResponse);
+  }
+
   const handleAddTag = (tagName: string) => {
-    const currentTags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
-    if (!currentTags.some(t => t.toLowerCase() === tagName.toLowerCase())) {
+    const currentTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+    if (!currentTags.some((tag) => tag.toLowerCase() === tagName.toLowerCase())) {
       updateField('tags', currentTags.length > 0 ? `${currentTags.join(', ')}, ${tagName}` : tagName);
     }
   };
 
   const handleRemoveTag = (tagName: string) => {
-    const currentTags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
-    const newTags = currentTags.filter(t => t.toLowerCase() !== tagName.toLowerCase());
-    updateField('tags', newTags.join(', '));
+    const currentTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+    const nextTags = currentTags.filter((tag) => tag.toLowerCase() !== tagName.toLowerCase());
+    updateField('tags', nextTags.join(', '));
   };
 
-  const selectedTags = useMemo(() => {
-    return form.tags.split(',').map((t) => t.trim()).filter(Boolean);
-  }, [form.tags]);
+  const selectedTags = useMemo(() => form.tags.split(',').map((tag) => tag.trim()).filter(Boolean), [form.tags]);
 
-  const availableTagsToDisplay = useMemo(() => {
-    return availableTags.filter(tag => !selectedTags.some(t => t.toLowerCase() === tag.name.toLowerCase()));
-  }, [availableTags, selectedTags]);
+  const availableTagsToDisplay = useMemo(
+    () => availableTags.filter((tag) => !selectedTags.some((selectedTag) => selectedTag.toLowerCase() === tag.name.toLowerCase())),
+    [availableTags, selectedTags],
+  );
 
-  const filteredModalTags = useMemo(() => {
-    return availableTagsToDisplay.filter(tag => tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase()));
-  }, [availableTagsToDisplay, tagSearchQuery]);
+  const filteredModalTags = useMemo(
+    () => availableTagsToDisplay.filter((tag) => tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())),
+    [availableTagsToDisplay, tagSearchQuery],
+  );
 
-  function updateField<Key extends keyof ShopFormState>(key: Key, value: ShopFormState[Key]) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
+  const verificationStatusLabel = getShopVerificationStatusLabel(shop?.verifyStatus, shop?.isVerified);
+  const listingStatusLabel = getShopListingStatusLabel(shop?.isActive ? 'Active' : 'Inactive', shop?.isActive);
 
   useEffect(() => {
     let active = true;
@@ -133,8 +159,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
 
         let nextShop: ShopDetail | null = null;
         if (shopId) {
-          const shopResponse = await api.get(`/keeper/shop/${shopId}`);
-          nextShop = unwrapApiData<ShopDetail>(shopResponse);
+          nextShop = await fetchShopDetail(shopId);
         }
 
         if (!active) {
@@ -143,8 +168,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
 
         setCategories(nextCategories);
         setAvailableTags(nextTags || []);
-        setShop(nextShop);
-        setForm(toFormState(nextShop));
+        setShopFromDetail(nextShop);
       } catch (err) {
         if (active) {
           setError(getApiErrorMessage(err, 'Unable to load the shop editor.'));
@@ -162,6 +186,77 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
       active = false;
     };
   }, [shopId]);
+
+  async function handleCoverImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+
+    if (files.length === 0) {
+      return;
+    }
+
+    if (!hasOnlyImageFiles(files)) {
+      setError('Only image files can be used for the shop cover.');
+      return;
+    }
+
+    setUploadingCover(true);
+    setError('');
+
+    try {
+      const [coverImage] = await readFilesAsDataUrls([files[0]]);
+      updateField('imageUrl', coverImage || '');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to read the selected cover image.'));
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  async function handleGalleryImagesChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+
+    if (files.length === 0) {
+      return;
+    }
+
+    if (!hasOnlyImageFiles(files)) {
+      setError('Only image files can be added to the shop gallery.');
+      return;
+    }
+
+    setUploadingGallery(true);
+    setError('');
+
+    try {
+      const nextImages = await readFilesAsDataUrls(files);
+      updateField('shopImages', [...form.shopImages, ...nextImages.filter(Boolean)]);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to read one or more selected gallery images.'));
+    } finally {
+      setUploadingGallery(false);
+    }
+  }
+
+  function removeGalleryImage(indexToRemove: number) {
+    updateField(
+      'shopImages',
+      form.shopImages.filter((_, index) => index !== indexToRemove),
+    );
+  }
+
+  function clearCoverImage() {
+    updateField('imageUrl', '');
+  }
+
+  function openImagePreview(image: string) {
+    setActivePreviewImage(resolveMediaSource(image));
+  }
+
+  function closeImagePreview() {
+    setActivePreviewImage(null);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,44 +282,42 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
         throw new Error('Notification radius must be a valid number greater than zero.');
       }
 
-      if (isEditing && shopId) {
-        await api.put(`/keeper/shop/${shopId}`, {
-          name: form.name.trim(),
-          description: form.description.trim() || null,
-          address: form.address.trim() || null,
-          phoneNumber: form.phoneNumber.trim() || null,
-          email: form.email.trim() || null,
-          imageUrl: form.imageUrl.trim() || null,
-          categoryId: form.categoryId || null,
-          latitude: toNumberOrNull(form.latitude),
-          longitude: toNumberOrNull(form.longitude),
-          isOpen: form.isOpen,
-          notificationRadius: toNumberOrNull(form.notificationRadius),
-          amenities: form.amenities.split(',').map((item) => item.trim()).filter(Boolean),
-          tags: form.tags.split(',').map((item) => item.trim()).filter(Boolean),
-        });
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        address: form.address.trim() || null,
+        phoneNumber: form.phoneNumber.trim() || null,
+        email: form.email.trim() || null,
+        imageUrl: form.imageUrl || null,
+        shopImages: form.shopImages,
+        categoryId: form.categoryId || null,
+        latitude: toNumberOrNull(form.latitude),
+        longitude: toNumberOrNull(form.longitude),
+        isOpen: form.isOpen,
+        notificationRadius: toNumberOrNull(form.notificationRadius),
+        amenities: form.amenities.split(',').map((item) => item.trim()).filter(Boolean),
+        tags: form.tags.split(',').map((item) => item.trim()).filter(Boolean),
+      };
 
-        showToast('Shop updated successfully.', 'success');
+      if (isEditing && shopId) {
+        await api.put(`/keeper/shop/${shopId}`, payload);
+        const refreshedShop = await fetchShopDetail(shopId);
+        setShopFromDetail(refreshedShop);
+        showToast(
+          String(shop?.verifyStatus || '').toLowerCase() === 'rejected'
+            ? 'Shop updated and sent back for review.'
+            : 'Shop updated successfully.',
+          'success',
+        );
       } else {
         const response = await api.post('/keeper/shop', {
-          name: form.name.trim(),
-          description: form.description.trim() || null,
+          ...payload,
           address: form.address.trim(),
-          phoneNumber: form.phoneNumber.trim() || null,
-          email: form.email.trim() || null,
-          latitude: toNumberOrNull(form.latitude),
-          longitude: toNumberOrNull(form.longitude),
-          imageUrl: form.imageUrl.trim() || null,
-          categoryId: form.categoryId || null,
-          isOpen: form.isOpen,
-          notificationRadius: toNumberOrNull(form.notificationRadius),
-          amenities: form.amenities.split(',').map((item) => item.trim()).filter(Boolean),
-          tags: form.tags.split(',').map((item) => item.trim()).filter(Boolean),
         });
 
-        const payload = unwrapApiData<{ shopId: string }>(response);
+        const created = unwrapApiData<{ shopId: string }>(response);
         showToast('Shop created successfully.', 'success');
-        router.replace(`/shops/${payload.shopId}`);
+        router.replace(`/shops/${created.shopId}`);
         return;
       }
     } catch (err) {
@@ -253,16 +346,33 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
 
     try {
       await api.post(`/keeper/shop/${shopId}/google-sync`);
+      const refreshedShop = await fetchShopDetail(shopId);
+      setShopFromDetail(refreshedShop);
       showToast('Google sync completed.', 'success');
-
-      const refreshed = await api.get(`/keeper/shop/${shopId}`);
-      const nextShop = unwrapApiData<ShopDetail>(refreshed);
-      setShop(nextShop);
-      setForm(toFormState(nextShop));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to sync with Google Business Profile.'));
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function handleReapply() {
+    if (!shopId) {
+      return;
+    }
+
+    setReapplying(true);
+    setError('');
+
+    try {
+      await api.post(`/keeper/shop/${shopId}/reapply`);
+      const refreshedShop = await fetchShopDetail(shopId);
+      setShopFromDetail(refreshedShop);
+      showToast('Shop sent back for verification review.', 'success');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to reapply this shop for review.'));
+    } finally {
+      setReapplying(false);
     }
   }
 
@@ -273,35 +383,71 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
       {isEditing && shop ? (
         <SectionCard
           title="Current shop status"
-          description="Quick view of verification and live operational flags."
-          action={<StatusPill status={shop.isVerified ? 'Approved' : 'PendingApproval'} />}
+          description="Verification, listing health, and review feedback for this location."
+          action={
+            <div className="button-row">
+              {String(shop.verifyStatus || '').toLowerCase() === 'rejected' ? (
+                <button type="button" className="button-secondary" onClick={() => void handleReapply()} disabled={reapplying || syncing}>
+                  {reapplying ? 'Reapplying...' : 'Reapply'}
+                </button>
+              ) : null}
+              <button type="button" className="button-ghost" onClick={() => void handleGoogleSync()} disabled={syncing || reapplying}>
+                {syncing ? 'Syncing...' : 'Google sync'}
+              </button>
+            </div>
+          }
         >
-          <div className="list-grid">
-            <div className="list-item">
-              <strong>{shop.isActive ? 'Active listing' : 'Inactive listing'}</strong>
-              <p className="muted-text tiny-text">Customers can {shop.isActive ? 'find the shop in the app.' : 'no longer see the shop publicly.'}</p>
+          <div className="field-stack">
+            <div className="list-grid">
+              <div className="list-item">
+                <div className="inline-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong>Listing status</strong>
+                  <StatusPill status={listingStatusLabel} />
+                </div>
+                <p className="muted-text tiny-text" style={{ marginTop: '0.45rem' }}>
+                  {shop.isActive ? 'Customers can discover this shop in the app.' : 'This shop is currently hidden from customers.'}
+                </p>
+              </div>
+              <div className="list-item">
+                <div className="inline-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong>Verification</strong>
+                  <StatusPill status={verificationStatusLabel} />
+                </div>
+                <p className="muted-text tiny-text" style={{ marginTop: '0.45rem' }}>
+                  {verificationStatusLabel === 'Verified'
+                    ? 'The current business details have passed review.'
+                    : verificationStatusLabel === 'Rejected'
+                      ? 'This shop needs updates before it can be approved again.'
+                      : 'The latest shop details are waiting for review.'}
+                </p>
+              </div>
+              <div className="list-item">
+                <div className="inline-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong>Open state</strong>
+                  <StatusPill status={shop.isOpen ? 'Open' : 'Closed'} />
+                </div>
+                <p className="muted-text tiny-text" style={{ marginTop: '0.45rem' }}>
+                  Use the operational toggle below to reflect daily storefront availability.
+                </p>
+              </div>
             </div>
-            <div className="list-item">
-              <strong>{shop.isVerified ? 'Verified' : 'Unverified'}</strong>
-              <p className="muted-text tiny-text">Google sync can refresh verification and business visibility metadata.</p>
-            </div>
-            <div className="list-item">
-              <strong>{shop.isOpen ? 'Currently open' : 'Currently closed'}</strong>
-              <p className="muted-text tiny-text">Use the shop open toggle below to reflect day-to-day availability.</p>
-            </div>
+
+            {(shop.rejectionReason || shop.deactivateReason) ? (
+              <div className="reason-stack">
+                {shop.rejectionReason ? <InlineNotice tone="error" message={`Review feedback: ${shop.rejectionReason}`} /> : null}
+                {shop.deactivateReason ? <InlineNotice tone="info" message={`Listing note: ${shop.deactivateReason}`} /> : null}
+              </div>
+            ) : null}
           </div>
         </SectionCard>
       ) : null}
 
       <SectionCard
         title={isEditing ? 'Edit shop' : 'Create shop'}
-        description={isEditing ? 'Update public listing details and operational metadata.' : 'Capture the public listing details, operating state, and discovery metadata in one pass.'}
-        action={
-          isEditing ? (
-            <button type="button" className="button-ghost" onClick={() => void handleGoogleSync()} disabled={syncing}>
-              {syncing ? 'Syncing...' : 'Google sync'}
-            </button>
-          ) : undefined
+        description={
+          isEditing
+            ? 'Update listing content, storefront images, coordinates, and review metadata in one place.'
+            : 'Create the public listing with the latest address, discovery tags, and storefront images.'
         }
       >
         <form className="form-stack" onSubmit={handleSubmit}>
@@ -382,17 +528,90 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
           </div>
 
           <div className="field">
-            <label htmlFor="shopImage">Image URL</label>
-            <input id="shopImage" value={form.imageUrl} onChange={(event) => updateField('imageUrl', event.target.value)} disabled={loading || saving} />
+            <label htmlFor="shopCoverImage">Cover image</label>
+            <div className="media-uploader">
+              <label className="media-dropzone" htmlFor="shopCoverImage">
+                <strong>{uploadingCover ? 'Preparing cover image...' : 'Upload a shop cover image'}</strong>
+                <span className="muted-text tiny-text">JPG, PNG, and WebP work best. The image is stored directly with the shop.</span>
+                <input id="shopCoverImage" type="file" accept="image/*" onChange={handleCoverImageChange} disabled={loading || saving || uploadingCover} />
+              </label>
+
+              {form.imageUrl ? (
+                <div className="media-preview-grid">
+                  <div className="media-preview-card media-preview-card-compact">
+                    <button
+                      type="button"
+                      className="media-preview-frame media-preview-trigger"
+                      onClick={() => openImagePreview(form.imageUrl)}
+                    >
+                      <img src={resolveMediaSource(form.imageUrl)} alt="Shop cover preview" />
+                    </button>
+                    <div className="media-preview-meta">
+                      <strong>Primary cover image</strong>
+                      <span className="muted-text tiny-text">This image is used as the main storefront thumbnail.</span>
+                    </div>
+                    <div className="media-preview-actions">
+                      <button type="button" className="button-secondary" onClick={() => openImagePreview(form.imageUrl)} disabled={loading || saving}>
+                        Preview full
+                      </button>
+                      <button type="button" className="button-ghost" onClick={clearCoverImage} disabled={loading || saving}>
+                        Remove cover
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="shopGalleryImages">Gallery images</label>
+            <div className="media-uploader">
+              <label className="media-dropzone" htmlFor="shopGalleryImages">
+                <strong>{uploadingGallery ? 'Preparing gallery images...' : 'Upload additional shop images'}</strong>
+                <span className="muted-text tiny-text">Add storefront, interior, shelf, or ambience photos to support review and discovery.</span>
+                <input id="shopGalleryImages" type="file" accept="image/*" multiple onChange={handleGalleryImagesChange} disabled={loading || saving || uploadingGallery} />
+              </label>
+
+              {form.shopImages.length > 0 ? (
+                <div className="media-preview-grid">
+                  {form.shopImages.map((image, index) => (
+                    <div key={`${image.slice(0, 32)}-${index}`} className="media-preview-card">
+                      <button
+                        type="button"
+                        className="media-preview-frame media-preview-trigger"
+                        onClick={() => openImagePreview(image)}
+                      >
+                        <img src={resolveMediaSource(image)} alt={`Shop gallery preview ${index + 1}`} />
+                      </button>
+                      <div className="media-preview-meta">
+                        <strong>Gallery image {index + 1}</strong>
+                        <span className="muted-text tiny-text">Additional storefront media saved with this shop.</span>
+                      </div>
+                      <div className="media-preview-actions">
+                        <button type="button" className="button-secondary" onClick={() => openImagePreview(image)} disabled={loading || saving}>
+                          Preview full
+                        </button>
+                        <button type="button" className="button-ghost" onClick={() => removeGalleryImage(index)} disabled={loading || saving}>
+                          Remove image
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted-text tiny-text">No extra gallery images added yet.</p>
+              )}
+            </div>
           </div>
 
           <div className="field">
             <label htmlFor="shopTags">Tags</label>
-            <div 
+            <div
               style={{
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '0.4rem', 
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.4rem',
                 width: '100%',
                 border: '1px solid var(--field-border)',
                 borderRadius: 'var(--radius-md)',
@@ -401,23 +620,32 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                 minHeight: '44px',
                 alignItems: 'center',
                 transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
-                cursor: 'text'
+                cursor: 'text',
               }}
               onClick={() => document.getElementById('shopTags')?.focus()}
             >
-              {selectedTags.map((tag, idx) => (
+              {selectedTags.map((tag, index) => (
                 <span
-                  key={idx}
+                  key={`${tag}-${index}`}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                    padding: '0.2rem 0.6rem', fontSize: '0.85rem', borderRadius: '999px',
-                    background: 'var(--accent-soft)', color: 'var(--accent-strong)', fontWeight: 'bold'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '999px',
+                    background: 'var(--accent-soft)',
+                    color: 'var(--accent-strong)',
+                    fontWeight: 'bold',
                   }}
                 >
                   {tag}
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); }}
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      handleRemoveTag(tag);
+                    }}
                     style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 0.5, padding: 0 }}
                     aria-label="Remove tag"
                   >
@@ -429,14 +657,14 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                 id="shopTags"
                 value={tagInputValue}
                 onChange={(event) => setTagInputValue(event.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault();
+                onKeyDown={(keyEvent) => {
+                  if (keyEvent.key === 'Enter' || keyEvent.key === ',') {
+                    keyEvent.preventDefault();
                     if (tagInputValue.trim()) {
                       handleAddTag(tagInputValue.trim());
                       setTagInputValue('');
                     }
-                  } else if (e.key === 'Backspace' && !tagInputValue && selectedTags.length > 0) {
+                  } else if (keyEvent.key === 'Backspace' && !tagInputValue && selectedTags.length > 0) {
                     handleRemoveTag(selectedTags[selectedTags.length - 1]);
                   }
                 }}
@@ -447,7 +675,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                   }
                 }}
                 disabled={loading || saving}
-                placeholder={selectedTags.length === 0 ? "Type a tag and press Enter" : "Add more..."}
+                placeholder={selectedTags.length === 0 ? 'Type a tag and press Enter' : 'Add more...'}
                 style={{
                   flex: 1,
                   minWidth: '120px',
@@ -457,11 +685,11 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                   outline: 'none',
                   padding: '0.3rem',
                   fontSize: 'inherit',
-                  boxShadow: 'none'
+                  boxShadow: 'none',
                 }}
               />
             </div>
-            {availableTagsToDisplay.length > 0 && (
+            {availableTagsToDisplay.length > 0 ? (
               <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {availableTagsToDisplay.slice(0, 10).map((tag) => (
                   <button
@@ -473,7 +701,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                     + {tag.name}
                   </button>
                 ))}
-                {availableTagsToDisplay.length > 10 && (
+                {availableTagsToDisplay.length > 10 ? (
                   <button
                     type="button"
                     style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem', borderRadius: '1rem', border: '1px dashed var(--accent)', color: 'var(--accent)', background: 'transparent', cursor: 'pointer', fontWeight: 'bold' }}
@@ -481,9 +709,9 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                   >
                     + {availableTagsToDisplay.length - 10} more...
                   </button>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="field">
@@ -497,56 +725,93 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
             />
           </div>
 
-          <p className="muted-text tiny-text">Coordinates are optional, but add both latitude and longitude together when you have them. Notification radius controls nearby audience and traffic views.</p>
+          <p className="muted-text tiny-text">
+            Add both latitude and longitude together when you have them. Saving a rejected shop will submit the refreshed details for review again.
+          </p>
 
-          <button type="submit" className="button" disabled={loading || saving}>
+          <button type="submit" className="button" disabled={loading || saving || uploadingCover || uploadingGallery}>
             {saving ? 'Saving shop...' : isEditing ? 'Save shop changes' : 'Create shop'}
           </button>
         </form>
       </SectionCard>
 
-      {isTagModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div style={{
-            background: 'var(--surface)', padding: '2rem', borderRadius: 'var(--radius-xl)',
-            width: '90%', maxWidth: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-            boxShadow: 'var(--shadow)', border: '1px solid var(--border)'
-          }}>
+      {isTagModalOpen ? (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--surface)',
+              padding: '2rem',
+              borderRadius: 'var(--radius-xl)',
+              width: '90%',
+              maxWidth: '500px',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: 'var(--shadow)',
+              border: '1px solid var(--border)',
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text)' }}>All Available Tags</h3>
-              <button type="button" onClick={() => setIsTagModalOpen(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>&times;</button>
+              <button type="button" onClick={() => setIsTagModalOpen(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                &times;
+              </button>
             </div>
             <input
               type="text"
               placeholder="Search tags..."
               value={tagSearchQuery}
-              onChange={(e) => setTagSearchQuery(e.target.value)}
+              onChange={(event) => setTagSearchQuery(event.target.value)}
               style={{ marginBottom: '1rem', padding: '0.6rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--field-border)', background: 'var(--field-bg)', color: 'var(--text)', width: '100%' }}
             />
             <div style={{ overflowY: 'auto', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingBottom: '1rem' }}>
-              {filteredModalTags.length > 0 ? filteredModalTags.map(tag => (
-                <button
-                  key={tag.tagId}
-                  type="button"
-                  style={{ padding: '0.3rem 0.8rem', fontSize: '0.9rem', borderRadius: '999px', border: '1px solid var(--border)', background: 'var(--surface-muted)', color: 'var(--text)', cursor: 'pointer' }}
-                  onClick={() => handleAddTag(tag.name)}
-                >
-                  + {tag.name}
-                </button>
-              )) : (
+              {filteredModalTags.length > 0 ? (
+                filteredModalTags.map((tag) => (
+                  <button
+                    key={tag.tagId}
+                    type="button"
+                    style={{ padding: '0.3rem 0.8rem', fontSize: '0.9rem', borderRadius: '999px', border: '1px solid var(--border)', background: 'var(--surface-muted)', color: 'var(--text)', cursor: 'pointer' }}
+                    onClick={() => handleAddTag(tag.name)}
+                  >
+                    + {tag.name}
+                  </button>
+                ))
+              ) : (
                 <p className="muted-text">No tags match your search.</p>
               )}
             </div>
             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
-              <button type="button" className="button" onClick={() => setIsTagModalOpen(false)}>Done</button>
+              <button type="button" className="button" onClick={() => setIsTagModalOpen(false)}>
+                Done
+              </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {activePreviewImage ? (
+        <div className="media-lightbox" onClick={closeImagePreview} role="dialog" aria-modal="true" aria-label="Full image preview">
+          <div className="media-lightbox-content" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="media-lightbox-close" onClick={closeImagePreview} aria-label="Close image preview">
+              &times;
+            </button>
+            <img src={activePreviewImage} alt="Full shop preview" className="media-lightbox-image" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

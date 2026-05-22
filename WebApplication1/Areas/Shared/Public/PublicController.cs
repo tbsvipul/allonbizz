@@ -6,6 +6,7 @@ using allonbiz.AdminAPI.Services.Interfaces;
 using allonbiz.AdminAPI.DTOs.Categories;
 using allonbiz.AdminAPI.DTOs.Tags;
 using allonbiz.AdminAPI.DTOs.Users;
+using allonbiz.AdminAPI.Helpers;
 
 namespace allonbiz.AdminAPI.Controllers;
 
@@ -53,7 +54,7 @@ public class PublicController : ControllerBase
     public async Task<IActionResult> CreatePublicTag([FromBody] CreateTagRequestDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Tag name is required."));
+            return this.ValidationProblemResponse("Tag name is required.", nameof(dto.Name));
 
         dto.Type ??= "public";
         var result = await _tagService.CreateTagAsync(dto);
@@ -73,7 +74,7 @@ public class PublicController : ControllerBase
     public async Task<IActionResult> SearchPlaces([FromQuery] string? query)
     {
         if (string.IsNullOrWhiteSpace(query))
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Search query is required."));
+            return this.ValidationProblemResponse("Search query is required.", nameof(query));
         var result = await _placesService.SearchPlacesAsync(query);
         return Ok(ApiResponse<List<PlaceSearchResponseDto>>.Ok(result));
     }

@@ -34,7 +34,9 @@ class AppSectionHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppDimensions.xs),
               decoration: BoxDecoration(
-                color: (iconColor ?? colorScheme.primary).withValues(alpha: 0.12),
+                color: (iconColor ?? colorScheme.primary).withValues(
+                  alpha: 0.12,
+                ),
                 borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
               ),
               child: Icon(

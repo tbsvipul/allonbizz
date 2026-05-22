@@ -5,19 +5,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class CachedResponseRecord {
-  const CachedResponseRecord({
-    required this.payload,
-    required this.fetchedAt,
-  });
+  const CachedResponseRecord({required this.payload, required this.fetchedAt});
 
   final String payload;
   final DateTime fetchedAt;
 
   Map<String, dynamic> toJson() {
-    return {
-      'payload': payload,
-      'fetchedAt': fetchedAt.millisecondsSinceEpoch,
-    };
+    return {'payload': payload, 'fetchedAt': fetchedAt.millisecondsSinceEpoch};
   }
 
   factory CachedResponseRecord.fromJson(Map<String, dynamic> json) {
@@ -42,14 +36,10 @@ class StorageService {
   final Box? _injectedResponses;
   final Box? _injectedRoutes;
 
-  StorageService({
-    Box? prefs,
-    Box? offers,
-    Box? responseCache,
-    Box? routes,
-  }) : _injectedPrefs = prefs,
-       _injectedResponses = responseCache ?? offers,
-       _injectedRoutes = routes;
+  StorageService({Box? prefs, Box? offers, Box? responseCache, Box? routes})
+    : _injectedPrefs = prefs,
+      _injectedResponses = responseCache ?? offers,
+      _injectedRoutes = routes;
 
   /// Initialise Hive and open required boxes with encryption.
   static Future<void> init() async {
@@ -60,10 +50,7 @@ class StorageService {
 
     if (encryptionKeyString == null) {
       final key = Hive.generateSecureKey();
-      await secureStorage.write(
-        key: 'hive_key',
-        value: base64UrlEncode(key),
-      );
+      await secureStorage.write(key: 'hive_key', value: base64UrlEncode(key));
       encryptionKeyString = base64UrlEncode(key);
     }
 
@@ -151,6 +138,23 @@ class StorageService {
     } else {
       _prefs.put('backendRefreshToken', value);
     }
+  }
+
+  Map<String, dynamic>? get activeJourneySession {
+    final raw = _prefs.get('activeJourneySession');
+    if (raw is! Map) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(raw);
+  }
+
+  Future<void> saveActiveJourneySession(Map<String, dynamic> value) async {
+    await _prefs.put('activeJourneySession', value);
+  }
+
+  Future<void> clearActiveJourneySession() async {
+    await _prefs.delete('activeJourneySession');
   }
 
   Future<void> putCachedResponse(

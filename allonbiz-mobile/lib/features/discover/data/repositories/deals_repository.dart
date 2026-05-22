@@ -19,10 +19,9 @@ final dealsProvider = StreamProvider<List<Offer>>((ref) {
     return Stream.value(const <Offer>[]);
   }
 
-  return ref.watch(dealsRepositoryProvider).watchOffers(
-    lat: position.latitude,
-    lng: position.longitude,
-  );
+  return ref
+      .watch(dealsRepositoryProvider)
+      .watchOffers(lat: position.latitude, lng: position.longitude);
 });
 
 final featuredDealsProvider = StreamProvider<List<Offer>>((ref) {

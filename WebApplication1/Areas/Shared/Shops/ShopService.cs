@@ -4,6 +4,7 @@ using allonbiz.AdminAPI.DTOs.Common;
 using allonbiz.AdminAPI.DTOs.Shops;
 using allonbiz.AdminAPI.Models.Entities;
 using allonbiz.AdminAPI.Services.Interfaces;
+using allonbiz.AdminAPI.Helpers;
 
 namespace allonbiz.AdminAPI.Services;
 
@@ -42,6 +43,11 @@ public class ShopService : IShopService
             dbQuery = dbQuery.Where(s => s.IsVerified == query.IsVerified.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.VerifyStatus))
+        {
+            dbQuery = dbQuery.Where(s => s.VerifyStatus == query.VerifyStatus);
+        }
+
         if (query.IsActive.HasValue)
         {
             dbQuery = dbQuery.Where(s => s.IsActive == query.IsActive.Value);
@@ -49,24 +55,28 @@ public class ShopService : IShopService
 
         var totalCount = await dbQuery.CountAsync(ct);
         
-        var shops = await dbQuery
+        var shopsList = await dbQuery
             .OrderByDescending(s => s.CreatedAt)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(s => new ShopSummaryDto
-            {
-                Id = s.ShopId,
-                Name = s.Name,
-                BusinessName = s.Keeper != null ? s.Keeper.BusinessName : "N/A",
-                Location = s.Address ?? "Unknown",
-                Category = s.Category != null ? s.Category.Name : "Uncategorized",
-                Status = s.IsActive ? "Active" : "Inactive",
-                IsVerified = s.IsVerified,
-                Latitude = s.Latitude,
-                Longitude = s.Longitude,
-                ImageUrl = s.ImageUrl
-            })
             .ToListAsync(ct);
+
+        var shops = shopsList.Select(s => new ShopSummaryDto
+        {
+            Id = s.ShopId,
+            Name = s.Name,
+            BusinessName = s.Keeper != null ? s.Keeper.BusinessName : "N/A",
+            Location = s.Address ?? "Unknown",
+            Category = s.Category != null ? s.Category.Name : "Uncategorized",
+            Status = s.IsActive ? "Active" : "Inactive",
+            IsVerified = s.IsVerified,
+            VerifyStatus = s.VerifyStatus,
+            Latitude = s.Latitude,
+            Longitude = s.Longitude,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            RejectionReason = s.RejectionReason,
+            DeactivateReason = s.DeactivateReason
+        }).ToList();
 
         return new PagedResponse<ShopSummaryDto>
         {
@@ -82,38 +92,49 @@ public class ShopService : IShopService
 
     public async Task<ShopDetailDto?> GetShopAsync(Guid shopId, CancellationToken ct = default)
     {
-        var shop = await _context.Shops
+        var s = await _context.Shops
             .AsNoTracking()
-            .Where(s => s.ShopId == shopId)
-            .Select(s => new ShopDetailDto
-            {
-                ShopId = s.ShopId,
-                Name = s.Name,
-                Description = s.Description,
-                Address = s.Address,
-                PhoneNumber = s.PhoneNumber,
-                Email = s.Email,
-                Latitude = s.Latitude,
-                Longitude = s.Longitude,
-                CategoryId = s.CategoryId,
-                CategoryName = s.Category != null ? s.Category.Name : null,
-                KeeperId = s.KeeperId,
-                KeeperBusinessName = s.Keeper != null ? s.Keeper.BusinessName : null,
-                IsActive = s.IsActive,
-                IsVerified = s.IsVerified,
-                IsOpen = s.IsOpen,
-                NotificationRadius = s.NotificationRadius,
-                ImageUrl = s.ImageUrl,
-                Tags = s.Tags ?? new List<string>(),
-                Amenities = s.Amenities ?? new List<string>(),
-                CreatedAt = s.CreatedAt
-            })
-            .FirstOrDefaultAsync(ct);
+            .Include(s => s.Keeper)
+                .ThenInclude(k => k!.User)
+            .Include(s => s.Category)
+            .FirstOrDefaultAsync(s => s.ShopId == shopId, ct);
 
-        if (shop == null)
+        if (s == null)
         {
             return null;
         }
+
+        var shop = new ShopDetailDto
+        {
+            ShopId = s.ShopId,
+            Name = s.Name,
+            Description = s.Description,
+            Address = s.Address,
+            PhoneNumber = s.PhoneNumber,
+            Email = s.Email,
+            Latitude = s.Latitude,
+            Longitude = s.Longitude,
+            CategoryId = s.CategoryId,
+            CategoryName = s.Category != null ? s.Category.Name : null,
+            KeeperId = s.KeeperId,
+            KeeperBusinessName = s.Keeper != null ? s.Keeper.BusinessName : null,
+            KeeperName = s.Keeper != null && s.Keeper.User != null ? $"{s.Keeper.User.FirstName} {s.Keeper.User.LastName}".Trim() : null,
+            IsActive = s.IsActive,
+            IsVerified = s.IsVerified,
+            VerifyStatus = s.VerifyStatus,
+            RejectionReason = s.RejectionReason,
+            DeactivateReason = s.DeactivateReason,
+            IsOpen = s.IsOpen,
+            NotificationRadius = s.NotificationRadius,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            ShopImages = s.ShopImages?
+                .Select(img => ImageConversionHelper.ToBase64DataUrl(img))
+                .OfType<string>()
+                .ToList() ?? new List<string>(),
+            Tags = s.Tags ?? new List<string>(),
+            Amenities = s.Amenities ?? new List<string>(),
+            CreatedAt = s.CreatedAt
+        };
 
         shop.RecentOffers = await _context.Offers
             .AsNoTracking()
@@ -151,7 +172,11 @@ public class ShopService : IShopService
             CategoryId = dto.CategoryId,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
-            ImageUrl = NormalizeOptional(dto.ImageUrl),
+            ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ImageUrl),
+            ShopImages = dto.ShopImages?
+                .Select(ImageConversionHelper.ParseBase64Image)
+                .OfType<byte[]>()
+                .ToList() ?? new List<byte[]>(),
             IsOpen = dto.IsOpen,
             NotificationRadius = dto.NotificationRadius,
             Amenities = NormalizeStringList(dto.Amenities),
@@ -181,7 +206,11 @@ public class ShopService : IShopService
         shop.Address = NormalizeOptional(dto.Address);
         shop.PhoneNumber = NormalizeOptional(dto.PhoneNumber);
         shop.Email = NormalizeOptional(dto.Email);
-        shop.ImageUrl = NormalizeOptional(dto.ImageUrl);
+        shop.ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ImageUrl);
+        shop.ShopImages = dto.ShopImages?
+            .Select(ImageConversionHelper.ParseBase64Image)
+            .OfType<byte[]>()
+            .ToList() ?? new List<byte[]>();
         shop.CategoryId = dto.CategoryId;
         shop.Latitude = dto.Latitude;
         shop.Longitude = dto.Longitude;
@@ -190,6 +219,11 @@ public class ShopService : IShopService
         shop.Amenities = NormalizeStringList(dto.Amenities);
         shop.Tags = tagsList;
         shop.UpdatedAt = DateTime.UtcNow;
+
+        // Reset verification and clear rejection reason on update so keeper can re-apply and admin can review again
+        shop.IsVerified = false;
+        shop.VerifyStatus = "Pending";
+        shop.RejectionReason = null;
 
         _context.Shops.Update(shop);
         await _context.SaveChangesAsync(ct);
@@ -214,15 +248,35 @@ public class ShopService : IShopService
 
         try
         {
-            shop.IsActive = dto.IsActive;
-            shop.RejectionReason = dto.IsActive ? null : dto.Reason?.Trim();
+            shop.IsActive = dto.IsActive ?? false;
+            
+            if (shop.IsActive)
+            {
+                if (!string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    shop.AdminNotes = string.IsNullOrWhiteSpace(shop.AdminNotes) 
+                        ? $"Activation Note: {dto.Reason}" 
+                        : $"{shop.AdminNotes}\nActivation Note: {dto.Reason}";
+                }
+                shop.DeactivateReason = null;
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    throw new ArgumentException("Reason is required when deactivating a shop.");
+                }
+                shop.DeactivateReason = dto.Reason.Trim();
+                shop.IsVerified = false;
+                if (shop.VerifyStatus != "Rejected") shop.VerifyStatus = "Pending";
+            }
             shop.UpdatedAt = DateTime.UtcNow;
 
             _context.Shops.Update(shop);
             await _context.SaveChangesAsync(ct);
             
             _logger.LogInformation("Shop {ShopId} status updated to {IsActive}. Reason: {Reason}", 
-                shopId, dto.IsActive, shop.RejectionReason ?? "N/A");
+                shopId, dto.IsActive, dto.Reason ?? "N/A");
         }
         catch (Exception ex)
         {
@@ -231,19 +285,24 @@ public class ShopService : IShopService
         }
     }
 
-    public async Task VerifyShopAsync(Guid shopId, CancellationToken ct = default)
+    public async Task VerifyShopAsync(Guid shopId, VerifyShopRequestDto dto, CancellationToken ct = default)
     {
-        var updated = await _context.Shops
-            .Where(shop => shop.ShopId == shopId)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(shop => shop.IsVerified, true)
-                .SetProperty(shop => shop.RejectionReason, (string?)null)
-                .SetProperty(shop => shop.UpdatedAt, DateTime.UtcNow), ct);
+        var shop = await _context.Shops.FindAsync(new object[] { shopId }, ct);
+        if (shop == null) throw new KeyNotFoundException($"Shop {shopId} not found.");
 
-        if (updated == 0)
+        shop.IsVerified = true;
+        shop.VerifyStatus = "Verified";
+        shop.RejectionReason = null;
+        if (!string.IsNullOrWhiteSpace(dto.Reason))
         {
-            throw new KeyNotFoundException($"Shop {shopId} not found.");
+            shop.AdminNotes = string.IsNullOrWhiteSpace(shop.AdminNotes) 
+                ? $"Verification Note: {dto.Reason}" 
+                : $"{shop.AdminNotes}\nVerification Note: {dto.Reason}";
         }
+        shop.UpdatedAt = DateTime.UtcNow;
+
+        _context.Shops.Update(shop);
+        await _context.SaveChangesAsync(ct);
     }
 
     public async Task UnverifyShopAsync(Guid shopId, CancellationToken ct = default)
@@ -252,6 +311,7 @@ public class ShopService : IShopService
             .Where(shop => shop.ShopId == shopId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(shop => shop.IsVerified, false)
+                .SetProperty(shop => shop.VerifyStatus, "Pending")
                 .SetProperty(shop => shop.UpdatedAt, DateTime.UtcNow), ct);
 
         if (updated == 0)
@@ -282,6 +342,7 @@ public class ShopService : IShopService
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(shop => shop.IsActive, false)
                 .SetProperty(shop => shop.IsVerified, false)
+                .SetProperty(shop => shop.VerifyStatus, "Rejected")
                 .SetProperty(shop => shop.RejectionReason, dto.Reason.Trim())
                 .SetProperty(shop => shop.UpdatedAt, DateTime.UtcNow), ct);
 
@@ -290,28 +351,51 @@ public class ShopService : IShopService
             throw new KeyNotFoundException($"Shop {shopId} not found.");
         }
     }
+    
+    public async Task ReapplyShopAsync(Guid shopId, CancellationToken ct = default)
+    {
+        var shop = await _context.Shops.FindAsync(new object[] { shopId }, ct);
+        if (shop == null) throw new KeyNotFoundException($"Shop {shopId} not found.");
+
+        if (shop.VerifyStatus != "Rejected")
+        {
+            throw new InvalidOperationException("Only rejected shops can be reapplied.");
+        }
+
+        shop.IsVerified = false;
+        shop.VerifyStatus = "Pending";
+        shop.RejectionReason = null;
+        shop.UpdatedAt = DateTime.UtcNow;
+
+        _context.Shops.Update(shop);
+        await _context.SaveChangesAsync(ct);
+    }
 
     public async Task<List<ShopSummaryDto>> GetShopsByKeeperAsync(Guid keeperId, CancellationToken ct = default)
     {
-        return await _context.Shops
+        var shopsList = await _context.Shops
             .AsNoTracking()
             .Include(s => s.Category)
             .Where(s => s.KeeperId == keeperId)
             .OrderByDescending(s => s.CreatedAt)
-            .Select(s => new ShopSummaryDto
-            {
-                Id = s.ShopId,
-                Name = s.Name,
-                BusinessName = "N/A", // Not needed for keeper-specific list
-                Location = s.Address ?? "Unknown",
-                Category = s.Category != null ? s.Category.Name : "Uncategorized",
-                Status = s.IsActive ? "Active" : "Inactive",
-                IsVerified = s.IsVerified,
-                Latitude = s.Latitude,
-                Longitude = s.Longitude,
-                ImageUrl = s.ImageUrl
-            })
             .ToListAsync(ct);
+
+        return shopsList.Select(s => new ShopSummaryDto
+        {
+            Id = s.ShopId,
+            Name = s.Name,
+            BusinessName = "N/A", // Not needed for keeper-specific list
+            Location = s.Address ?? "Unknown",
+            Category = s.Category != null ? s.Category.Name : "Uncategorized",
+            Status = s.IsActive ? "Active" : "Inactive",
+            IsVerified = s.IsVerified,
+            VerifyStatus = s.VerifyStatus,
+            Latitude = s.Latitude,
+            Longitude = s.Longitude,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            RejectionReason = s.RejectionReason,
+            DeactivateReason = s.DeactivateReason
+        }).ToList();
     }
 
     public async Task AssignTagsAsync(Guid shopId, AssignTagsDto dto, CancellationToken ct = default)
@@ -343,9 +427,16 @@ public class ShopService : IShopService
             KeeperBusinessName = shop.Keeper?.BusinessName,
             IsActive = shop.IsActive,
             IsVerified = shop.IsVerified,
+            VerifyStatus = shop.VerifyStatus,
+            RejectionReason = shop.RejectionReason,
+            DeactivateReason = shop.DeactivateReason,
             IsOpen = shop.IsOpen,
             NotificationRadius = shop.NotificationRadius,
-            ImageUrl = shop.ImageUrl,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(shop.ImageUrl),
+            ShopImages = shop.ShopImages?
+                .Select(img => ImageConversionHelper.ToBase64DataUrl(img))
+                .OfType<string>()
+                .ToList() ?? new List<string>(),
             Tags = shop.Tags ?? new List<string>(),
             Amenities = shop.Amenities ?? new List<string>(),
             CreatedAt = shop.CreatedAt,
@@ -435,8 +526,8 @@ public class ShopService : IShopService
     Task IShopService.UpdateShopStatusAsync(Guid shopId, UpdateShopStatusDto dto, CancellationToken ct) 
         => UpdateShopStatusAsync(shopId, dto, ct);
     
-    Task IShopService.VerifyShopAsync(Guid shopId, CancellationToken ct) 
-        => VerifyShopAsync(shopId, ct);
+    Task IShopService.VerifyShopAsync(Guid shopId, VerifyShopRequestDto dto, CancellationToken ct) 
+        => VerifyShopAsync(shopId, dto, ct);
 
     Task IShopService.UnverifyShopAsync(Guid shopId, CancellationToken ct)
         => UnverifyShopAsync(shopId, ct);

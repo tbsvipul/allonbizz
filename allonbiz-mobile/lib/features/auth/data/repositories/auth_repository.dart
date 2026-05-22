@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kProfileMode;
+import 'package:flutter/foundation.dart'
+    show debugPrint, kDebugMode, kProfileMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/services/notification_service.dart';
 import '../../../../shared/models/app_user.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
@@ -12,7 +12,6 @@ import '../../../profile/data/repositories/profile_repository.dart';
 /// Riverpod provider for AuthRepository.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
-    notificationService: ref.watch(notificationServiceProvider),
     apiClient: ref.watch(apiClientProvider),
     storageService: ref.watch(storageServiceProvider),
     profileRepository: ref.watch(profileRepositoryProvider),
@@ -27,12 +26,11 @@ final authStateProvider = StreamProvider<AppUser?>((ref) {
 /// Repository for Backend Authentication and user profile management.
 class AuthRepository {
   AuthRepository({
-    NotificationService? notificationService,
     ApiClient? apiClient,
     StorageService? storageService,
     ProfileRepository? profileRepository,
-  }) : _notificationService = notificationService ?? NotificationService(),
-       _apiClient = apiClient ??
+  }) : _apiClient =
+           apiClient ??
            ApiClient(
              baseUrl: BaseApi.backendBaseUrl,
              storageService: StorageService(),
@@ -42,7 +40,6 @@ class AuthRepository {
     _init();
   }
 
-  final NotificationService _notificationService;
   final ApiClient _apiClient;
   final StorageService _storageService;
   final ProfileRepository? _profileRepository;
@@ -59,10 +56,7 @@ class AuthRepository {
 
   Future<void> _init() async {
     final token = _storageService.backendAccessToken;
-    _logAuthFlow(
-      'init',
-      details: {'hasStoredAccessToken': token != null},
-    );
+    _logAuthFlow('init', details: {'hasStoredAccessToken': token != null});
     if (token != null) {
       try {
         await refreshProfile();
@@ -83,9 +77,12 @@ class AuthRepository {
   Future<AppUser?> refreshProfile() async {
     _logAuthFlow('refresh-profile-start');
     try {
-      final user = await (_profileRepository?.getProfile() ?? 
-        _apiClient.get('/user/profile').then((r) => AppUser.fromJson(r['data'])));
-      
+      final user =
+          await (_profileRepository?.getProfile() ??
+              _apiClient
+                  .get('/user/profile')
+                  .then((r) => AppUser.fromJson(r['data'])));
+
       _updateState(user);
       _logAuthFlow(
         'refresh-profile-success',
@@ -97,10 +94,7 @@ class AuthRepository {
 
       return user;
     } catch (e) {
-      _logAuthFlow(
-        'refresh-profile-failure',
-        details: {'error': e.toString()},
-      );
+      _logAuthFlow('refresh-profile-failure', details: {'error': e.toString()});
       if (e is ServerFailure && e.statusCode == 401) {
         _updateState(null);
       }
@@ -108,13 +102,13 @@ class AuthRepository {
     }
   }
 
-  Future<AppUser?> signInWithEmailAndPassword(String email, String password) async {
+  Future<AppUser?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     _logAuthFlow(
       'login-start',
-      details: {
-        'email': _maskEmail(email),
-        'baseUrl': _apiClient.baseUrl,
-      },
+      details: {'email': _maskEmail(email), 'baseUrl': _apiClient.baseUrl},
     );
     try {
       final response = await _apiClient.post(
@@ -141,12 +135,11 @@ class AuthRepository {
     } on ServerFailure catch (e) {
       _logAuthFlow(
         'login-server-failure',
-        details: {
-          'statusCode': e.statusCode,
-          'message': e.message,
-        },
+        details: {'statusCode': e.statusCode, 'message': e.message},
       );
-      if (e.statusCode == 401) throw const AuthFailure('unauthorized', 'Invalid email or password');
+      if (e.statusCode == 401) {
+        throw const AuthFailure('unauthorized', 'Invalid email or password');
+      }
       throw AuthFailure('error', e.message);
     } catch (e) {
       _logAuthFlow(
@@ -157,13 +150,14 @@ class AuthRepository {
     }
   }
 
-  Future<AppUser?> createUserWithEmailAndPassword(String email, String password, String name) async {
+  Future<AppUser?> createUserWithEmailAndPassword(
+    String email,
+    String password,
+    String name,
+  ) async {
     _logAuthFlow(
       'register-start',
-      details: {
-        'email': _maskEmail(email),
-        'baseUrl': _apiClient.baseUrl,
-      },
+      details: {'email': _maskEmail(email), 'baseUrl': _apiClient.baseUrl},
     );
     try {
       final names = name.trim().split(RegExp(r'\s+'));
@@ -194,16 +188,21 @@ class AuthRepository {
         return await refreshProfile();
       }
       _logAuthFlow('register-invalid-response');
-      throw const AuthFailure('registration-failed', 'Could not create account');
+      throw const AuthFailure(
+        'registration-failed',
+        'Could not create account',
+      );
     } on ServerFailure catch (e) {
       _logAuthFlow(
         'register-server-failure',
-        details: {
-          'statusCode': e.statusCode,
-          'message': e.message,
-        },
+        details: {'statusCode': e.statusCode, 'message': e.message},
       );
-      if (e.statusCode == 409) throw const AuthFailure('email-already-in-use', 'Email is already registered');
+      if (e.statusCode == 409) {
+        throw const AuthFailure(
+          'email-already-in-use',
+          'Email is already registered',
+        );
+      }
       throw AuthFailure('error', e.message);
     } catch (e) {
       _logAuthFlow(
@@ -263,5 +262,4 @@ class AuthRepository {
 
     return '${localPart.substring(0, 2)}***$domain';
   }
-
 }

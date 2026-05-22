@@ -12,7 +12,7 @@ public class UpdateShopStatusDtoValidator : AbstractValidator<UpdateShopStatusDt
 
         RuleFor(x => x.Reason)
             .NotEmpty()
-            .When(x => !x.IsActive)
+            .When(x => x.IsActive == false)
             .WithMessage("A reason is required when deactivating a shop.")
             .MaximumLength(500).WithMessage("Reason cannot exceed 500 characters.");
     }

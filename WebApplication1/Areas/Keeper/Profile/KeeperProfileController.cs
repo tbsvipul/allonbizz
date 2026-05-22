@@ -106,12 +106,12 @@ public class KeeperProfileController : ControllerBase
         var result = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
         if (result == null)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
 
         if (result.KeeperId != keeper.KeeperId)
         {
-            return Forbid();
+            return this.ForbiddenProblemResponse("The requested shop does not belong to the authenticated keeper.");
         }
 
         return Ok(ApiResponse<ShopDetailDto>.Ok(result));
@@ -130,12 +130,12 @@ public class KeeperProfileController : ControllerBase
         var existingShop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
         if (existingShop == null)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
 
         if (existingShop.KeeperId != keeper.KeeperId)
         {
-            return Forbid();
+            return this.ForbiddenProblemResponse("The requested shop does not belong to the authenticated keeper.");
         }
 
         await _shopService.UpdateShopAsync(shopId, dto, HttpContext.RequestAborted);
@@ -149,16 +149,42 @@ public class KeeperProfileController : ControllerBase
         var existingShop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
         if (existingShop == null)
         {
-            return NotFound(ApiResponse<object>.Fail("NOT_FOUND", "Shop not found."));
+            return this.NotFoundProblemResponse("Shop not found.");
         }
 
         if (existingShop.KeeperId != keeper.KeeperId)
         {
-            return Forbid();
+            return this.ForbiddenProblemResponse("The requested shop does not belong to the authenticated keeper.");
         }
 
         await _profileService.SyncWithGoogleBusinessAsync(shopId);
         return Ok(ApiResponse<object?>.Ok(null, "Synced with Google Business Profile"));
+    }
+
+    [HttpPost("shop/{shopId:guid}/reapply")]
+    public async Task<IActionResult> ReapplyShop(Guid shopId)
+    {
+        var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
+        var existingShop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
+        if (existingShop == null)
+        {
+            return this.NotFoundProblemResponse("Shop not found.");
+        }
+
+        if (existingShop.KeeperId != keeper.KeeperId)
+        {
+            return this.ForbiddenProblemResponse("The requested shop does not belong to the authenticated keeper.");
+        }
+
+        try
+        {
+            await _shopService.ReapplyShopAsync(shopId, HttpContext.RequestAborted);
+            return Ok(ApiResponse<object?>.Ok(null, "Shop reapplied for verification"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return this.ValidationProblemResponse(ex.Message);
+        }
     }
 
     private IActionResult? ValidateShopRequest(
@@ -170,32 +196,32 @@ public class KeeperProfileController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Shop name is required."));
+            return this.ValidationProblemResponse("Shop name is required.", nameof(name));
         }
 
         if (string.IsNullOrWhiteSpace(address))
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Shop address is required."));
+            return this.ValidationProblemResponse("Shop address is required.", nameof(address));
         }
 
         if (latitude.HasValue != longitude.HasValue)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Latitude and longitude must both be provided together."));
+            return this.ValidationProblemResponse("Latitude and longitude must both be provided together.");
         }
 
         if (latitude is < -90 or > 90)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Latitude must be between -90 and 90."));
+            return this.ValidationProblemResponse("Latitude must be between -90 and 90.", nameof(latitude));
         }
 
         if (longitude is < -180 or > 180)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Longitude must be between -180 and 180."));
+            return this.ValidationProblemResponse("Longitude must be between -180 and 180.", nameof(longitude));
         }
 
         if (notificationRadius.HasValue && notificationRadius.Value <= 0)
         {
-            return BadRequest(ApiResponse<object>.Fail("VALIDATION_ERROR", "Notification radius must be greater than zero."));
+            return this.ValidationProblemResponse("Notification radius must be greater than zero.", nameof(notificationRadius));
         }
 
         return null;

@@ -14,7 +14,8 @@ public class Shop
     public string? GooglePlaceId { get; set; }
     public Guid? CategoryId { get; set; }
     public byte[]? ImageData { get; set; }
-    public string? ImageUrl { get; set; }
+    public byte[]? ImageUrl { get; set; }
+    public List<byte[]> ShopImages { get; set; } = new();
     public bool IsOpen { get; set; } = true;
     public string? BusinessHoursJson { get; set; }
     public List<string> Amenities { get; set; } = new();
@@ -28,8 +29,10 @@ public class Shop
     public List<string> Tags { get; set; } = new();
 
     public bool IsVerified { get; set; }
+    public string VerifyStatus { get; set; } = "Pending";
     public bool IsActive { get; set; } = true;
     public string? RejectionReason { get; set; }
+    public string? DeactivateReason { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

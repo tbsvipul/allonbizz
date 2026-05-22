@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
 using allonbiz.AdminAPI.Constants;
-using System.Linq;
+using allonbiz.AdminAPI.Helpers;
 
 namespace allonbiz.AdminAPI.Filters;
 
@@ -18,7 +18,11 @@ public class RequirePermissionAttribute : Attribute, IAuthorizationFilter
         var user = context.HttpContext.User;
         if (user.Identity?.IsAuthenticated != true)
         {
-            context.Result = new UnauthorizedResult();
+            context.Result = ControllerProblemExtensions.CreateProblemResult(
+                context.HttpContext,
+                StatusCodes.Status401Unauthorized,
+                "Unauthorized",
+                "Authentication is required to access this resource.");
             return;
         }
 
@@ -39,7 +43,11 @@ public class RequirePermissionAttribute : Attribute, IAuthorizationFilter
 
         if (!permissions.Contains(_permission))
         {
-            context.Result = new ForbidResult();
+            context.Result = ControllerProblemExtensions.CreateProblemResult(
+                context.HttpContext,
+                StatusCodes.Status403Forbidden,
+                "Forbidden",
+                $"The authenticated principal does not have the required permission '{_permission}'.");
         }
     }
 }

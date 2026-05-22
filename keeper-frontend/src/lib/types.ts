@@ -115,9 +115,12 @@ export interface ShopSummary {
   category: string;
   status: string;
   isVerified: boolean;
+  verifyStatus?: string;
   latitude?: number | null;
   longitude?: number | null;
   imageUrl?: string | null;
+  rejectionReason?: string | null;
+  deactivateReason?: string | null;
 }
 
 export interface ShopOfferSummary {
@@ -139,14 +142,19 @@ export interface ShopDetail {
   categoryName?: string | null;
   categoryId?: string | null;
   keeperBusinessName?: string | null;
+  keeperName?: string | null;
   keeperId: string;
   isActive: boolean;
   isVerified: boolean;
+  verifyStatus?: string;
   isOpen: boolean;
   notificationRadius?: number | null;
   imageUrl?: string | null;
+  shopImages: string[];
   tags: string[];
   amenities: string[];
+  rejectionReason?: string | null;
+  deactivateReason?: string | null;
   createdAt: string;
   recentOffers: ShopOfferSummary[];
 }

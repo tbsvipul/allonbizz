@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -26,6 +28,7 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
+  avatarUrl?: string | null;
   role: string;
   status: string;
   createdAt: string;
@@ -296,9 +299,14 @@ export default function UsersPage() {
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: 600,
+                              overflow: 'hidden',
                             }}
                           >
-                            {user.firstName?.[0] || user.email?.[0] || '?'}
+                            {user.avatarUrl ? (
+                              <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            ) : (
+                              user.firstName?.[0] || user.email?.[0] || '?'
+                            )}
                           </div>
                           <div>
                             <p style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{`${user.firstName} ${user.lastName}`}</p>

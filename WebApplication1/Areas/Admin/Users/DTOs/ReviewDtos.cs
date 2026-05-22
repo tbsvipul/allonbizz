@@ -7,6 +7,7 @@ public class ReviewDto
     public Guid ReviewId { get; set; }
     public Guid UserId { get; set; }
     public string UserFullName { get; set; } = string.Empty;
+    public string? UserAvatarUrl { get; set; }
     public Guid? ShopId { get; set; }
     public string ShopName { get; set; } = string.Empty;
     public Guid? OfferId { get; set; }

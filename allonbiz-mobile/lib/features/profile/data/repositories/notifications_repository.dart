@@ -3,16 +3,22 @@ import '../../../../core/models/api_response.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/failures.dart';
 
-final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+final notificationsRepositoryProvider = Provider<NotificationsRepository>((
+  ref,
+) {
   return NotificationsRepository(apiClient: ref.watch(apiClientProvider));
 });
 
 class NotificationsRepository {
   final ApiClient _apiClient;
 
-  NotificationsRepository({required ApiClient apiClient}) : _apiClient = apiClient;
+  NotificationsRepository({required ApiClient apiClient})
+    : _apiClient = apiClient;
 
-  Future<ApiPage<UserNotification>> getNotifications({int page = 1, int pageSize = 10}) async {
+  Future<ApiPage<UserNotification>> getNotifications({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
     try {
       return _apiClient.getPage<UserNotification>(
         '/user/notifications?pageNumber=$page&pageSize=$pageSize',
@@ -63,8 +69,7 @@ class UserNotification {
           ) ??
           DateTime.now(),
       isRead: json['isRead'] as bool? ?? json['IsRead'] as bool? ?? false,
-      metadata:
-          (json['metadataJson'] ?? json['MetadataJson'])?.toString(),
+      metadata: (json['metadataJson'] ?? json['MetadataJson'])?.toString(),
     );
   }
 }
