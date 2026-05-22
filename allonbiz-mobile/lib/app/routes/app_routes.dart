@@ -5,6 +5,7 @@ abstract final class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
   static const String home = '/home';
   static const String navigate = '/navigate';
   static const String discover = '/discover';
@@ -18,6 +19,7 @@ abstract final class AppRoutes {
   static const String error = '/error';
   static const String pastJourneys = '/profile/history';
   static const String savedItems = '/profile/saved';
+  static const String changePassword = '/profile/change-password';
 }
 
 extension NavigationExtension on BuildContext {

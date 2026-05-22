@@ -10,6 +10,7 @@ public interface IAuthService
     // Common
     Task<TokenResponseDto> RefreshTokenAsync(string refreshToken);
     Task LogoutAsync(ClaimsPrincipal user);
+    Task ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordRequestDto dto);
     Task ForgotPasswordAsync(string email);
     Task ResetPasswordAsync(string token, string newPassword);
     Task SendOtpAsync(string email);

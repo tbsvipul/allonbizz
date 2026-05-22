@@ -37,9 +37,27 @@ class AuthErrorMapper {
         return 'This authentication method is not enabled.';
       case 'weak-password':
         return 'The password is too weak. Please use a stronger password.';
+      case 'forgot-password-failed':
+        return 'We could not send the reset OTP right now.';
+      case 'invalid-otp':
+        return 'The OTP is invalid or expired.';
+      case 'reset-password-failed':
+        return 'We could not reset the password right now.';
+      case 'change-password-failed':
+        return 'We could not change the password right now.';
       case 'requires-recent-login':
         return 'This sensitive operation requires a recent login. Please log in again.';
       default:
+        if (lowered.contains('current password is incorrect')) {
+          return 'Current password is incorrect.';
+        }
+        if (lowered.contains('different from the current password')) {
+          return 'New password must be different from your current password.';
+        }
+        if (lowered.contains('expired otp') ||
+            lowered.contains('expired password reset token')) {
+          return 'The reset code has expired. Please request a new one.';
+        }
         if (lowered.contains('email is already taken') ||
             lowered.contains('already registered')) {
           return l10n.authEmailAlreadyInUse;

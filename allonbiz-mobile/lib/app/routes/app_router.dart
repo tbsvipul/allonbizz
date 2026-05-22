@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/onboarding_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/controllers/auth_controller.dart';
@@ -18,6 +19,7 @@ import '../../features/discover/presentation/screens/shop_detail_screen.dart';
 import '../../features/profile/presentation/screens/past_journeys_screen.dart';
 import '../../features/profile/presentation/screens/notification_screen.dart';
 import '../../features/profile/presentation/screens/saved_offers_screen.dart';
+import '../../features/profile/presentation/screens/change_password_screen.dart';
 import '../../shared/screens/app_error_screen.dart';
 import '../../shared/models/offer.dart';
 import '../../core/services/storage_service.dart';
@@ -58,6 +60,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isOnboarding = state.matchedLocation == AppRoutes.onboarding;
       final isLogin = state.matchedLocation == AppRoutes.login;
       final isRegister = state.matchedLocation == AppRoutes.register;
+      final isForgotPassword =
+          state.matchedLocation == AppRoutes.forgotPassword;
 
       // Keep users on splash until API restores any persisted session.
       if (!hasResolvedSession) {
@@ -72,12 +76,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // If logged in, redirect away from auth pages
-      if (isLoggedIn && (isOnboarding || isLogin || isRegister)) {
+      if (isLoggedIn &&
+          (isOnboarding || isLogin || isRegister || isForgotPassword)) {
         return AppRoutes.home;
       }
 
       // If not logged in and not on auth pages, redirect to login
-      if (!isLoggedIn && !isOnboarding && !isLogin && !isRegister) {
+      if (!isLoggedIn &&
+          !isOnboarding &&
+          !isLogin &&
+          !isRegister &&
+          !isForgotPassword) {
         if (!storage.hasSeenOnboarding) return AppRoutes.onboarding;
         return AppRoutes.login;
       }
@@ -120,6 +129,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.register,
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) => ForgotPasswordScreen(
+          initialEmail: state.extra is String ? state.extra as String : null,
+        ),
       ),
 
       // ── Main Shell (Bottom Nav) ─────────────────────────────
@@ -167,6 +182,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'saved',
                     name: 'savedItems',
                     builder: (context, state) => const SavedOffersScreen(),
+                  ),
+                  GoRoute(
+                    path: 'change-password',
+                    name: 'changePassword',
+                    builder: (context, state) => const ChangePasswordScreen(),
                   ),
                 ],
               ),

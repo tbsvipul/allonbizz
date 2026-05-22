@@ -230,7 +230,60 @@ class AuthRepository {
     try {
       await _apiClient.post('/auth/forgot-password', body: {'email': email});
     } on ServerFailure catch (e) {
+      if (e.statusCode == 404) {
+        throw const AuthFailure(
+          'user-not-found',
+          'No user found for that email.',
+        );
+      }
       throw AuthFailure('forgot-password-failed', e.message);
+    }
+  }
+
+  Future<String> verifyPasswordResetOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        '/auth/verify-otp',
+        body: {'email': email, 'otp': otp},
+      );
+      final token = response['data']?['resetToken']?.toString();
+      if (token == null || token.trim().isEmpty) {
+        throw const AuthFailure('invalid-otp', 'Invalid or expired OTP.');
+      }
+      return token;
+    } on ServerFailure catch (e) {
+      throw AuthFailure('invalid-otp', e.message);
+    }
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      await _apiClient.post(
+        '/auth/reset-password',
+        body: {'token': token, 'newPassword': newPassword},
+      );
+    } on ServerFailure catch (e) {
+      throw AuthFailure('reset-password-failed', e.message);
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _apiClient.post(
+        '/auth/change-password',
+        body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      );
+    } on ServerFailure catch (e) {
+      throw AuthFailure('change-password-failed', e.message);
     }
   }
 

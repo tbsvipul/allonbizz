@@ -47,6 +47,14 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto dto)
+    {
+        await _authService.ChangePasswordAsync(User, dto);
+        return Ok(ApiResponse<object?>.Ok(null, "Password changed successfully."));
+    }
+
     [HttpPost("send-otp")]
     [AllowAnonymous]
     public async Task<IActionResult> SendOtp([FromBody] ForgotPasswordRequestDto dto)

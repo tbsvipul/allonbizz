@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/routes/app_routes.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -21,6 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _forgotPasswordMessage;
 
   @override
   void dispose() {
@@ -30,6 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _onLogin() {
+    _clearError();
     if (_formKey.currentState?.validate() ?? false) {
       ref
           .read(authControllerProvider.notifier)
@@ -41,28 +44,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _onForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid email to reset your password'),
-        ),
-      );
+    final result = await context.push<String?>(
+      AppRoutes.forgotPassword,
+      extra: _emailController.text.trim(),
+    );
+
+    if (!mounted || result == null || result.isEmpty) {
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).sendPasswordReset(email);
-
-    if (!mounted) return;
-
-    if (ref.read(authControllerProvider).status != AuthStatus.error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset link sent to your email')),
-      );
-    }
+    setState(() => _forgotPasswordMessage = result);
   }
 
   void _clearError() {
+    if (_forgotPasswordMessage != null) {
+      setState(() => _forgotPasswordMessage = null);
+    }
     if (ref.read(authControllerProvider).status == AuthStatus.error) {
       ref.read(authControllerProvider.notifier).clearError();
     }
@@ -76,6 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.status == AuthStatus.loading;
+    final loginErrorMessage = _forgotPasswordMessage ?? authState.errorMessage;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -97,8 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      if (authState.status == AuthStatus.error &&
-                          authState.errorMessage != null) ...[
+                      if (loginErrorMessage != null) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -116,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Expanded(
                                 child: Text(
                                   AuthErrorMapper.getMessage(
-                                    authState.errorMessage,
+                                    loginErrorMessage,
                                     l10n,
                                   ),
                                   style: textTheme.bodySmall?.copyWith(

@@ -236,6 +236,11 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.pastJourneys),
                 ),
                 ProfileTileWidget(
+                  icon: Icons.lock_reset_rounded,
+                  title: 'Change Password',
+                  onTap: () => context.push(AppRoutes.changePassword),
+                ),
+                ProfileTileWidget(
                   icon: Icons.security_rounded,
                   title: l10n.privacySecurity,
                   onTap: () {},

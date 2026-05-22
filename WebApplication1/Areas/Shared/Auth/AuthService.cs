@@ -91,8 +91,34 @@ public class AuthService : IAuthService
         var userId = user.GetUserId();
         await RevokeActiveTokensAsync(userId);
         await _db.SaveChangesAsync();
-        await _auditService.LogAsync(userId, "LOGOUT", "Auth", userId.ToString(), null, "N/A");
         _logger.LogInformation("User {UserId} logged out and active refresh tokens were revoked", userId);
+    }
+
+    public async Task ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordRequestDto dto)
+    {
+        var userId = user.GetUserId();
+        var account = await _db.Users.FindAsync(userId)
+            ?? throw new KeyNotFoundException("User account not found.");
+
+        if (string.IsNullOrWhiteSpace(account.PasswordHash) ||
+            !PasswordHelper.VerifyPassword(dto.CurrentPassword, account.PasswordHash))
+        {
+            throw new ArgumentException("Current password is incorrect.");
+        }
+
+        AdminAccountHelper.ValidatePassword(dto.NewPassword);
+
+        if (PasswordHelper.VerifyPassword(dto.NewPassword, account.PasswordHash))
+        {
+            throw new ArgumentException("New password must be different from the current password.");
+        }
+
+        account.PasswordHash = PasswordHelper.HashPassword(dto.NewPassword);
+        account.UpdatedAt = DateTime.UtcNow;
+        await RevokeActiveTokensAsync(userId);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Password changed for user {UserId}", userId);
     }
 
     public async Task ForgotPasswordAsync(string email)
@@ -100,7 +126,7 @@ public class AuthService : IAuthService
         var normalizedEmail = AdminAccountHelper.NormalizeEmail(email);
         if (!await AccountExistsAsync(normalizedEmail))
         {
-            return;
+            throw new KeyNotFoundException("No user found for that email.");
         }
 
         await SendOtpAsync(normalizedEmail);
@@ -154,7 +180,6 @@ public class AuthService : IAuthService
         challenge.ConsumedAt = DateTime.UtcNow;
         await RevokeActiveTokensAsync(user.UserId);
         await _db.SaveChangesAsync();
-        await _auditService.LogAsync(user.UserId, "RESET_PASSWORD_USER", nameof(User), user.UserId.ToString(), null, "N/A");
 
         _logger.LogInformation("Password reset completed for user {UserId}", user.UserId);
     }

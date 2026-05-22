@@ -1,6 +1,7 @@
 using allonbiz.AdminAPI.Data;
 using allonbiz.AdminAPI.Models.Entities;
 using allonbiz.AdminAPI.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace allonbiz.AdminAPI.Services;
 
@@ -17,6 +18,27 @@ public class AuditService : IAuditService
 
     public async Task LogAsync(Guid adminId, string action, string targetEntity, string targetId, string? ipAddress, string? userAgent)
     {
+        if (adminId == Guid.Empty)
+        {
+            _logger.LogDebug("Audit skipped for {Action} because admin id is empty", action);
+            return;
+        }
+
+        var adminExists = await _db.AdminAccounts
+            .AsNoTracking()
+            .AnyAsync(admin => admin.AdminId == adminId);
+
+        if (!adminExists)
+        {
+            _logger.LogWarning(
+                "Audit skipped for {Action} on {Entity}/{Id} because admin account {AdminId} was not found",
+                action,
+                targetEntity,
+                targetId,
+                adminId);
+            return;
+        }
+
         var auditLog = new AuditLog
         {
             AdminId = adminId,
@@ -28,11 +50,8 @@ public class AuditService : IAuditService
             Timestamp = DateTime.UtcNow
         };
 
-        if (adminId != Guid.Empty)
-        {
-            _db.AuditLogs.Add(auditLog);
-            await _db.SaveChangesAsync();
-        }
+        _db.AuditLogs.Add(auditLog);
+        await _db.SaveChangesAsync();
 
         _logger.LogDebug("Audit: {Action} on {Entity}/{Id} by {AdminId}", action, targetEntity, targetId, adminId);
     }
