@@ -102,18 +102,8 @@ function geocodeAddress(geocoder: any, address: string): Promise<{ latitude: num
   });
 }
 
-function createMarkerIcon(googleMaps: any, status: string, isSelected: boolean) {
-  const isActive = status.toLowerCase() === 'active';
-
-  return {
-    path: googleMaps.SymbolPath.CIRCLE,
-    scale: isSelected ? 10 : 8,
-    fillColor: isActive ? '#10b981' : '#ef4444',
-    fillOpacity: 1,
-    strokeColor: isSelected ? '#111827' : '#ffffff',
-    strokeWeight: isSelected ? 3 : 2,
-  };
-}
+// We will dynamically create a custom OverlayView inside the component
+// to support HTML and CSS-based markers with external images.
 
 function escapeHtml(value: string) {
   return value
@@ -126,53 +116,53 @@ function escapeHtml(value: string) {
 
 function buildInfoWindowContent(shop: DashboardMapShop) {
   const statusIsActive = shop.status.toLowerCase() === 'active';
-  const statusBg = statusIsActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)';
-  const statusColor = statusIsActive ? '#10b981' : '#ef4444';
+  const statusBg = statusIsActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+  const statusColor = statusIsActive ? '#059669' : '#dc2626';
   const latitude = typeof shop.latitude === 'number' ? shop.latitude.toFixed(4) : 'N/A';
   const longitude = typeof shop.longitude === 'number' ? shop.longitude.toFixed(4) : 'N/A';
+  
   const image = shop.imageUrl
-    ? `<img src="${escapeHtml(shop.imageUrl)}" alt="${escapeHtml(shop.name)}" style="width:52px;height:52px;border-radius:14px;object-fit:cover;display:block;" />`
-    : '<div style="width:52px;height:52px;border-radius:14px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;">S</div>';
+    ? `<img src="${escapeHtml(shop.imageUrl)}" alt="${escapeHtml(shop.name)}" style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08); display: block; flex-shrink: 0;" />`
+    : `<div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0;">${escapeHtml(shop.name.charAt(0).toUpperCase())}</div>`;
 
   return `
-    <div style="max-width:280px;padding:4px 2px 2px;font-family:Inter,system-ui,sans-serif;color:#0f172a;">
-      <div style="display:flex;gap:12px;align-items:flex-start;">
+    <div style="min-width: 250px; max-width: 280px; padding: 4px; font-family: Inter, system-ui, sans-serif; color: #0f172a;">
+      <!-- Header Row -->
+      <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06);">
         ${image}
-        <div style="min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <h4 style="margin:0;font-size:16px;line-height:1.2;font-weight:800;">${escapeHtml(shop.name)}</h4>
-            ${shop.isVerified ? '<span style="color:#10b981;font-size:14px;">●</span>' : ''}
+        <div style="min-width: 0; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <h4 style="margin: 0; font-size: 15px; line-height: 1.2; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(shop.name)}</h4>
+            ${shop.isVerified ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="#10b981" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>' : ''}
           </div>
-          <p style="margin:4px 0 0;color:#475569;font-size:13px;line-height:1.35;">${escapeHtml(shop.businessName || 'Business')}</p>
+          <p style="margin: 3px 0 0; color: #64748b; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(shop.businessName || shop.category || 'Business')}</p>
         </div>
       </div>
 
-      <div style="margin-top:12px;display:grid;gap:8px;">
-        <div>
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:3px;">Category</div>
-          <div style="font-size:13px;font-weight:700;">${escapeHtml(shop.category || 'General')}</div>
+      <!-- Details List -->
+      <div style="padding: 12px 0; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <div style="font-size: 13px; font-weight: 500; color: #334155; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(shop.location || 'Unknown location')}</div>
         </div>
-        <div>
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:3px;">Address</div>
-          <div style="font-size:13px;font-weight:700;">${escapeHtml(shop.location || 'Unknown')}</div>
+        
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <span style="padding: 4px 8px; border-radius: 6px; background: ${statusBg}; color: ${statusColor}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+            ${escapeHtml(shop.status)}
+          </span>
+          <span style="padding: 4px 8px; border-radius: 6px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 600;">
+            <span style="opacity: 0.6; margin-right: 2px;">GPS:</span> ${latitude}, ${longitude}
+          </span>
         </div>
       </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-        <span style="padding:6px 10px;border-radius:999px;background:${statusBg};color:${statusColor};font-size:12px;font-weight:800;">
-          ${escapeHtml(shop.status)}
-        </span>
-        <span style="padding:6px 10px;border-radius:999px;background:rgba(37,99,235,.12);color:#2563eb;font-size:12px;font-weight:800;">
-          ${latitude}, ${longitude}
-        </span>
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
-        <a href="/shops/${encodeURIComponent(shop.id)}" style="padding:9px 12px;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-size:12px;font-weight:800;">
-          View shop details
+      <!-- Actions -->
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <a href="/shops/${encodeURIComponent(shop.id)}" style="flex: 1; text-align: center; padding: 8px; border-radius: 8px; background: #2563eb; color: #fff; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+          Details
         </a>
-        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${shop.latitude},${shop.longitude}`)}" target="_blank" rel="noopener noreferrer" style="padding:9px 12px;border-radius:12px;background:rgba(37,99,235,.1);color:#2563eb;text-decoration:none;font-size:12px;font-weight:800;">
-          Open in Google Maps
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${shop.latitude},${shop.longitude}`)}" target="_blank" rel="noopener noreferrer" style="flex: 1; text-align: center; padding: 8px; border-radius: 8px; background: #fff; color: #0f172a; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+          Maps
         </a>
       </div>
     </div>
@@ -482,6 +472,10 @@ export default function DashboardShopMap() {
           );
         }
       });
+
+      mapRef.current.addListener('click', () => {
+        setSelectedShopId(null);
+      });
     }
 
     if (!infoWindowRef.current) {
@@ -501,20 +495,108 @@ export default function DashboardShopMap() {
 
     const bounds = new googleMaps.LatLngBounds();
 
-    mappableShops.forEach((shop) => {
-      const marker = new googleMaps.Marker({
-        map,
-        position: { lat: shop.latitude, lng: shop.longitude },
-        title: shop.name,
-        icon: createMarkerIcon(googleMaps, shop.status, shop.id === selectedShopId),
-      });
+    // Define Custom HTML Marker OverlayView Class
+    class ShopMarkerOverlay extends googleMaps.OverlayView {
+      private container: HTMLDivElement | null = null;
+      private shop: DashboardMapShop;
+      private isSelected: boolean;
+      private onClick: () => void;
 
-      marker.addListener('click', () => {
+      constructor(shop: DashboardMapShop, isSelected: boolean, onClick: () => void) {
+        super();
+        this.shop = shop;
+        this.isSelected = isSelected;
+        this.onClick = onClick;
+      }
+
+      onAdd() {
+        const div = document.createElement('div');
+        div.style.position = 'absolute';
+        // Shift up by half the teardrop diagonal (46 / sqrt(2) ≈ 32.5px) so the tip points exactly at the coordinate
+        const tipOffset = this.isSelected ? 38 : 32.5; 
+        div.style.transform = `translate(-50%, calc(-50% - ${tipOffset}px))`;
+        div.style.cursor = 'pointer';
+        div.style.zIndex = this.isSelected ? '100' : '10';
+        div.onclick = (e) => {
+          e.stopPropagation();
+          this.onClick();
+        };
+
+        const pinColor = this.shop.status.toLowerCase() === 'active' ? '#10b981' : '#ef4444';
+        const size = this.isSelected ? 54 : 46;
+        const innerSize = this.isSelected ? 44 : 38;
+        const iconSize = this.isSelected ? 24 : 20;
+
+        const imageHtml = this.shop.imageUrl 
+          ? `<img src="${escapeHtml(this.shop.imageUrl)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`
+          : `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
+
+        div.innerHTML = `
+          <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <!-- Rotated teardrop background -->
+            <div style="
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              background-color: ${pinColor};
+              border-radius: 50% 50% 4px 50%;
+              transform: rotate(45deg);
+              box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
+              ${this.isSelected ? `border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.4), 2px 4px 16px rgba(0,0,0,0.4);` : ''}
+            "></div>
+            
+            <!-- Inner Circle with Image -->
+            <div style="
+              position: absolute;
+              width: ${innerSize}px;
+              height: ${innerSize}px;
+              background-color: #ffffff;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              z-index: 2;
+            ">
+              ${imageHtml}
+            </div>
+          </div>
+        `;
+
+        this.container = div;
+        const panes = this.getPanes();
+        panes.overlayMouseTarget.appendChild(div);
+      }
+
+      draw() {
+        if (!this.container) return;
+        const projection = this.getProjection();
+        if (!projection) return;
+        const pos = new win.google.maps.LatLng(this.shop.latitude, this.shop.longitude);
+        const positionPixel = projection.fromLatLngToDivPixel(pos);
+        if (!positionPixel) return;
+
+        this.container.style.left = positionPixel.x + 'px';
+        this.container.style.top = positionPixel.y + 'px';
+      }
+
+      onRemove() {
+        if (this.container && this.container.parentNode) {
+          this.container.parentNode.removeChild(this.container);
+          this.container = null;
+        }
+      }
+    }
+
+    mappableShops.forEach((shop) => {
+      const isSelected = shop.id === selectedShopId;
+      const markerOverlay = new ShopMarkerOverlay(shop, isSelected, () => {
         setSelectedShopId(shop.id);
       });
-
-      bounds.extend(marker.getPosition());
-      markersRef.current.push({ shopId: shop.id, marker });
+      
+      markerOverlay.setMap(map);
+      bounds.extend(new googleMaps.LatLng(shop.latitude, shop.longitude));
+      markersRef.current.push({ shopId: shop.id, marker: markerOverlay });
     });
 
     if (selectedShop) {
@@ -542,15 +624,20 @@ export default function DashboardShopMap() {
       return;
     }
 
-    const markerEntry = markersRef.current.find((entry) => entry.shopId === selectedShop.id);
-    if (!markerEntry) {
+    const win = window as GoogleMapsWindow;
+    if (!win.google?.maps) {
       return;
     }
 
+    const pos = new win.google.maps.LatLng(selectedShop.latitude, selectedShop.longitude);
     infoWindowRef.current.setContent(buildInfoWindowContent(selectedShop));
+    infoWindowRef.current.setPosition(pos);
+    
+    // Slight pixel offset so info window appears above the teardrop pin
+    infoWindowRef.current.setOptions({ pixelOffset: new win.google.maps.Size(0, -35) });
+
     infoWindowRef.current.open({
       map: mapRef.current,
-      anchor: markerEntry.marker,
       shouldFocus: false,
     });
   }, [selectedShop]);

@@ -701,37 +701,7 @@ List<Marker> _buildStaticMarkers({
 }) {
   final markers = <Marker>[];
 
-  if (origin != null) {
-    markers.add(
-      Marker(
-        point: origin,
-        width: 24,
-        height: 24,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.white, width: 2),
-          ),
-        ),
-      ),
-    );
-  }
 
-  if (destination != null) {
-    markers.add(
-      Marker(
-        point: destination,
-        width: 36,
-        height: 44,
-        child: const Icon(
-          Icons.location_on_rounded,
-          color: AppColors.error,
-          size: 36,
-        ),
-      ),
-    );
-  }
 
   final Map<String, List<Offer>> shopGroups = {};
   for (final offer in nearbyOffers) {

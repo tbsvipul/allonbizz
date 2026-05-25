@@ -20,6 +20,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   late final TextEditingController _searchController;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -54,7 +55,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             child: AppTextField.search(
               controller: _searchController,
               hint: l10n.searchHint,
-              onChanged: (v) {},
+              onChanged: (v) {
+                setState(() {
+                  _searchQuery = v.trim().toLowerCase();
+                });
+              },
             ),
           ),
         ),
@@ -65,8 +70,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             padding: const EdgeInsets.only(top: AppDimensions.xl),
             child: AppSectionHeader(
               title: l10n.categories,
-              actionLabel: l10n.seeAll,
-              onActionPressed: () {},
             ),
           ),
         ),
@@ -74,12 +77,21 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: SizedBox(
             height: 110,
             child: categoriesAsync.when(
-              data: (categories) => ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.lg,
-                ),
-                itemCount: categories.length,
+              data: (allCategories) {
+                final categories = _searchQuery.isEmpty 
+                    ? allCategories 
+                    : allCategories.where((c) => c.label.toLowerCase().contains(_searchQuery)).toList();
+                
+                if (categories.isEmpty) {
+                  return const Center(child: Text('No categories found'));
+                }
+
+                return ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.lg,
+                  ),
+                  itemCount: categories.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppDimensions.lg),
                 itemBuilder: (context, index) {
@@ -93,8 +105,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     },
                   );
                 },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(child: Text('Error: $err')),
             ),
           ),
@@ -106,8 +119,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             padding: const EdgeInsets.only(top: AppDimensions.xl),
             child: AppSectionHeader(
               title: 'Popular Tags',
-              actionLabel: l10n.seeAll,
-              onActionPressed: () {},
             ),
           ),
         ),
@@ -115,12 +126,19 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: SizedBox(
             height: 40,
             child: tagsAsync.when(
-              data: (tags) => ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.lg,
-                ),
-                itemCount: tags.length,
+              data: (allTags) {
+                final tags = _searchQuery.isEmpty 
+                    ? allTags 
+                    : allTags.where((t) => t.name.toLowerCase().contains(_searchQuery)).toList();
+                
+                if (tags.isEmpty) return const SizedBox.shrink();
+
+                return ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.lg,
+                  ),
+                  itemCount: tags.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppDimensions.md),
                 itemBuilder: (context, index) {
@@ -146,8 +164,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     ),
                   );
                 },
-              ),
-              loading: () => const SizedBox.shrink(),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
               error: (err, _) => const SizedBox.shrink(),
             ),
           ),
@@ -159,8 +178,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             padding: const EdgeInsets.only(top: AppDimensions.xl),
             child: AppSectionHeader(
               title: 'Featured Offers',
-              actionLabel: l10n.seeAll,
-              onActionPressed: () {},
             ),
           ),
         ),
@@ -170,7 +187,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: SizedBox(
             height: 220,
             child: dealsAsync.when(
-              data: (deals) {
+              data: (allDeals) {
+                final deals = _searchQuery.isEmpty
+                    ? allDeals
+                    : allDeals.where((d) {
+                        final q = _searchQuery;
+                        return d.title.toLowerCase().contains(q) ||
+                            d.shopName.toLowerCase().contains(q) ||
+                            d.category.toLowerCase().contains(q);
+                      }).toList();
+
                 if (deals.isEmpty) {
                   return const Center(child: Text('No offers available'));
                 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:permission_handler/permission_handler.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,7 +45,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _requestPermissions();
       unawaited(_initGeofencing());
 
       final locationState = ref.read(currentLocationProvider);
@@ -51,10 +54,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         unawaited(
           ref
               .read(currentLocationProvider.notifier)
-              .fetchCurrentLocation(requestPermission: false),
+              .fetchCurrentLocation(requestPermission: true),
         );
       }
     });
+  }
+
+  Future<void> _requestPermissions() async {
+    // Request notification and base location permissions together
+    await [
+      Permission.notification,
+      Permission.location,
+    ].request();
+
+    // If location is granted, request background location for tracking
+    if (await Permission.location.isGranted) {
+      await Permission.locationAlways.request();
+    }
   }
 
   @override
