@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -127,7 +128,7 @@ class ApiClient {
   final Map<String, _MemoryCacheEntry> _memoryCache = {};
   final Map<String, Future<http.Response>> _inFlightGets = {};
 
-  bool _isRefreshing = false;
+  Future<bool>? _refreshFuture;
 
   @visibleForTesting
   ApiReadMetrics? lastReadMetrics;
@@ -453,11 +454,11 @@ class ApiClient {
         request = httpRequest;
       }
 
-      final streamedResponse = await _client.send(request);
+      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
       _logTrackedAuthResponse(endpoint, response);
 
-      if (response.statusCode == 401 && !isRetry && !_isRefreshing) {
+      if (response.statusCode == 401 && !isRetry) {
         final success = await _tryRefreshToken();
         if (success) {
           return _request(
@@ -479,12 +480,15 @@ class ApiClient {
     } on SocketException catch (error) {
       _logTrackedAuthException(method, endpoint, error);
       throw const NetworkFailure();
+    } on TimeoutException catch (error) {
+      _logTrackedAuthException(method, endpoint, error);
+      throw const NetworkFailure();
     } catch (error) {
       _logTrackedAuthException(method, endpoint, error);
       if (error is Failure) {
         rethrow;
       }
-      throw const NetworkFailure();
+      rethrow; // Do not swallow unknown errors as NetworkFailure
     }
   }
 
@@ -578,10 +582,10 @@ class ApiClient {
   }) async {
     try {
       final request = http.Request('GET', uri)..headers.addAll(_headers);
-      final streamedResponse = await _client.send(request);
+      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 401 && !isRetry && !_isRefreshing) {
+      if (response.statusCode == 401 && !isRetry) {
         final success = await _tryRefreshToken();
         if (success) {
           final refreshedUri = Uri.parse('$baseUrl$endpoint');
@@ -599,16 +603,28 @@ class ApiClient {
       throw const NetworkFailure();
     } on SocketException {
       throw const NetworkFailure();
+    } on TimeoutException {
+      throw const NetworkFailure();
     }
+
   }
 
-  Future<bool> _tryRefreshToken() async {
+  Future<bool> _tryRefreshToken() {
+    if (_refreshFuture != null) {
+      return _refreshFuture!;
+    }
+    _refreshFuture = _doRefreshToken().whenComplete(() {
+      _refreshFuture = null;
+    });
+    return _refreshFuture!;
+  }
+
+  Future<bool> _doRefreshToken() async {
     final refreshToken = storageService.backendRefreshToken;
     if (refreshToken == null) {
       return false;
     }
 
-    _isRefreshing = true;
     try {
       final response = await _client.post(
         Uri.parse('$baseUrl/auth/refresh-token'),
@@ -632,10 +648,12 @@ class ApiClient {
       }
 
       return false;
+    } on SocketException {
+      rethrow;
+    } on TimeoutException {
+      rethrow;
     } catch (_) {
       return false;
-    } finally {
-      _isRefreshing = false;
     }
   }
 

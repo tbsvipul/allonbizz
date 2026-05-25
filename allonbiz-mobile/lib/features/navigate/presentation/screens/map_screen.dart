@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -47,6 +48,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     _mapController = MapController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final locationState = ref.read(currentLocationProvider);
       if (locationState.position == null && !locationState.isLoading) {
         unawaited(
@@ -103,24 +105,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
         } else if (focusPoint != null) {
           _mapController.move(focusPoint, 15);
         }
-      } catch (_) {
-        // Ignore camera sync errors caused by transient map lifecycle timing.
+      } catch (error, stackTrace) {
+        debugPrint('Camera sync failed: $error\n$stackTrace');
       }
     });
-  }
-
-  String _buildEtaText(
-    AppLocalizations l10n, {
-    required bool isLoading,
-    required bool hasActiveRoute,
-    required String? duration,
-    required String? distance,
-  }) {
-    if (isLoading) return l10n.calculatingRoute;
-    if (hasActiveRoute) {
-      return '${duration ?? '--- min'} \u2022 ${distance ?? '--- km'}';
-    }
-    return l10n.tapSearchRoute;
   }
 
   @override
@@ -132,20 +120,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final isLoading = ref.watch(
       navigationControllerProvider.select((state) => state.isLoading),
     );
-    final destinationName = ref.watch(
-      navigationControllerProvider.select((state) => state.destinationName),
-    );
+
     final origin = ref.watch(
       navigationControllerProvider.select((state) => state.origin),
     );
     final destination = ref.watch(
       navigationControllerProvider.select((state) => state.destination),
-    );
-    final distance = ref.watch(
-      navigationControllerProvider.select((state) => state.distanceText),
-    );
-    final duration = ref.watch(
-      navigationControllerProvider.select((state) => state.durationText),
     );
     final isFreeRoam = ref.watch(
       navigationControllerProvider.select((state) => state.isFreeRoam),
@@ -153,18 +133,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final isJourneyActive = ref.watch(
       navigationControllerProvider.select((state) => state.hasActiveJourney),
     );
-    final selectedInterests = ref.watch(
-      navigationControllerProvider.select((state) => state.selectedInterests),
-    );
-    final searchText = ref.watch(
-      navigationControllerProvider.select((state) => state.searchText),
-    );
-    final nearbyOffers = ref.watch(
+    final rawNearbyOffers = ref.watch(
       navigationControllerProvider.select((state) => state.offersOnRoute),
     );
-    final nearbyShops = ref.watch(
+    final rawNearbyShops = ref.watch(
       navigationControllerProvider.select((state) => state.nearbyShops),
     );
+    final nearbyOffers = rawNearbyOffers;
+    final nearbyShops = rawNearbyShops;
     final currentLocation = ref.watch(
       currentLocationProvider.select((state) => state.position),
     );
@@ -274,8 +250,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   ],
                 ),
               MarkerLayer(
-                markers: _buildMarkers(
-                  currentPoint: currentPoint,
+                markers: _buildStaticMarkers(
                   origin: origin,
                   destination: destination,
                   isFreeRoam: isFreeRoam,
@@ -285,6 +260,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   ref: ref,
                 ),
               ),
+              UserLocationMarkerLayer(hasActiveRoute: hasActiveRoute),
               const RichAttributionWidget(
                 alignment: AttributionAlignment.bottomRight,
                 attributions: [
@@ -293,115 +269,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ],
           ),
-          Positioned(
-            top: topPadding + AppDimensions.sm,
-            left: AppDimensions.md,
-            right: AppDimensions.md,
-            child: Material(
-              color: isDark ? AppColors.cardDark : AppColors.white,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-              elevation: 2,
-              shadowColor: AppColors.black.withValues(alpha: 0.12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-                onTap: () => context.push(AppRoutes.search),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.md,
-                    vertical: AppDimensions.sm,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(
-                            AppDimensions.radiusMd,
-                          ),
-                        ),
-                        child: Icon(
-                          isLoading
-                              ? Icons.hourglass_bottom_rounded
-                              : isJourneyActive
-                              ? Icons.directions_walk_rounded
-                              : Icons.navigation_rounded,
-                          color: AppColors.primary,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _buildEtaText(
-                                l10n,
-                                isLoading: isLoading,
-                                hasActiveRoute: hasActiveRoute,
-                                duration: duration,
-                                distance: distance,
-                              ),
-                              style: AppTextStyles.titleMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.white
-                                    : AppColors.grey900,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (isFreeRoam)
-                              Text(
-                                [
-                                      if (selectedInterests.isNotEmpty)
-                                        selectedInterests.join(', '),
-                                      if (searchText != null) '"$searchText"',
-                                    ].join(' • ').isEmpty
-                                    ? 'Exploring Nearby'
-                                    : 'Nearby: ${[if (selectedInterests.isNotEmpty) selectedInterests.join(', '), if (searchText != null) '"$searchText"'].join(' • ')}',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            else if (isJourneyActive && !hasActiveRoute)
-                              Text(
-                                destinationName?.isNotEmpty == true
-                                    ? 'Active journey in progress'
-                                    : 'Journey tracking is active',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            else if (destinationName != null &&
-                                destinationName.isNotEmpty)
-                              Text(
-                                destinationName,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.grey500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ).animate().fadeIn(duration: 260.ms).slideY(begin: -0.2),
-          ),
+          EtaOverlayWidget(topPadding: topPadding),
           Positioned(
             right: AppDimensions.lg,
-            bottom: 120,
+            bottom: AppDimensions.lg + MediaQuery.of(context).padding.bottom,
             child: Column(
               children: [
                 _MapControlButton(
@@ -460,7 +331,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
           if (nearbyOffers.isNotEmpty)
             Positioned(
               left: AppDimensions.md,
-              bottom: 120,
+              bottom: AppDimensions.lg + MediaQuery.of(context).padding.bottom,
               child: _buildOffersOverlay(context, nearbyOffers),
             ),
 
@@ -663,10 +534,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
               child: AspectRatio(
                 aspectRatio: 22 / 10,
                 child: offer.imageUrl != null && offer.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        offer.imageUrl!,
+                    ? CachedNetworkImage(
+                        imageUrl: offer.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
+                        errorWidget: (context, error, stackTrace) =>
                             _buildOfferPlaceholder(),
                       )
                     : _buildOfferPlaceholder(),
@@ -819,8 +690,7 @@ class _MapControlButton extends StatelessWidget {
   }
 }
 
-List<Marker> _buildMarkers({
-  required LatLng? currentPoint,
+List<Marker> _buildStaticMarkers({
   required LatLng? origin,
   required LatLng? destination,
   required bool isFreeRoam,
@@ -831,62 +701,7 @@ List<Marker> _buildMarkers({
 }) {
   final markers = <Marker>[];
 
-  if (currentPoint != null) {
-    markers.add(
-      Marker(
-        point: currentPoint,
-        width: 60,
-        height: 60,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (!hasActiveRoute) ...[
-              for (int i = 0; i < 3; i++)
-                Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.3),
-                        shape: BoxShape.circle,
-                      ),
-                    )
-                    .animate(onPlay: (c) => c.repeat())
-                    .scale(
-                      delay: (i * 700).ms,
-                      duration: 2100.ms,
-                      begin: const Offset(1, 1),
-                      end: const Offset(3.0, 3.0),
-                      curve: Curves.decelerate,
-                    )
-                    .fadeOut(
-                      delay: (i * 700).ms,
-                      duration: 2100.ms,
-                      curve: Curves.decelerate,
-                    ),
-            ],
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.blue.shade600,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withValues(alpha: 0.4),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  if (origin != null && origin != currentPoint) {
+  if (origin != null) {
     markers.add(
       Marker(
         point: origin,
@@ -918,6 +733,12 @@ List<Marker> _buildMarkers({
     );
   }
 
+  final Map<String, List<Offer>> shopGroups = {};
+  for (final offer in nearbyOffers) {
+    final key = offer.shopId ?? offer.shopName;
+    shopGroups.putIfAbsent(key, () => []).add(offer);
+  }
+
   final shopMarkerIds = <String>{};
   for (final shop in nearbyShops) {
     final shopId = shop.id.trim();
@@ -929,61 +750,99 @@ List<Marker> _buildMarkers({
     }
 
     shopMarkerIds.add(shopId);
+
+    // Skip drawing the shop marker if there are offers for this shop
+    if (shopGroups.containsKey(shopId) && shopGroups[shopId]!.isNotEmpty) {
+      continue;
+    }
+
     markers.add(
       Marker(
         point: LatLng(shop.latitude, shop.longitude),
-        width: 48,
-        height: 48,
+        width: 60,
+        height: 60,
         child: GestureDetector(
           onTap: () {
             ref.read(navigationControllerProvider.notifier).selectShop(shop.id);
           },
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.accent, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.rotate(
+                angle: 3.1415926535897932 / 4,
+                child: Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(23),
+                      topRight: Radius.circular(23),
+                      bottomLeft: Radius.circular(23),
+                      bottomRight: Radius.circular(4),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(2, 2),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.storefront_rounded,
-                color: AppColors.accent,
-                size: 24,
               ),
-            ),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: AppColors.white,
+                  shape: BoxShape.circle,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: shop.imageUrl != null && shop.imageUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: shop.imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const Center(
+                          child: Icon(
+                            Icons.storefront_rounded,
+                            color: AppColors.accent,
+                            size: 20,
+                          ),
+                        ),
+                        errorWidget: (context, error, stackTrace) =>
+                            const Center(
+                              child: Icon(
+                                Icons.storefront_rounded,
+                                color: AppColors.accent,
+                                size: 20,
+                              ),
+                            ),
+                      )
+                    : const Center(
+                        child: Icon(
+                          Icons.storefront_rounded,
+                          color: AppColors.accent,
+                          size: 20,
+                        ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  final Map<String, List<Offer>> shopGroups = {};
-  for (final offer in nearbyOffers) {
-    final key = offer.shopId ?? offer.shopName;
-    shopGroups.putIfAbsent(key, () => []).add(offer);
-  }
-
   for (final entry in shopGroups.entries) {
     final groupedOffers = entry.value;
     final firstOffer = groupedOffers.first;
-    final shopId = firstOffer.shopId?.trim();
-
-    if (shopId != null && shopId.isNotEmpty && shopMarkerIds.contains(shopId)) {
-      continue;
-    }
 
     markers.add(
       Marker(
         point: LatLng(firstOffer.latitude, firstOffer.longitude),
-        width: 44,
-        height: 44,
+        width: 60,
+        height: 60,
         child: GestureDetector(
           onTap: () {
             if (groupedOffers.length > 1) {
@@ -996,35 +855,71 @@ List<Marker> _buildMarkers({
                   .selectOffer(firstOffer);
             }
           },
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: firstOffer.shopId != null
-                    ? AppColors.accent
-                    : AppColors.primary,
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.rotate(
+                angle: 3.1415926535897932 / 4,
+                child: Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(23),
+                      topRight: Radius.circular(23),
+                      bottomLeft: Radius.circular(23),
+                      bottomRight: Radius.circular(4),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(2, 2),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                firstOffer.shopId != null
-                    ? Icons.storefront_rounded
-                    : Icons.local_offer_rounded,
-                color: firstOffer.shopId != null
-                    ? AppColors.accent
-                    : AppColors.primary,
-                size: 24,
               ),
-            ),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: AppColors.white,
+                  shape: BoxShape.circle,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    firstOffer.imageUrl != null &&
+                        firstOffer.imageUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: firstOffer.imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const Center(
+                          child: Icon(
+                            Icons.local_offer_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        errorWidget: (context, error, stackTrace) =>
+                            const Center(
+                              child: Icon(
+                                Icons.local_offer_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                      )
+                    : const Center(
+                        child: Icon(
+                          Icons.local_offer_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1032,4 +927,242 @@ List<Marker> _buildMarkers({
   }
 
   return markers;
+}
+
+class UserLocationMarkerLayer extends ConsumerWidget {
+  final bool hasActiveRoute;
+
+  const UserLocationMarkerLayer({super.key, required this.hasActiveRoute});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocation = ref.watch(
+      currentLocationProvider.select((state) => state.position),
+    );
+
+    if (currentLocation == null) return const SizedBox.shrink();
+
+    final currentPoint = LatLng(
+      currentLocation.latitude,
+      currentLocation.longitude,
+    );
+
+    return MarkerLayer(
+      markers: [
+        Marker(
+          point: currentPoint,
+          width: 60,
+          height: 60,
+          child: RepaintBoundary(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (!hasActiveRoute) ...[
+                  for (int i = 0; i < 3; i++)
+                    Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.3),
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                        .animate(onPlay: (c) => c.repeat())
+                        .scale(
+                          delay: (i * 700).ms,
+                          duration: 2100.ms,
+                          begin: const Offset(1, 1),
+                          end: const Offset(3.0, 3.0),
+                          curve: Curves.decelerate,
+                        )
+                        .fadeOut(
+                          delay: (i * 700).ms,
+                          duration: 2100.ms,
+                          curve: Curves.decelerate,
+                        ),
+                ],
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade600,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withValues(alpha: 0.4),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class EtaOverlayWidget extends ConsumerWidget {
+  final double topPadding;
+
+  const EtaOverlayWidget({super.key, required this.topPadding});
+
+  String _buildEtaText(
+    AppLocalizations l10n, {
+    required bool isLoading,
+    required bool hasActiveRoute,
+    required String? duration,
+    required String? distance,
+  }) {
+    if (isLoading) return l10n.calculatingRoute;
+    if (hasActiveRoute) {
+      return '${duration ?? '--- min'} \u2022 ${distance ?? '--- km'}';
+    }
+    return l10n.tapSearchRoute;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final route = ref.watch(
+      navigationControllerProvider.select((state) => state.currentRoute),
+    );
+    final isLoading = ref.watch(
+      navigationControllerProvider.select((state) => state.isLoading),
+    );
+    final destinationName = ref.watch(
+      navigationControllerProvider.select((state) => state.destinationName),
+    );
+    final destination = ref.watch(
+      navigationControllerProvider.select((state) => state.destination),
+    );
+    final distance = ref.watch(
+      navigationControllerProvider.select((state) => state.distanceText),
+    );
+    final duration = ref.watch(
+      navigationControllerProvider.select((state) => state.durationText),
+    );
+    final isFreeRoam = ref.watch(
+      navigationControllerProvider.select((state) => state.isFreeRoam),
+    );
+    final isJourneyActive = ref.watch(
+      navigationControllerProvider.select((state) => state.hasActiveJourney),
+    );
+    final selectedInterests = ref.watch(
+      navigationControllerProvider.select((state) => state.selectedInterests),
+    );
+    final searchText = ref.watch(
+      navigationControllerProvider.select((state) => state.searchText),
+    );
+
+    final hasActiveRoute = route.length >= 2 && destination != null;
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Positioned(
+      top: topPadding + AppDimensions.sm,
+      left: AppDimensions.md,
+      right: AppDimensions.md,
+      child: Material(
+        color: isDark ? AppColors.cardDark : AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+        elevation: 2,
+        shadowColor: AppColors.black.withValues(alpha: 0.12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          onTap: () => context.push(AppRoutes.search),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.md,
+              vertical: AppDimensions.sm,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                  ),
+                  child: Icon(
+                    isLoading
+                        ? Icons.hourglass_bottom_rounded
+                        : isJourneyActive
+                        ? Icons.directions_walk_rounded
+                        : Icons.navigation_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: AppDimensions.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _buildEtaText(
+                          l10n,
+                          isLoading: isLoading,
+                          hasActiveRoute: hasActiveRoute,
+                          duration: duration,
+                          distance: distance,
+                        ),
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: isDark ? AppColors.white : AppColors.grey900,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (isFreeRoam)
+                        Text(
+                          [
+                                if (selectedInterests.isNotEmpty)
+                                  selectedInterests.join(', '),
+                                if (searchText != null) '"$searchText"',
+                              ].join(' • ').isEmpty
+                              ? 'Exploring Nearby'
+                              : 'Nearby: ${[if (selectedInterests.isNotEmpty) selectedInterests.join(', '), if (searchText != null) '"$searchText"'].join(' • ')}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else if (isJourneyActive && !hasActiveRoute)
+                        Text(
+                          destinationName?.isNotEmpty == true
+                              ? 'Active journey in progress'
+                              : 'Journey tracking is active',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else if (destinationName != null &&
+                          destinationName.isNotEmpty)
+                        Text(
+                          destinationName,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.grey500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ).animate().fadeIn(duration: 260.ms).slideY(begin: -0.2),
+    );
+  }
 }

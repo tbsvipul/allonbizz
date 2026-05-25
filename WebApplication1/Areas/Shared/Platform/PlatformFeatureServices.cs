@@ -356,7 +356,7 @@ public class PlatformFeatureService : IReviewService, ILoyaltyService, IAdminPan
         var normalizedQuery = query.ToLower().Trim();
         return await _db.Shops
             .AsNoTracking()
-            .Where(s => s.Name.ToLower().Contains(normalizedQuery) || (s.Address != null && s.Address.ToLower().Contains(normalizedQuery)))
+            .Where(s => s.IsActive && s.IsVerified && (s.Name.ToLower().Contains(normalizedQuery) || (s.Address != null && s.Address.ToLower().Contains(normalizedQuery))))
             .Select(s => new PlaceSearchResponseDto 
             { 
                 Name = s.Name, 
@@ -372,6 +372,7 @@ public class PlatformFeatureService : IReviewService, ILoyaltyService, IAdminPan
         return await _db.Offers
             .Include(o => o.Shop)
             .AsNoTracking()
+            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
             .OrderByDescending(o => o.CurrentRedemptions)
             .Select(o => new TrendingOfferDto 
             { 

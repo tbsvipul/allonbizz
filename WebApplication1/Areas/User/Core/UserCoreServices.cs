@@ -110,7 +110,7 @@ public class UserProfileService : IUserProfileService
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
-            .Where(o => o.IsActive && o.Shop != null)
+            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .ToListAsync();
@@ -151,7 +151,7 @@ public class UserProfileService : IUserProfileService
             nearby = await _db.Shops
                 .AsNoTracking()
                 .Include(s => s.Category)
-                .Where(s => s.IsActive && s.Latitude.HasValue && s.Longitude.HasValue &&
+                .Where(s => s.IsActive && s.IsVerified && s.Latitude.HasValue && s.Longitude.HasValue &&
                             s.Latitude.Value >= minLat && s.Latitude.Value <= maxLat &&
                             s.Longitude.Value >= minLng && s.Longitude.Value <= maxLng)
                 .OrderBy(s => (s.Latitude!.Value - lat.Value) * (s.Latitude!.Value - lat.Value) + (s.Longitude!.Value - lng.Value) * (s.Longitude!.Value - lng.Value))
@@ -164,7 +164,7 @@ public class UserProfileService : IUserProfileService
             nearby = await _db.Shops
                 .AsNoTracking()
                 .Include(s => s.Category)
-                .Where(s => s.IsActive)
+                .Where(s => s.IsActive && s.IsVerified)
                 .OrderByDescending(s => s.CreatedAt)
                 .Take(5)
                 .ToListAsync();
@@ -257,7 +257,7 @@ public class RouteService : IRouteService
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
-            .Where(o => o.IsActive && o.Shop != null)
+            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
             .Take(100)
             .ToListAsync();
 
@@ -322,7 +322,7 @@ public class UserOfferService : IOfferService
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
-            .Where(o => o.IsActive && o.Shop != null);
+            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified);
             
         if (!string.IsNullOrEmpty(category))
         {
@@ -425,7 +425,7 @@ public class UserOfferService : IOfferService
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
             .FirstOrDefaultAsync(o => o.OfferId == offerId);
-        if (offer == null) throw new KeyNotFoundException($"Offer {offerId} not found.");
+        if (offer == null || !offer.IsActive || offer.Shop == null || !offer.Shop.IsActive || !offer.Shop.IsVerified) throw new KeyNotFoundException($"Offer {offerId} not found.");
         return new OfferDetailDto
         {
             OfferId = offer.OfferId,
@@ -470,7 +470,7 @@ public class UserOfferService : IOfferService
             throw new InvalidOperationException("This offer has expired.");
         }
 
-        if (offer.Shop == null || !offer.Shop.IsActive)
+        if (offer.Shop == null || !offer.Shop.IsActive || !offer.Shop.IsVerified)
         {
             throw new InvalidOperationException("This shop is not available for redemption.");
         }
@@ -612,7 +612,9 @@ public class FavouriteService : IFavouriteService
             .ThenInclude(shop => shop!.Category)
             .Include(f => f.Shop)
             .ThenInclude(shop => shop!.Category)
-            .Where(f => f.UserId == userId)
+            .Where(f => f.UserId == userId && 
+                        (f.Offer == null || (f.Offer.IsActive && f.Offer.Shop != null && f.Offer.Shop.IsActive && f.Offer.Shop.IsVerified)) &&
+                        (f.Shop == null || (f.Shop.IsActive && f.Shop.IsVerified)))
             .OrderByDescending(f => f.CreatedAt)
             .ToListAsync();
 

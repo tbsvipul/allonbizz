@@ -204,7 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 24),
 
                       TextButton(
-                        onPressed: () => context.push('/register'),
+                        onPressed: () => context.push(AppRoutes.register),
                         child: RichText(
                           text: TextSpan(
                             text: l10n.dontHaveAccountPrefix,

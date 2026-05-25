@@ -63,7 +63,7 @@ public class UserSearchController : ControllerBase
     public async Task<IActionResult> GetShop(Guid shopId)
     {
         var shop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
-        if (shop == null)
+        if (shop == null || !shop.IsActive || !shop.IsVerified)
         {
             return this.NotFoundProblemResponse("Shop not found.");
         }

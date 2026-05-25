@@ -20,8 +20,11 @@ import '../../features/profile/presentation/screens/past_journeys_screen.dart';
 import '../../features/profile/presentation/screens/notification_screen.dart';
 import '../../features/profile/presentation/screens/saved_offers_screen.dart';
 import '../../features/profile/presentation/screens/change_password_screen.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/profile/presentation/screens/journey_detail_screen.dart';
 import '../../shared/screens/app_error_screen.dart';
 import '../../shared/models/offer.dart';
+import '../../core/models/journey_model.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/widgets/main_layout.dart';
 
@@ -43,7 +46,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
   }
 }
 
-/// GoRouter configuration with auth-aware routing.
+/// GoRouter configuration with auth-aware routing restrictions.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final storage = ref.watch(storageServiceProvider);
 
@@ -70,7 +73,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // Once auth is resolved, route away from splash immediately.
       if (isSplash) {
-        if (isLoggedIn) return AppRoutes.home;
+        if (isLoggedIn) {
+          return storage.activeJourneySession != null
+              ? AppRoutes.navigate
+              : AppRoutes.home;
+        }
         if (!storage.hasSeenOnboarding) return AppRoutes.onboarding;
         return AppRoutes.login;
       }
@@ -78,7 +85,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // If logged in, redirect away from auth pages
       if (isLoggedIn &&
           (isOnboarding || isLogin || isRegister || isForgotPassword)) {
-        return AppRoutes.home;
+        return storage.activeJourneySession != null
+            ? AppRoutes.navigate
+            : AppRoutes.home;
       }
 
       // If not logged in and not on auth pages, redirect to login
@@ -103,7 +112,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             if (!authState.hasResolvedSession) return;
             final isLoggedIn = authState.user != null;
             if (isLoggedIn) {
-              context.go(AppRoutes.home);
+              if (storage.activeJourneySession != null) {
+                context.go(AppRoutes.navigate);
+              } else {
+                context.go(AppRoutes.home);
+              }
             } else if (!storage.hasSeenOnboarding) {
               context.go(AppRoutes.onboarding);
             } else {
@@ -235,6 +248,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: AppRoutes.editProfile,
+        builder: (context, state) => MainLayout(
+          currentIndex: 3,
+          onTabSelected: (_) {},
+          showNavBar: false,
+          child: const EditProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.journeyDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id'];
+          final initialJourney = state.extra as JourneyModel?;
+
+          return MainLayout(
+            currentIndex: 3,
+            onTabSelected: (_) {},
+            showNavBar: false,
+            child: JourneyDetailScreen(
+              journeyId: id!,
+              initialJourney: initialJourney,
+            ),
+          );
+        },
+      ),
+      GoRoute(
         path: AppRoutes.notifications,
         builder: (context, state) => const NotificationScreen(),
       ),
@@ -252,6 +291,10 @@ class _MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final location = GoRouterState.of(context).uri.path;
+    final hideAppBar =
+        navigationShell.currentIndex == 1 || location == AppRoutes.pastJourneys;
+
     return MainLayout(
       currentIndex: navigationShell.currentIndex,
       onTabSelected: (index) {
@@ -260,7 +303,7 @@ class _MainShell extends ConsumerWidget {
           initialLocation: index == navigationShell.currentIndex,
         );
       },
-      showAppBar: navigationShell.currentIndex != 1, // Hide AppBar on MapScreen
+      showAppBar: !hideAppBar, // Hide AppBar on MapScreen and PastJourneys
       child: navigationShell,
     );
   }

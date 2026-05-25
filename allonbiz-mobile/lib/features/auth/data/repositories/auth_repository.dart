@@ -46,13 +46,17 @@ class AuthRepository {
 
   final _authController = StreamController<AppUser?>.broadcast();
   AppUser? _currentUser;
+  bool _isInitialized = false;
 
   Stream<AppUser?> get authStateChanges async* {
-    yield _currentUser;
+    if (_isInitialized) {
+      yield _currentUser;
+    }
     yield* _authController.stream;
   }
 
   AppUser? get currentUser => _currentUser;
+  bool get isInitialized => _isInitialized;
 
   Future<void> _init() async {
     final token = _storageService.backendAccessToken;
@@ -71,6 +75,7 @@ class AuthRepository {
 
   void _updateState(AppUser? user) {
     _currentUser = user;
+    _isInitialized = true;
     _authController.add(user);
   }
 

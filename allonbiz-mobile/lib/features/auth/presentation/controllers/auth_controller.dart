@@ -64,7 +64,7 @@ class AuthController extends StateNotifier<AuthState> {
 
     // 2. Manually check current repo state immediately to resolve the session faster if possible
     final currentUser = _repo.currentUser;
-    if (currentUser != null) {
+    if (currentUser != null || _repo.isInitialized) {
       _handleUpdate(currentUser);
     }
   }
@@ -187,6 +187,9 @@ class AuthController extends StateNotifier<AuthState> {
         _handleUpdate(user);
       }
     } catch (e) {
+      if (e is! AuthFailure) {
+        state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+      }
       // If refresh fails due to 401, _repo already updates state to null
     }
   }

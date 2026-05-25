@@ -43,7 +43,7 @@ class NavigateCardWidget extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    hasActiveJourney ? 'Continue Journey' : l10n.startJourney,
+                    hasActiveJourney ? l10n.endJourney : l10n.startJourney,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.w700,
@@ -123,17 +123,27 @@ class NavigateCardWidget extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(width: AppDimensions.md),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              ),
-              child: const Icon(
-                Icons.navigation_rounded,
-                color: AppColors.white,
-                size: 28,
+            GestureDetector(
+              onTap: () {
+                if (hasActiveJourney) {
+                  ref.read(navigationControllerProvider.notifier).clearRoute();
+                } else {
+                  context.push(AppRoutes.search);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                ),
+                child: Icon(
+                  hasActiveJourney
+                      ? Icons.stop_rounded
+                      : Icons.navigation_rounded,
+                  color: AppColors.white,
+                  size: 28,
+                ),
               ),
             ),
           ],

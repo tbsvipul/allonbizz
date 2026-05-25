@@ -20,6 +20,8 @@ abstract final class AppRoutes {
   static const String pastJourneys = '/profile/history';
   static const String savedItems = '/profile/saved';
   static const String changePassword = '/profile/change-password';
+  static const String editProfile = '/profile/edit';
+  static const String journeyDetail = '/journey-detail/:id';
 }
 
 extension NavigationExtension on BuildContext {

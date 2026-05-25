@@ -59,10 +59,26 @@ export default function DashboardPage() {
           nextErrors.push(getApiErrorMessage(analyticsResponse.reason, 'Unable to load analytics totals.'));
         }
 
+        let firstShopId = '';
+        let firstShopHasCoords = false;
+
         if (shopsResponse.status === 'fulfilled') {
           const nextShops = unwrapApiData<ShopSummary[]>(shopsResponse.value);
           setShops(nextShops);
-          setSelectedShopId((current) => nextShops.some((shop) => shop.id === current) ? current : nextShops[0]?.id || '');
+          
+          // Keep current if still exists, otherwise use first
+          const currentShopStillExists = nextShops.some((shop) => shop.id === selectedShopId);
+          const targetShop = currentShopStillExists 
+            ? nextShops.find((shop) => shop.id === selectedShopId)!
+            : nextShops[0];
+
+          if (targetShop) {
+            firstShopId = targetShop.id;
+            firstShopHasCoords = targetShop.latitude != null && targetShop.longitude != null;
+            setSelectedShopId(firstShopId);
+          } else {
+            setSelectedShopId('');
+          }
         } else {
           setShops([]);
           setSelectedShopId('');
@@ -70,6 +86,31 @@ export default function DashboardPage() {
         }
 
         setMainError(nextErrors.join(' '));
+
+        // Immediately fetch traffic for the selected shop to avoid waterfall
+        if (firstShopId) {
+          if (!firstShopHasCoords) {
+             setTraffic(null);
+             setTrafficError('');
+          } else {
+             setTrafficLoading(true);
+             try {
+               const trafficRes = await api.get('/keeper/traffic', { params: { shopId: firstShopId } });
+               if (active) {
+                 setTraffic(unwrapApiData<KeeperTraffic>(trafficRes));
+                 setTrafficError('');
+               }
+             } catch (err) {
+               if (active) {
+                 setTraffic(null);
+                 setTrafficError(getApiErrorMessage(err, 'Unable to load traffic analytics.'));
+               }
+             } finally {
+               if (active) setTrafficLoading(false);
+             }
+          }
+        }
+
       } catch (err) {
         if (active) {
           setMainError(getApiErrorMessage(err, 'Unable to load the keeper dashboard.'));
@@ -86,7 +127,8 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const selectedShop = useMemo(
     () => shops.find((shop) => shop.id === selectedShopId) || null,
@@ -99,7 +141,11 @@ export default function DashboardPage() {
     selectedShop.longitude != null,
   );
 
+  // Handle manual dropdown changes
   useEffect(() => {
+    // Skip if still loading initial data
+    if (loading) return;
+    
     let active = true;
 
     async function loadTraffic() {
@@ -147,7 +193,7 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [selectedShopHasCoordinates, selectedShopId]);
+  }, [selectedShopHasCoordinates, selectedShopId, loading]);
 
   const trendItems = useMemo(
     () => (dashboard?.redemptionTrend || []).map((item) => ({

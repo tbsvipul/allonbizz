@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes/app_router.dart';
 import '../../app/routes/app_routes.dart';
+import '../../features/navigate/presentation/controllers/navigation_controller.dart';
 import '../constants/app_colors.dart';
 
 class NotificationService {
@@ -56,9 +57,15 @@ class NotificationService {
     await _notifications.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (details) {
+        if (details.actionId == 'end_journey') {
+          if (_ref != null) {
+            _ref.read(navigationControllerProvider.notifier).clearRoute();
+          }
+          return;
+        }
         final payload = details.payload;
         if (payload != null && payload.isNotEmpty && _ref != null) {
-          _ref.read(appRouterProvider).push(payload);
+          _ref.read(appRouterProvider).go(payload);
         }
       },
     );
@@ -170,6 +177,14 @@ class NotificationService {
       showWhen: false,
       channelShowBadge: false,
       color: AppColors.primary,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          'end_journey',
+          'End',
+          cancelNotification: false,
+          showsUserInterface: true,
+        ),
+      ],
     );
 
     await _notifications.show(
@@ -291,7 +306,36 @@ void onStart(ServiceInstance service) async {
         ?.createNotificationChannel(channel);
 
     await service.setAsForegroundService();
-    await service.setForegroundNotificationInfo(title: title, content: content);
+
+    Future<void> updateNotification(String t, String c) async {
+      const androidDetails = AndroidNotificationDetails(
+        NotificationService._backgroundJourneyChannelId,
+        'Location Tracking',
+        channelDescription:
+            'Used for background location and active journey status.',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        channelShowBadge: false,
+        ongoing: true,
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'end_journey',
+            'End',
+            cancelNotification: false,
+            showsUserInterface: true,
+          ),
+        ],
+      );
+      await notificationsPlugin.show(
+        NotificationService.activeJourneyNotificationId,
+        t,
+        c,
+        const NotificationDetails(android: androidDetails),
+      );
+    }
+
+    await updateNotification(title, content);
   }
 
   service.on('updateJourneyNotification').listen((event) async {
@@ -303,9 +347,31 @@ void onStart(ServiceInstance service) async {
         : NotificationService._defaultJourneyBody;
 
     if (service is AndroidServiceInstance) {
-      await service.setForegroundNotificationInfo(
-        title: title,
-        content: content,
+      final notificationsPlugin = FlutterLocalNotificationsPlugin();
+      const androidDetails = AndroidNotificationDetails(
+        NotificationService._backgroundJourneyChannelId,
+        'Location Tracking',
+        channelDescription:
+            'Used for background location and active journey status.',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        channelShowBadge: false,
+        ongoing: true,
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'end_journey',
+            'End',
+            cancelNotification: false,
+            showsUserInterface: true,
+          ),
+        ],
+      );
+      await notificationsPlugin.show(
+        NotificationService.activeJourneyNotificationId,
+        title,
+        content,
+        const NotificationDetails(android: androidDetails),
       );
     }
   });
@@ -314,9 +380,31 @@ void onStart(ServiceInstance service) async {
   heartbeat = Timer.periodic(const Duration(minutes: 1), (_) async {
     if (service is AndroidServiceInstance &&
         await service.isForegroundService()) {
-      await service.setForegroundNotificationInfo(
-        title: title,
-        content: content,
+      final notificationsPlugin = FlutterLocalNotificationsPlugin();
+      const androidDetails = AndroidNotificationDetails(
+        NotificationService._backgroundJourneyChannelId,
+        'Location Tracking',
+        channelDescription:
+            'Used for background location and active journey status.',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        channelShowBadge: false,
+        ongoing: true,
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'end_journey',
+            'End',
+            cancelNotification: false,
+            showsUserInterface: true,
+          ),
+        ],
+      );
+      await notificationsPlugin.show(
+        NotificationService.activeJourneyNotificationId,
+        title,
+        content,
+        const NotificationDetails(android: androidDetails),
       );
     }
   });

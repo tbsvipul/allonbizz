@@ -164,7 +164,7 @@ class DealsRepository {
     final queryParts = <String>[
       if (lat != null) 'lat=$lat',
       if (lng != null) 'lng=$lng',
-      if (radiusKm != null) 'radiusKm=$radiusKm',
+      if (radiusKm != null) 'radius=$radiusKm',
       if (category != null && category.trim().isNotEmpty)
         'category=${Uri.encodeQueryComponent(category.trim())}',
       for (final tag in normalizedTags) 'tags=${Uri.encodeQueryComponent(tag)}',

@@ -8,7 +8,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../trips/data/repositories/journeys_repository.dart';
 import '../widgets/journey_card.dart';
-import 'journey_detail_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../app/routes/app_routes.dart';
 
 final pastJourneysListProvider = FutureProvider.family<List<JourneyModel>, int>(
   (ref, page) {
@@ -68,13 +69,9 @@ class _PastJourneysScreenState extends ConsumerState<PastJourneysScreen> {
                       journey: journey,
                       onTap: journey.id == null
                           ? null
-                          : () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => JourneyDetailScreen(
-                                  journeyId: journey.id!,
-                                  initialJourney: journey,
-                                ),
-                              ),
+                          : () => context.push(
+                              AppRoutes.journeyDetail.replaceFirst(':id', journey.id!),
+                              extra: journey,
                             ),
                     );
                   },

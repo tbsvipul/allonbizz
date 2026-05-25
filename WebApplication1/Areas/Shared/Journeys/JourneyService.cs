@@ -127,7 +127,7 @@ public class JourneyService : IJourneyService
         // Fetch only shops within the bounding box to avoid loading the entire table
         var shopsInBox = await _db.Shops
             .Include(s => s.Category)
-            .Where(s => s.IsActive && s.Latitude.HasValue && s.Longitude.HasValue &&
+            .Where(s => s.IsActive && s.IsVerified && s.Latitude.HasValue && s.Longitude.HasValue &&
                         s.Latitude.Value >= minLat && s.Latitude.Value <= maxLat &&
                         s.Longitude.Value >= minLng && s.Longitude.Value <= maxLng)
             .OrderBy(s => (s.Latitude!.Value - lat) * (s.Latitude!.Value - lat) + (s.Longitude!.Value - lng) * (s.Longitude!.Value - lng))

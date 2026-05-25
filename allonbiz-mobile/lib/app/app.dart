@@ -7,7 +7,6 @@ import '../core/services/theme_mode_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'routes/app_router.dart';
 
-/// Root application widget with Riverpod + GoRouter + L10N.
 class AllonbizApp extends ConsumerWidget {
   const AllonbizApp({super.key});
 

@@ -20,8 +20,6 @@ import '../widgets/profile_switch_tile_widget.dart';
 import '../widgets/profile_vertical_divider_widget.dart';
 import '../../../../core/services/preference_providers.dart';
 import '../../../trips/data/repositories/journeys_repository.dart';
-import 'edit_profile_screen.dart';
-import 'journey_detail_screen.dart';
 import '../widgets/journey_card.dart';
 
 final recentJourneysProvider = FutureProvider<List<JourneyModel>>((ref) async {
@@ -86,11 +84,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const EditProfileScreen(),
-                      ),
-                    ),
+                    onPressed: () => context.push(AppRoutes.editProfile),
                     icon: const Icon(Icons.edit_rounded, size: 16),
                     label: const Text('Edit Profile'),
                     style: ElevatedButton.styleFrom(
@@ -289,13 +283,9 @@ class ProfileScreen extends ConsumerWidget {
                               journey: journey,
                               onTap: journey.id == null
                                   ? null
-                                  : () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => JourneyDetailScreen(
-                                          journeyId: journey.id!,
-                                          initialJourney: journey,
-                                        ),
-                                      ),
+                                  : () => context.push(
+                                      AppRoutes.journeyDetail.replaceFirst(':id', journey.id!),
+                                      extra: journey,
                                     ),
                             ),
                           )

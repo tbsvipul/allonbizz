@@ -138,7 +138,7 @@ public class ShopService : IShopService
 
         shop.RecentOffers = await _context.Offers
             .AsNoTracking()
-            .Where(o => o.ShopId == shopId)
+            .Where(o => o.ShopId == shopId && o.IsActive)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .Select(o => new ShopOfferSummaryDto
@@ -440,7 +440,7 @@ public class ShopService : IShopService
             Tags = shop.Tags ?? new List<string>(),
             Amenities = shop.Amenities ?? new List<string>(),
             CreatedAt = shop.CreatedAt,
-            RecentOffers = shop.Offers?.Select(o => new ShopOfferSummaryDto
+            RecentOffers = shop.Offers?.Where(o => o.IsActive).Select(o => new ShopOfferSummaryDto
             {
                 OfferId = o.OfferId,
                 Title = o.Title,

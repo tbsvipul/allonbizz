@@ -37,14 +37,17 @@ class SearchInterestTags extends StatefulWidget {
 }
 
 class _SearchInterestTagsState extends State<SearchInterestTags> {
+  static int _globalVisibleCount = 20;
+
   late final ScrollController _scrollController;
-  int _visibleCount = 20;
+  late int _visibleCount;
   String _searchText = '';
   bool _isAddingTag = false;
 
   @override
   void initState() {
     super.initState();
+    _visibleCount = _globalVisibleCount;
     _scrollController = ScrollController()..addListener(_onScroll);
     widget.interestSearchController.addListener(_onSearchChanged);
     _searchText = widget.interestSearchController.text;
@@ -70,8 +73,11 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
     if (mounted) {
       setState(() {
         _searchText = widget.interestSearchController.text;
-        // Reset visible count to 20 when search changes
-        _visibleCount = 20;
+        if (_searchText.isNotEmpty) {
+          _visibleCount = 20;
+        } else {
+          _visibleCount = _globalVisibleCount;
+        }
       });
     }
   }
@@ -81,6 +87,9 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
     if (_visibleCount < filteredList.length) {
       setState(() {
         _visibleCount = (_visibleCount + 20).clamp(0, filteredList.length);
+        if (_searchText.trim().isEmpty) {
+          _globalVisibleCount = _visibleCount;
+        }
       });
     }
   }

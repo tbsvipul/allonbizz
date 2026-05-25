@@ -144,27 +144,34 @@ class NavigationState {
 }
 
 /// Controller for navigation logic and map data.
-class NavigationController extends StateNotifier<NavigationState> {
-  final RouteService _routeService;
-  final DealsRepository _dealsRepository;
-  final JourneyService _journeyService;
-  final ShopsRepository _shopsRepository;
-  final NotificationService _notificationService;
-  final StorageService _storageService;
-  final Ref _ref;
+class NavigationController extends Notifier<NavigationState> {
+  late RouteService _routeService;
+  late DealsRepository _dealsRepository;
+  late JourneyService _journeyService;
+  late ShopsRepository _shopsRepository;
+  late NotificationService _notificationService;
+  late StorageService _storageService;
   StreamSubscription<Position>? _liveTrackingSubscription;
   int _nearbyOffersRequestId = 0;
+  bool _isDisposed = false;
+  LatLng? _lastApiFetchPosition;
+  LatLng? _lastProgressSyncPosition;
 
-  NavigationController(
-    this._routeService,
-    this._dealsRepository,
-    this._journeyService,
-    this._shopsRepository,
-    this._notificationService,
-    this._storageService,
-    this._ref,
-  ) : super(NavigationState()) {
-    unawaited(restoreActiveJourneyState());
+  @override
+  NavigationState build() {
+    ref.onDispose(() {
+      _isDisposed = true;
+      _liveTrackingSubscription?.cancel();
+    });
+    _routeService = RouteService();
+    _dealsRepository = ref.read(dealsRepositoryProvider);
+    _journeyService = ref.read(journeyServiceProvider);
+    _shopsRepository = ref.read(shopsRepositoryProvider);
+    _notificationService = ref.read(notificationServiceProvider);
+    _storageService = ref.read(storageServiceProvider);
+
+    Future.microtask(() => restoreActiveJourneyState());
+    return NavigationState();
   }
 
   void selectOffer(Offer? offer) {
@@ -219,21 +226,23 @@ class NavigationController extends StateNotifier<NavigationState> {
     }
 
     if (activeJourney == null) {
-      await _clearActiveJourneySession();
-      if (state.currentRoute.isEmpty) {
-        state = state.copyWith(
-          currentJourneyId: null,
-          destinationName: null,
-          origin: null,
-          destination: null,
-          searchText: null,
-          selectedInterests: const <String>[],
-          trackedDistanceMeters: 0,
-          trackedDurationSeconds: 0,
-          lastProgressPosition: null,
-          journeyStartedAt: null,
-          isFreeRoam: false,
-        );
+      if (forceSync || !state.hasActiveJourney) {
+        await _clearActiveJourneySession();
+        if (state.currentRoute.isEmpty) {
+          state = state.copyWith(
+            currentJourneyId: null,
+            destinationName: null,
+            origin: null,
+            destination: null,
+            searchText: null,
+            selectedInterests: const <String>[],
+            trackedDistanceMeters: 0,
+            trackedDurationSeconds: 0,
+            lastProgressPosition: null,
+            journeyStartedAt: null,
+            isFreeRoam: false,
+          );
+        }
       }
       return;
     }
@@ -270,7 +279,6 @@ class NavigationController extends StateNotifier<NavigationState> {
       return false;
     }
 
-    final buffer = _ref.read(discoveryRadiusProvider);
     state = state.copyWith(
       isLoading: true,
       destinationName: name,
@@ -305,15 +313,9 @@ class NavigationController extends StateNotifier<NavigationState> {
       final result = results[0] as RouteResult;
       final offersList = allOffers ?? (results[1] as List<Offer>);
 
-      final onRoute = await _routeService.getOffersAlongRoute(
-        result.points,
-        offersList,
-        bufferDistance: buffer,
-      );
-
-      // Interest/tag filtering is handled by the API; keep only query refinement here.
+      // Bypass route distance filtering so all nearby offers show up on the map
       final List<Offer> filteredOnRoute = _filterOffersLocally(
-        offers: onRoute,
+        offers: offersList,
         query: interestQuery,
       );
 
@@ -372,7 +374,8 @@ class NavigationController extends StateNotifier<NavigationState> {
       );
       unawaited(updateNearbyOffers(snappedOrigin));
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Start destination journey error: $e\n$stackTrace');
       state = NavigationState(
         errorMessage:
             'Could not start this journey right now. Please try again.',
@@ -397,14 +400,14 @@ class NavigationController extends StateNotifier<NavigationState> {
 
     var effectivePosition = currentPosition;
     if (effectivePosition == null) {
-      await _ref
+      await ref
           .read(currentLocationProvider.notifier)
           .fetchCurrentLocation(
             requestPermission: true,
             resolvePlaceName: false,
             forceRefresh: true,
           );
-      final resolvedPosition = _ref.read(currentLocationProvider).position;
+      final resolvedPosition = ref.read(currentLocationProvider).position;
       if (resolvedPosition != null) {
         effectivePosition = LatLng(
           resolvedPosition.latitude,
@@ -440,45 +443,53 @@ class NavigationController extends StateNotifier<NavigationState> {
       journeyStartedAt: null,
     );
 
-    final startedAt = DateTime.now();
-    final journeyId = await _journeyService.startJourney(
-      type: JourneyType.freeRoam,
-      startLat: effectivePosition.latitude,
-      startLng: effectivePosition.longitude,
-      startName: 'Free Roam Start',
-      tags: [...interests, if (query != null && query.isNotEmpty) query],
-    );
+    try {
+      final startedAt = DateTime.now();
+      final journeyId = await _journeyService.startJourney(
+        type: JourneyType.freeRoam,
+        startLat: effectivePosition.latitude,
+        startLng: effectivePosition.longitude,
+        startName: 'Free Roam Start',
+        tags: [...interests, if (query != null && query.isNotEmpty) query],
+      );
 
-    if (journeyId == null) {
+      if (journeyId == null) {
+        state = NavigationState(
+          errorMessage:
+              'Unable to save this exploration journey right now. Please try again.',
+        );
+        return false;
+      }
+
+      state = state.copyWith(
+        isLoading: false,
+        isFreeRoam: true,
+        currentJourneyId: journeyId,
+        journeyStartedAt: startedAt,
+        lastProgressPosition: effectivePosition,
+      );
+
+      await _persistActiveJourneySession();
+      await _startLiveJourneyTracking();
+      await _notificationService.startJourneyTracking(
+        title: _buildActiveJourneyNotificationTitle(state),
+        body: _buildActiveJourneyNotificationBody(state),
+      );
+      await updateNearbyOffers(effectivePosition);
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('Start free roam error: $e\n$stackTrace');
       state = NavigationState(
-        errorMessage:
-            'Unable to save this exploration journey right now. Please try again.',
+        errorMessage: 'Unable to start exploration right now.',
       );
       return false;
     }
-
-    state = state.copyWith(
-      isLoading: false,
-      isFreeRoam: true,
-      currentJourneyId: journeyId,
-      journeyStartedAt: startedAt,
-      lastProgressPosition: effectivePosition,
-    );
-
-    await _persistActiveJourneySession();
-    await _startLiveJourneyTracking();
-    await _notificationService.startJourneyTracking(
-      title: _buildActiveJourneyNotificationTitle(state),
-      body: _buildActiveJourneyNotificationBody(state),
-    );
-    await updateNearbyOffers(effectivePosition);
-    return true;
   }
 
   /// Filters offers based on radius (configurable) and interests.
   Future<void> updateNearbyOffers(LatLng position) async {
     final requestId = ++_nearbyOffersRequestId;
-    final buffer = _ref.read(discoveryRadiusProvider);
+    final buffer = ref.read(discoveryRadiusProvider);
     final selectedInterests = List<String>.from(state.selectedInterests);
     final searchText = state.searchText;
     final isFreeRoam = state.isFreeRoam;
@@ -505,23 +516,15 @@ class NavigationController extends StateNotifier<NavigationState> {
       derivedShops: _deriveShopsFromOffers(allOffers),
       apiShops: results[1] as List<Shop>,
     );
-    if (!mounted || requestId != _nearbyOffersRequestId) {
+    if (_isDisposed || requestId != _nearbyOffersRequestId) {
       return;
     }
     final progressSnapshot = _nextJourneyProgress(position);
 
     if (state.currentRoute.isNotEmpty && !state.isFreeRoam) {
-      final onRoute = await _routeService.getOffersAlongRoute(
-        state.currentRoute,
-        allOffers,
-        bufferDistance: buffer,
-      );
-      if (!mounted || requestId != _nearbyOffersRequestId) {
-        return;
-      }
-
+      // Bypass route distance filtering to match random journey behavior
       final filteredOnRoute = _filterOffersLocally(
-        offers: onRoute,
+        offers: allOffers,
         query: searchText,
       );
       final routeShops = _mergeNearbyShops(
@@ -554,7 +557,7 @@ class NavigationController extends StateNotifier<NavigationState> {
             );
           })
         : allOffers;
-    if (!mounted || requestId != _nearbyOffersRequestId) {
+    if (_isDisposed || requestId != _nearbyOffersRequestId) {
       return;
     }
 
@@ -633,14 +636,19 @@ class NavigationController extends StateNotifier<NavigationState> {
     }
     await _stopLiveJourneyTracking();
     await _clearActiveJourneySession();
+    _lastApiFetchPosition = null;
+    _lastProgressSyncPosition = null;
     state = NavigationState();
   }
 
   Future<void> _startLiveJourneyTracking() async {
     await _stopLiveJourneyTracking();
 
+    _lastApiFetchPosition = null;
+    _lastProgressSyncPosition = null;
+
     try {
-      _liveTrackingSubscription = _ref
+      _liveTrackingSubscription = ref
           .read(locationServiceProvider)
           .getPositionStream(
             distanceFilter: 10,
@@ -648,14 +656,34 @@ class NavigationController extends StateNotifier<NavigationState> {
           )
           .listen(
             (position) {
-              if (!mounted) return;
+              if (_isDisposed) return;
 
-              _ref.read(currentLocationProvider.notifier).setPosition(position);
-              unawaited(
-                updateNearbyOffers(
-                  LatLng(position.latitude, position.longitude),
-                ),
+              ref.read(currentLocationProvider.notifier).setPosition(position);
+              final currentLatLng = LatLng(
+                position.latitude,
+                position.longitude,
               );
+
+              bool shouldFetchOffers = false;
+              if (_lastApiFetchPosition == null) {
+                shouldFetchOffers = true;
+              } else {
+                final dist = const Distance().as(
+                  LengthUnit.Meter,
+                  _lastApiFetchPosition!,
+                  currentLatLng,
+                );
+                if (dist >= 200) {
+                  shouldFetchOffers = true;
+                }
+              }
+
+              if (shouldFetchOffers) {
+                _lastApiFetchPosition = currentLatLng;
+                unawaited(updateNearbyOffers(currentLatLng));
+              } else {
+                _syncProgressLocally(currentLatLng);
+              }
             },
             onError: (Object error, StackTrace stackTrace) {
               debugPrint('Live journey tracking failed: $error');
@@ -663,6 +691,39 @@ class NavigationController extends StateNotifier<NavigationState> {
           );
     } catch (error) {
       debugPrint('Unable to start live journey tracking: $error');
+    }
+  }
+
+  void _syncProgressLocally(LatLng position) {
+    final progressSnapshot = _nextJourneyProgress(position);
+    state = state.copyWith(
+      trackedDistanceMeters: progressSnapshot.distanceMeters,
+      trackedDurationSeconds: progressSnapshot.durationSeconds,
+      lastProgressPosition: progressSnapshot.position,
+    );
+    unawaited(_syncActiveJourneyTracking());
+
+    bool shouldSyncProgress = false;
+    if (_lastProgressSyncPosition == null) {
+      shouldSyncProgress = true;
+    } else {
+      final dist = const Distance().as(
+        LengthUnit.Meter,
+        _lastProgressSyncPosition!,
+        position,
+      );
+      if (dist >= 100) {
+        shouldSyncProgress = true;
+      }
+    }
+
+    if (shouldSyncProgress) {
+      _lastProgressSyncPosition = position;
+      _sendJourneyProgress(
+        position: position,
+        distanceMeters: progressSnapshot.distanceMeters,
+        durationSeconds: progressSnapshot.durationSeconds,
+      );
     }
   }
 
@@ -697,8 +758,19 @@ class NavigationController extends StateNotifier<NavigationState> {
       origin: origin,
       destination: destination,
       searchText: raw['searchText']?.toString(),
-      selectedInterests: _readStringList(raw['selectedInterests']),
-      trackedDistanceMeters: _readDouble(raw['trackedDistanceMeters']),
+      selectedInterests:
+          (raw['selectedInterests'] as List<dynamic>?)?.cast<String>() ??
+          const [],
+      currentRoute: raw['currentRoute'] != null
+          ? (raw['currentRoute'] as List<dynamic>).map((p) {
+              final map = p as Map;
+              return LatLng(
+                (map['lat'] as num).toDouble(),
+                (map['lng'] as num).toDouble(),
+              );
+            }).toList()
+          : const <LatLng>[],
+      trackedDistanceMeters: raw['trackedDistanceMeters'] as double? ?? 0.0,
       trackedDurationSeconds: _readInt(raw['trackedDurationSeconds']),
       lastProgressPosition: lastPosition ?? origin,
       journeyStartedAt: _readDateTime(raw['journeyStartedAt']),
@@ -776,6 +848,9 @@ class NavigationController extends StateNotifier<NavigationState> {
       'destinationLng': state.destination?.longitude,
       'searchText': state.searchText,
       'selectedInterests': state.selectedInterests,
+      'currentRoute': state.currentRoute
+          .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+          .toList(),
       'trackedDistanceMeters': state.trackedDistanceMeters,
       'trackedDurationSeconds': state.trackedDurationSeconds,
       'lastProgressLat': state.lastProgressPosition?.latitude,
@@ -850,21 +925,6 @@ class NavigationController extends StateNotifier<NavigationState> {
     }
 
     return DateTime.tryParse(value);
-  }
-
-  List<String> _readStringList(Object? raw) {
-    if (raw is! List) {
-      return const <String>[];
-    }
-
-    return raw
-        .map((item) => item.toString().trim())
-        .where((item) => item.isNotEmpty)
-        .toList(growable: false);
-  }
-
-  double _readDouble(Object? raw) {
-    return _readDoubleOrNull(raw) ?? 0;
   }
 
   double? _readDoubleOrNull(Object? raw) {
@@ -1032,7 +1092,7 @@ class NavigationController extends StateNotifier<NavigationState> {
     LatLng? finalPosition = explicitEndPosition;
 
     if (finalPosition == null) {
-      final currentPos = _ref.read(currentLocationProvider).position;
+      final currentPos = ref.read(currentLocationProvider).position;
       if (currentPos != null) {
         finalPosition = LatLng(currentPos.latitude, currentPos.longitude);
       }
@@ -1205,12 +1265,6 @@ class NavigationController extends StateNotifier<NavigationState> {
     }
     return true;
   }
-
-  @override
-  void dispose() {
-    _liveTrackingSubscription?.cancel();
-    super.dispose();
-  }
 }
 
 /// Configurable discovery radius in meters.
@@ -1235,14 +1289,6 @@ class _JourneyProgressSnapshot {
 
 /// Navigation status provider.
 final navigationControllerProvider =
-    StateNotifierProvider<NavigationController, NavigationState>((ref) {
-      return NavigationController(
-        RouteService(),
-        ref.read(dealsRepositoryProvider),
-        ref.read(journeyServiceProvider),
-        ref.read(shopsRepositoryProvider),
-        ref.read(notificationServiceProvider),
-        ref.read(storageServiceProvider),
-        ref,
-      );
-    });
+    NotifierProvider<NavigationController, NavigationState>(
+      NavigationController.new,
+    );

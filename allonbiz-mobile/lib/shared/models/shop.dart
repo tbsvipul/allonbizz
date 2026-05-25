@@ -8,6 +8,7 @@ class Shop {
   final String? phoneNumber;
   final String? email;
   final String? imageUrl;
+  final List<String> shopImages;
   final double latitude;
   final double longitude;
   final List<Offer> offers;
@@ -20,6 +21,7 @@ class Shop {
     this.phoneNumber,
     this.email,
     this.imageUrl,
+    this.shopImages = const [],
     required this.latitude,
     required this.longitude,
     this.offers = const [],
@@ -31,6 +33,8 @@ class Shop {
         json['Offers'] ??
         json['recentOffers'] ??
         json['RecentOffers'];
+
+    final rawImages = json['shopImages'] ?? json['ShopImages'] ?? [];
 
     return Shop(
       id:
@@ -57,6 +61,7 @@ class Shop {
           (json['longitude'] as num?)?.toDouble() ??
           (json['Longitude'] as num?)?.toDouble() ??
           0.0,
+      shopImages: (rawImages as List?)?.map((e) => e.toString()).toList() ?? [],
       offers:
           (rawOffers as List?)
               ?.map((offer) => Offer.fromJson(Map<String, dynamic>.from(offer)))

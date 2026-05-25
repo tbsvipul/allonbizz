@@ -14,13 +14,14 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/models/offer.dart';
 import '../../../../shared/widgets/app_section_header.dart';
 import '../../../discover/data/repositories/deals_repository.dart';
-import '../../../profile/presentation/screens/journey_detail_screen.dart';
 import '../../../profile/presentation/widgets/journey_card.dart';
 import '../../../trips/data/repositories/journeys_repository.dart';
 import '../../data/repositories/home_repository.dart';
 import '../widgets/deal_section_widget.dart';
 import '../widgets/navigate_card_widget.dart';
 import '../widgets/quick_action_widget.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../app/routes/app_routes.dart';
 
 final homeRecentJourneysProvider = FutureProvider<List<JourneyModel>>((ref) {
   return ref
@@ -204,14 +205,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     compact: true,
                                     onTap: journey.id == null
                                         ? null
-                                        : () => Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  JourneyDetailScreen(
-                                                    journeyId: journey.id!,
-                                                    initialJourney: journey,
-                                                  ),
-                                            ),
+                                        : () => context.push(
+                                            AppRoutes.journeyDetail.replaceFirst(':id', journey.id!),
+                                            extra: journey,
                                           ),
                                   ),
                                 )

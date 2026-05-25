@@ -737,30 +737,45 @@ public class KeeperDashboardService : IKeeperDashboardService
                 offer.StartDate <= now &&
                 offer.EndDate >= now);
 
-        var redemptions = await _db.Redemptions
-            .AsNoTracking()
+        var totalRedemptions = await _db.Redemptions
+            .CountAsync(redemption =>
+                redemption.Status == RedemptionStatus.Redeemed &&
+                redemption.Offer != null &&
+                redemption.Offer.KeeperId == keeperId);
+
+        var totalSalesValue = await _db.Redemptions
             .Where(redemption =>
                 redemption.Status == RedemptionStatus.Redeemed &&
                 redemption.Offer != null &&
                 redemption.Offer.KeeperId == keeperId)
-            .Select(redemption => new
-            {
-                redemption.RedeemedAt,
-                redemption.SavedAmount,
-                OfferDiscountAmount = redemption.Offer != null ? redemption.Offer.DiscountAmount : null
-            })
+            .SumAsync(redemption => redemption.SavedAmount ?? redemption.Offer!.DiscountAmount ?? 0);
+
+        var rangeStart = DateTime.UtcNow.Date.AddDays(-6);
+        var trendDb = await _db.Redemptions
+            .Where(redemption =>
+                redemption.Status == RedemptionStatus.Redeemed &&
+                redemption.Offer != null &&
+                redemption.Offer.KeeperId == keeperId &&
+                redemption.RedeemedAt >= rangeStart)
+            .GroupBy(redemption => redemption.RedeemedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToListAsync();
 
-        var totalRedemptions = redemptions.Count;
-        var totalSalesValue = redemptions.Sum(redemption => ResolveSavings(redemption.SavedAmount, redemption.OfferDiscountAmount));
-        var trend = BuildDailyRedemptionTrend(redemptions.Select(redemption => redemption.RedeemedAt), 7);
+        var trend = Enumerable.Range(0, 7)
+            .Select(offset => rangeStart.AddDays(offset))
+            .Select(date => new RedemptionTrendDto
+            {
+                Date = date,
+                Count = trendDb.FirstOrDefault(t => t.Date == date)?.Count ?? 0
+            })
+            .ToList();
 
         return new KeeperDashboardDto 
         { 
             ActiveOffersCount = activeOffersCount,
             TotalRedemptions = totalRedemptions,
             TotalSalesValue = totalSalesValue,
-            RedemptionTrend = trend.OrderBy(item => item.Date).ToList()
+            RedemptionTrend = trend
         };
     }
 
@@ -779,6 +794,17 @@ public class KeeperDashboardService : IKeeperDashboardService
             ? shop.NotificationRadius.Value
             : 2;
         var oneHourAgo = DateTime.UtcNow.AddHours(-1);
+
+        var lat = shop.Latitude.Value;
+        var lng = shop.Longitude.Value;
+        var latDelta = radiusKm / 111.0;
+        var lngDelta = radiusKm / (111.0 * Math.Cos(lat * Math.PI / 180.0));
+        
+        var minLat = lat - latDelta;
+        var maxLat = lat + latDelta;
+        var minLng = lng - lngDelta;
+        var maxLng = lng + lngDelta;
+
         var currentViewers = await _db.Users
             .AsNoTracking()
             .Where(user => user.IsActive &&
@@ -786,21 +812,15 @@ public class KeeperDashboardService : IKeeperDashboardService
                            EF.Functions.ILike(user.Role, "customer") &&
                            user.LastLatitude.HasValue &&
                            user.LastLongitude.HasValue &&
+                           user.LastLatitude >= minLat && user.LastLatitude <= maxLat &&
+                           user.LastLongitude >= minLng && user.LastLongitude <= maxLng &&
                            user.LastLoginAt.HasValue &&
                            user.LastLoginAt.Value >= oneHourAgo)
-            .Select(user => new
-            {
-                user.LastLatitude,
-                user.LastLongitude
-            })
+            .Select(user => new { user.LastLatitude, user.LastLongitude })
             .ToListAsync();
 
         var nearbyViewerCount = currentViewers.Count(user =>
-            GeoHelper.CalculateDistanceKm(
-                shop.Latitude.Value,
-                shop.Longitude.Value,
-                user.LastLatitude!.Value,
-                user.LastLongitude!.Value) <= radiusKm);
+            GeoHelper.CalculateDistanceKm(lat, lng, user.LastLatitude!.Value, user.LastLongitude!.Value) <= radiusKm);
 
         var since = DateTime.UtcNow.AddDays(-14);
         var journeys = await _db.Journeys
@@ -813,21 +833,14 @@ public class KeeperDashboardService : IKeeperDashboardService
                               journey.User.Status == UserStatus.Active &&
                               EF.Functions.ILike(journey.User.Role, "customer") &&
                               journey.EndLat.HasValue &&
-                              journey.EndLng.HasValue)
-            .Select(journey => new
-            {
-                journey.StartTime,
-                journey.EndLat,
-                journey.EndLng
-            })
+                              journey.EndLng.HasValue &&
+                              journey.EndLat >= minLat && journey.EndLat <= maxLat &&
+                              journey.EndLng >= minLng && journey.EndLng <= maxLng)
+            .Select(journey => new { journey.StartTime, journey.EndLat, journey.EndLng })
             .ToListAsync();
 
         var predictedTraffic = journeys
-            .Where(journey => GeoHelper.CalculateDistanceKm(
-                shop.Latitude.Value,
-                shop.Longitude.Value,
-                journey.EndLat!.Value,
-                journey.EndLng!.Value) <= radiusKm)
+            .Where(journey => GeoHelper.CalculateDistanceKm(lat, lng, journey.EndLat!.Value, journey.EndLng!.Value) <= radiusKm)
             .GroupBy(journey => journey.StartTime.Hour)
             .Select(group => new HourlyTrafficDto
             {
@@ -857,98 +870,73 @@ public class KeeperDashboardService : IKeeperDashboardService
         var offers = await _db.Offers
             .AsNoTracking()
             .Where(offer => offer.KeeperId == keeperId)
-            .Select(offer => new
-            {
-                offer.OfferId,
-                offer.ShopId,
-                offer.Status,
-                offer.IsActive,
-                offer.StartDate,
-                offer.EndDate
-            })
+            .Select(offer => new { offer.OfferId, offer.ShopId, offer.Status, offer.IsActive, offer.StartDate, offer.EndDate })
             .ToListAsync();
 
-        var redemptions = await _db.Redemptions
-            .AsNoTracking()
+        var shopAnalytics = new List<KeeperShopAnalyticsDto>();
+        var totalSavings = 0m;
+        var totalRedemptions = 0;
+
+        var redemptionsByShop = await _db.Redemptions
             .Where(redemption =>
                 redemption.Status == RedemptionStatus.Redeemed &&
                 redemption.Offer != null &&
                 redemption.Offer.KeeperId == keeperId)
-            .Select(redemption => new
-            {
-                redemption.OfferId,
-                redemption.ShopId,
-                redemption.SavedAmount,
-                OfferDiscountAmount = redemption.Offer != null ? redemption.Offer.DiscountAmount : null,
-                redemption.RedeemedAt
+            .GroupBy(redemption => redemption.ShopId)
+            .Select(g => new { 
+                ShopId = g.Key, 
+                RedemptionCount = g.Count(), 
+                Savings = g.Sum(r => r.SavedAmount ?? r.Offer!.DiscountAmount ?? 0) 
             })
             .ToListAsync();
 
-        var trend = BuildDailyRedemptionTrend(redemptions.Select(item => item.RedeemedAt), 30);
-
-        var shopAnalytics = shopIds.Select(shop => new KeeperShopAnalyticsDto
+        foreach (var shop in shopIds)
         {
-            ShopId = shop.ShopId,
-            ShopName = shop.Name,
-            OfferCount = offers.Count(offer => offer.ShopId == shop.ShopId),
-            RedemptionCount = redemptions.Count(redemption => redemption.ShopId == shop.ShopId),
-            Savings = redemptions
-                .Where(redemption => redemption.ShopId == shop.ShopId)
-                .Sum(redemption => ResolveSavings(redemption.SavedAmount, redemption.OfferDiscountAmount))
-        }).ToList();
+            var rData = redemptionsByShop.FirstOrDefault(r => r.ShopId == shop.ShopId);
+            var sCount = rData?.RedemptionCount ?? 0;
+            var sSavings = rData?.Savings ?? 0m;
+            shopAnalytics.Add(new KeeperShopAnalyticsDto
+            {
+                ShopId = shop.ShopId,
+                ShopName = shop.Name,
+                OfferCount = offers.Count(o => o.ShopId == shop.ShopId),
+                RedemptionCount = sCount,
+                Savings = sSavings
+            });
+            totalRedemptions += sCount;
+            totalSavings += sSavings;
+        }
+
+        var rangeStart = DateTime.UtcNow.Date.AddDays(-29);
+        var trendDb = await _db.Redemptions
+            .Where(redemption =>
+                redemption.Status == RedemptionStatus.Redeemed &&
+                redemption.Offer != null &&
+                redemption.Offer.KeeperId == keeperId &&
+                redemption.RedeemedAt >= rangeStart)
+            .GroupBy(redemption => redemption.RedeemedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var trend = Enumerable.Range(0, 30)
+            .Select(offset => rangeStart.AddDays(offset))
+            .Select(date => new RedemptionTrendDto
+            {
+                Date = date,
+                Count = trendDb.FirstOrDefault(t => t.Date == date)?.Count ?? 0
+            })
+            .ToList();
 
         return new KeeperAnalyticsDto
         {
             TotalShops = shopIds.Count,
             ActiveShops = shopIds.Count(item => item.IsActive),
             TotalOffers = offers.Count,
-            ActiveOffers = offers.Count(item =>
-                item.IsActive &&
-                item.Status == OfferStatus.Active &&
-                item.StartDate <= now &&
-                item.EndDate >= now),
-            TotalRedemptions = redemptions.Count,
-            TotalSavings = redemptions.Sum(item => ResolveSavings(item.SavedAmount, item.OfferDiscountAmount)),
+            ActiveOffers = offers.Count(item => item.IsActive && item.Status == OfferStatus.Active && item.StartDate <= now && item.EndDate >= now),
+            TotalRedemptions = totalRedemptions,
+            TotalSavings = totalSavings,
             RedemptionTrend = trend,
             Shops = shopAnalytics
         };
-    }
-
-    private static decimal ResolveSavings(decimal? savedAmount, decimal? offerDiscountAmount)
-    {
-        return savedAmount ?? offerDiscountAmount ?? 0;
-    }
-
-    private static List<RedemptionTrendDto> BuildDailyRedemptionTrend(IEnumerable<DateTime> redeemedAtValues, int days)
-    {
-        var orderedDates = redeemedAtValues
-            .Select(value => value.Date)
-            .OrderBy(value => value)
-            .ToList();
-
-        if (orderedDates.Count == 0)
-        {
-            return new List<RedemptionTrendDto>();
-        }
-
-        var rangeStart = DateTime.UtcNow.Date.AddDays(-(days - 1));
-        var countsByDay = orderedDates
-            .Where(value => value >= rangeStart)
-            .GroupBy(value => value)
-            .ToDictionary(group => group.Key, group => group.Count());
-
-        if (countsByDay.Count == 0)
-        {
-            return new List<RedemptionTrendDto>();
-        }
-
-        return Enumerable.Range(0, days)
-            .Select(offset => rangeStart.AddDays(offset))
-            .Select(date => new RedemptionTrendDto
-            {
-                Date = date,
-                Count = countsByDay.GetValueOrDefault(date, 0)
-            })
-            .ToList();
     }
 }
