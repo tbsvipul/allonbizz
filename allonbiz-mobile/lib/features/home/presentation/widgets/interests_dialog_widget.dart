@@ -22,25 +22,22 @@ class InterestsDialogWidget extends ConsumerStatefulWidget {
 
 class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
   final _searchController = TextEditingController();
-  final List<String> _selectedTags = [];
+  final ValueNotifier<Set<String>> _selectedTags = ValueNotifier({});
   final List<TagModel> _customTags = [];
   bool _isStartingJourney = false;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() {});
-    });
   }
 
   void _addCustomTag(String text) {
     if (text.trim().isEmpty) return;
     final label = text.trim();
-    if (_selectedTags.contains(label)) return;
+    if (_selectedTags.value.contains(label)) return;
 
     setState(() {
-      _selectedTags.add(label);
+      _selectedTags.value = Set.from(_selectedTags.value)..add(label);
       final newTag = TagModel(
         id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
         name: label,
@@ -135,11 +132,12 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
               ),
             ),
             const SizedBox(height: AppDimensions.xs),
-            ref
-                .watch(tagsProvider)
-                .when(
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _searchController,
+              builder: (context, textValue, _) {
+                return ref.watch(tagsProvider).when(
                   data: (tags) {
-                    final query = _searchController.text.toLowerCase().trim();
+                    final query = textValue.text.toLowerCase().trim();
                     var allChips = [...tags, ..._customTags];
 
                     if (query.isNotEmpty) {
@@ -158,58 +156,12 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
                           spacing: 8.0,
                           runSpacing: 8.0,
                           children: allChips.map((tag) {
-                            final isSelected = _selectedTags.contains(tag.name);
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedTags.remove(tag.name);
-                                  } else {
-                                    _selectedTags.add(tag.name);
-                                  }
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? colorScheme.primary
-                                      : colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? colorScheme.primary
-                                        : colorScheme.outlineVariant,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      tag.icon,
-                                      size: 16,
-                                      color: isSelected
-                                          ? colorScheme.onPrimary
-                                          : colorScheme.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      tag.name,
-                                      style: textTheme.labelSmall?.copyWith(
-                                        color: isSelected
-                                            ? colorScheme.onPrimary
-                                            : colorScheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            return _TagChipWidget(
+                              tag: tag,
+                              selectedTags: _selectedTags,
+                              onToggle: (_) {},
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
                             );
                           }).toList(),
                         ),
@@ -219,7 +171,9 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (err, stack) => Text('Error: $err'),
-                ),
+                );
+              },
+            ),
             const SizedBox(height: AppDimensions.lg),
             ElevatedButton(
               onPressed: _isStartingJourney
@@ -307,7 +261,7 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
                         final started = await ref
                             .read(navigationControllerProvider.notifier)
                             .startFreeRoam(
-                              interests: _selectedTags,
+                              interests: _selectedTags.value.toList(),
                               query: query.isEmpty ? null : query,
                               currentPosition: latLng,
                             );
@@ -369,6 +323,85 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TagChipWidget extends StatelessWidget {
+  final TagModel tag;
+  final ValueNotifier<Set<String>> selectedTags;
+  final Function(String) onToggle;
+  final ColorScheme colorScheme;
+  final TextTheme textTheme;
+
+  const _TagChipWidget({
+    required this.tag,
+    required this.selectedTags,
+    required this.onToggle,
+    required this.colorScheme,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Set<String>>(
+      valueListenable: selectedTags,
+      builder: (context, selected, _) {
+        final isSelected = selected.contains(tag.name);
+        return GestureDetector(
+          onTap: () {
+            final newSet = Set<String>.from(selected);
+            if (newSet.contains(tag.name)) {
+              newSet.remove(tag.name);
+            } else {
+              newSet.add(tag.name);
+            }
+            selectedTags.value = newSet;
+            onToggle(tag.name);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.outlineVariant,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  tag.icon,
+                  size: 16,
+                  color: isSelected
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  tag.name,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: isSelected
+                        ? colorScheme.onPrimary
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

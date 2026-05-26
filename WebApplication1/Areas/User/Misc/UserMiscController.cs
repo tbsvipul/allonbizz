@@ -32,22 +32,7 @@ public class UserMiscController : ControllerBase
         return Ok(ApiResponse<ChatThreadDto>.Ok(result, "Chat thread ready"));
     }
 
-    [HttpGet("notifications")]
-    public async Task<IActionResult> GetNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
-    {
-        var userId = User.GetUserId();
-        var role = User.FindFirst("role")?.Value ?? User.FindFirst(ClaimTypes.Role)?.Value ?? "customer";
-        var paging = new PaginationParams { PageNumber = pageNumber, PageSize = Math.Clamp(pageSize, 1, 100) };
-        var result = await _notificationService.GetUserNotificationsAsync(userId, role, paging);
-        return Ok(ApiResponse<PagedResponse<UserNotificationDto>>.Ok(result));
-    }
-
-    [HttpPost("notifications/{notificationId:guid}/read")]
-    public async Task<IActionResult> MarkNotificationRead(Guid notificationId)
-    {
-        await _notificationService.MarkUserNotificationReadAsync(User.GetUserId(), notificationId);
-        return Ok(ApiResponse<object?>.Ok(null, "Notification marked as read"));
-    }
+    // Notification endpoints moved to UserNotificationsController
 
     [HttpPost("review")]
     public async Task<IActionResult> SubmitReview([FromBody] SubmitReviewDto dto)

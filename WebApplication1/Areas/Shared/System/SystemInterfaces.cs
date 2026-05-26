@@ -60,6 +60,7 @@ public interface IShopService {
     Task ReapplyShopAsync(Guid shopId, CancellationToken ct = default);
     Task<List<ShopSummaryDto>> GetShopsByKeeperAsync(Guid keeperId, CancellationToken ct = default);
     Task AssignTagsAsync(Guid shopId, AssignTagsDto dto, CancellationToken ct = default);
+    Task<bool> ToggleShopOpenAsync(Guid shopId, CancellationToken ct = default);
 }
 
 public interface ITagService {
@@ -74,6 +75,8 @@ public interface INotificationService {
     Task<PagedResponse<NotificationSummaryDto>> GetNotificationsAsync(PaginationParams paging, string? status = null, CancellationToken ct = default);
     Task<PagedResponse<UserNotificationDto>> GetUserNotificationsAsync(Guid userId, string role, PaginationParams paging, CancellationToken ct = default);
     Task MarkUserNotificationReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default);
+    Task DeleteUserNotificationAsync(Guid userId, Guid notificationId, CancellationToken ct = default);
+    Task<int> GetUnreadNotificationCountAsync(Guid userId, string role, CancellationToken ct = default);
     Task<NotificationDetailDto> GetNotificationByIdAsync(Guid notificationId, CancellationToken ct = default);
     Task<NotificationDetailDto> CreateNotificationAsync(CreateNotificationDto dto, Guid adminId, CancellationToken ct = default);
     Task UpdateNotificationAsync(Guid notificationId, UpdateNotificationDto dto, CancellationToken ct = default);

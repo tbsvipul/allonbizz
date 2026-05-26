@@ -77,28 +77,21 @@ public class NotificationService : INotificationService
 
     public async Task<PagedResponse<UserNotificationDto>> GetUserNotificationsAsync(Guid userId, string role, PaginationParams paging, CancellationToken ct = default)
     {
-        var normalizedRole = string.IsNullOrWhiteSpace(role) ? "customer" : role.Trim().ToLowerInvariant();
-        var allowedAudiences = normalizedRole == "keeper"
-            ? new[] { "all", "keepers" }
-            : new[] { "all", "customers" };
-
-        var query = _db.Notifications
+        var query = _db.UserNotifications
+            .Include(un => un.Notification)
             .AsNoTracking()
-            .Where(notification =>
-                notification.Status == NotificationStatus.Sent &&
-                (notification.UserId == null || notification.UserId == userId) &&
-                allowedAudiences.Contains((notification.TargetAudience ?? "all").ToLower()));
+            .Where(un => un.UserId == userId && !un.IsDeleted);
 
         var totalCount = await query.CountAsync(ct);
         var notifications = await query
-            .OrderByDescending(notification => notification.CreatedAt)
+            .OrderByDescending(un => un.Notification!.CreatedAt)
             .Skip((paging.PageNumber - 1) * paging.PageSize)
             .Take(paging.PageSize)
             .ToListAsync(ct);
 
         return new PagedResponse<UserNotificationDto>
         {
-            Data = notifications.Select(notification => MapUserNotification(notification, userId)).ToList(),
+            Data = notifications.Select(MapUserNotification).ToList(),
             Pagination = new PaginationMeta
             {
                 Page = paging.PageNumber,
@@ -110,29 +103,36 @@ public class NotificationService : INotificationService
 
     public async Task MarkUserNotificationReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default)
     {
-        var notification = await _db.Notifications.FirstOrDefaultAsync(
-            item => item.NotificationId == notificationId && (item.UserId == null || item.UserId == userId),
-            ct);
+        var un = await _db.UserNotifications.FirstOrDefaultAsync(
+            item => item.NotificationId == notificationId && item.UserId == userId, ct);
 
-        if (notification == null)
+        if (un == null) throw new KeyNotFoundException($"Notification {notificationId} not found for user {userId}");
+
+        if (!un.IsRead)
         {
-            throw new KeyNotFoundException($"Notification {notificationId} not found");
-        }
-
-        if (!notification.IsRead)
-        {
-            if (notification.UserId == null)
-            {
-                notification.MetadataJson = UpsertReadByUser(notification.MetadataJson, userId);
-            }
-            else
-            {
-                notification.IsRead = true;
-            }
-
-            notification.UpdatedAt = DateTime.UtcNow;
+            un.IsRead = true;
+            un.ReadAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
         }
+    }
+
+    public async Task DeleteUserNotificationAsync(Guid userId, Guid notificationId, CancellationToken ct = default)
+    {
+        var un = await _db.UserNotifications.FirstOrDefaultAsync(
+            item => item.NotificationId == notificationId && item.UserId == userId, ct);
+
+        if (un != null && !un.IsDeleted)
+        {
+            un.IsDeleted = true;
+            await _db.SaveChangesAsync(ct);
+        }
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync(Guid userId, string role, CancellationToken ct = default)
+    {
+        return await _db.UserNotifications
+            .Where(un => un.UserId == userId && !un.IsDeleted && !un.IsRead)
+            .CountAsync(ct);
     }
 
     public async Task<NotificationDetailDto> GetNotificationByIdAsync(Guid notificationId, CancellationToken ct = default)
@@ -211,6 +211,13 @@ public class NotificationService : INotificationService
             SentById = adminId,
             SentByAdminAdminId = adminId,
             MetadataJson = dto.MetadataJson,
+            ImageUrl = dto.ImageUrl,
+            IsGlobal = dto.IsGlobal,
+            RadiusKm = dto.RadiusKm,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            SenderType = "Admin",
+            SenderId = adminId,
             RecipientCount = await CountRecipientsAsync(dto.TargetAudience, ct),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -397,24 +404,23 @@ public class NotificationService : INotificationService
         };
     }
 
-    private static UserNotificationDto MapUserNotification(Notification notification, Guid userId)
+    private static UserNotificationDto MapUserNotification(UserNotification un)
     {
+        var notification = un.Notification!;
         var metadata = ParseMetadata(notification.MetadataJson);
-        var isRead = notification.UserId == null
-            ? HasUserReadBroadcastNotification(notification.MetadataJson, userId)
-            : notification.IsRead;
 
         return new UserNotificationDto
         {
             NotificationId = notification.NotificationId,
             Title = notification.Title,
             Message = notification.Message,
+            ImageUrl = notification.ImageUrl,
             Type = notification.Type.ToString(),
             Priority = notification.Priority.ToString(),
-            IsRead = isRead,
+            IsRead = un.IsRead,
             CreatedAt = notification.CreatedAt,
-            ActionOfferId = metadata.OfferId,
-            ActionShopId = metadata.ShopId,
+            ActionOfferId = notification.OfferId ?? metadata.OfferId,
+            ActionShopId = notification.ShopId ?? metadata.ShopId,
             ActionJourneyId = metadata.JourneyId,
             MetadataJson = notification.MetadataJson
         };

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -59,6 +60,22 @@ class AppImage extends StatelessWidget {
       case AppImageVariant.network:
         if (url == null || url!.isEmpty) {
           imageWidget = _buildFallback();
+        } else if (url!.startsWith('data:image')) {
+          try {
+            final base64String = url!.split(',').last;
+            final bytes = base64Decode(base64String);
+            imageWidget = Image.memory(
+              bytes,
+              width: width,
+              height: height,
+              fit: fit,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) =>
+                  errorWidget ?? _buildFallback(),
+            );
+          } catch (_) {
+            imageWidget = _buildFallback();
+          }
         } else {
           imageWidget = CachedNetworkImage(
             imageUrl: url!,
@@ -109,18 +126,31 @@ class AppImage extends StatelessWidget {
                   size: (width ?? 40) * 0.6,
                   color: AppColors.grey500,
                 )
-              : CachedNetworkImage(
-                  imageUrl: url!,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => const Center(
-                    child: SpinKitPulse(color: AppColors.primary, size: 20),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.person_rounded,
-                    size: (width ?? 40) * 0.6,
-                    color: AppColors.grey500,
-                  ),
-                ),
+              : url!.startsWith('data:image')
+                  ? Image.memory(
+                      base64Decode(url!.split(',').last),
+                      width: width,
+                      height: height,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.person_rounded,
+                        size: (width ?? 40) * 0.6,
+                        color: AppColors.grey500,
+                      ),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: url!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(
+                        child: SpinKitPulse(color: AppColors.primary, size: 20),
+                      ),
+                      errorWidget: (context, url, error) => Icon(
+                        Icons.person_rounded,
+                        size: (width ?? 40) * 0.6,
+                        color: AppColors.grey500,
+                      ),
+                    ),
         );
         return imageWidget; // Avatar is intrinsically rounded
     }

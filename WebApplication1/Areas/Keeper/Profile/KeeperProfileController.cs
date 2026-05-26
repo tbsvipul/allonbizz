@@ -161,6 +161,25 @@ public class KeeperProfileController : ControllerBase
         return Ok(ApiResponse<object?>.Ok(null, "Synced with Google Business Profile"));
     }
 
+    [HttpPost("shop/{shopId:guid}/toggle-open")]
+    public async Task<IActionResult> ToggleShopOpen(Guid shopId)
+    {
+        var keeper = await _keeperContextService.GetRequiredActiveKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
+        var existingShop = await _shopService.GetShopAsync(shopId, HttpContext.RequestAborted);
+        if (existingShop == null)
+        {
+            return this.NotFoundProblemResponse("Shop not found.");
+        }
+
+        if (existingShop.KeeperId != keeper.KeeperId)
+        {
+            return this.ForbiddenProblemResponse("The requested shop does not belong to the authenticated keeper.");
+        }
+
+        var isOpen = await _shopService.ToggleShopOpenAsync(shopId, HttpContext.RequestAborted);
+        return Ok(ApiResponse<object>.Ok(new { isOpen }, $"Shop is now {(isOpen ? "open" : "closed")}."));
+    }
+
     [HttpPost("shop/{shopId:guid}/reapply")]
     public async Task<IActionResult> ReapplyShop(Guid shopId)
     {
@@ -219,9 +238,12 @@ public class KeeperProfileController : ControllerBase
             return this.ValidationProblemResponse("Longitude must be between -180 and 180.", nameof(longitude));
         }
 
-        if (notificationRadius.HasValue && notificationRadius.Value <= 0)
+        if (notificationRadius.HasValue)
         {
-            return this.ValidationProblemResponse("Notification radius must be greater than zero.", nameof(notificationRadius));
+            if (notificationRadius.Value <= 0)
+            {
+                return this.ValidationProblemResponse("Notification radius must be greater than zero.", nameof(notificationRadius));
+            }
         }
 
         return null;

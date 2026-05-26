@@ -743,6 +743,11 @@ public class KeeperDashboardService : IKeeperDashboardService
                 redemption.Offer != null &&
                 redemption.Offer.KeeperId == keeperId);
 
+        var totalReviews = await _db.Reviews
+            .CountAsync(review => 
+                (review.Shop != null && review.Shop.KeeperId == keeperId) || 
+                (review.Offer != null && review.Offer.KeeperId == keeperId));
+
         var totalSalesValue = await _db.Redemptions
             .Where(redemption =>
                 redemption.Status == RedemptionStatus.Redeemed &&
@@ -775,6 +780,7 @@ public class KeeperDashboardService : IKeeperDashboardService
             ActiveOffersCount = activeOffersCount,
             TotalRedemptions = totalRedemptions,
             TotalSalesValue = totalSalesValue,
+            TotalReviews = totalReviews,
             RedemptionTrend = trend
         };
     }

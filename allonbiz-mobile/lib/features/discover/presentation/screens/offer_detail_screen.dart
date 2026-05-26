@@ -9,9 +9,14 @@ import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../core/providers/app_bar_provider.dart';
 import '../../../../shared/widgets/app_image.dart';
 import '../../data/repositories/offers_repository.dart';
-import 'dart:async';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'shop_detail_screen.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/services/current_location_provider.dart';
+import '../../../navigate/presentation/controllers/navigation_controller.dart';
+import '../../../../app/routes/app_routes.dart';
 
 final offerDetailProvider = FutureProvider.family<Offer, String>((ref, id) {
   return ref.watch(offersRepositoryProvider).getOfferDetail(id);
@@ -59,7 +64,7 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
     });
   }
 
-  void _showReviewSheet(BuildContext context) {
+  void _showReviewSheet(BuildContext context, String offerId) {
     int selectedRating = 0;
     final reviewController = TextEditingController();
     
@@ -127,13 +132,37 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                       width: double.infinity,
                       height: 54,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          AppSnackbar.show(
-                            context,
-                            message: 'Review submitted successfully!',
-                            type: AppSnackbarType.success,
-                          );
+                        onPressed: () async {
+                          if (selectedRating == 0) {
+                            AppSnackbar.show(
+                              context,
+                              message: 'Please select a rating first',
+                              type: AppSnackbarType.error,
+                            );
+                            return;
+                          }
+                          try {
+                            await ref.read(offersRepositoryProvider).rateOffer(
+                                offerId,
+                                selectedRating,
+                                reviewController.text.isNotEmpty ? reviewController.text : null);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              AppSnackbar.show(
+                                context,
+                                message: 'Review submitted successfully!',
+                                type: AppSnackbarType.success,
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              AppSnackbar.show(
+                                context,
+                                message: 'Failed to submit review',
+                                type: AppSnackbarType.error,
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -296,6 +325,75 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                if (offer.latitude != 0.0 && offer.longitude != 0.0)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final locState = ref.read(currentLocationProvider);
+                        if (locState.position == null) {
+                          if (context.mounted) {
+                            AppSnackbar.show(context, message: 'Current location not available.', type: AppSnackbarType.error);
+                          }
+                          return;
+                        }
+                        final origin = LatLng(locState.position!.latitude, locState.position!.longitude);
+                        final notifier = ref.read(navigationControllerProvider.notifier);
+
+                        final navState = ref.read(navigationControllerProvider);
+                        if (navState.hasActiveJourney) {
+                          if (!context.mounted) return;
+                          final shouldStartNew = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Active Journey Detected'),
+                              content: const Text('You currently have an active journey. Do you want to end it and start a new journey?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  child: const Text('New Journey'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (shouldStartNew != true) return;
+                          
+                          await notifier.clearRoute();
+                        }
+
+                        await notifier.setDestination(
+                          origin,
+                          LatLng(offer.latitude, offer.longitude),
+                          offer.shopName,
+                          startName: locState.placeName ?? 'Current Location',
+                          interests: offer.tags,
+                        );
+
+                        if (context.mounted) {
+                          if (widget.isSheet) {
+                            Navigator.of(context).pop();
+                          }
+                          context.go(AppRoutes.navigate);
+                        }
+                      },
+                      icon: const Icon(Icons.directions_rounded),
+                      label: const Text('Get Directions'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: AppDimensions.xl),
                 Text(
                   l10n.details,
@@ -361,7 +459,7 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _showReviewSheet(context),
+                        onPressed: () => _showReviewSheet(context, offer.id),
                         icon: const Icon(Icons.rate_review_rounded),
                         label: const Text('Write a Review'),
                         style: ElevatedButton.styleFrom(
@@ -422,45 +520,8 @@ class _OfferImageHeader extends ConsumerStatefulWidget {
 }
 
 class _OfferImageHeaderState extends ConsumerState<_OfferImageHeader> {
-  late PageController _pageController;
   int _currentPage = 0;
-  Timer? _timer;
   List<String> _images = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  void _setupTimer() {
-    _timer?.cancel();
-    if (_images.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-        if (!mounted) return;
-        if (_currentPage < _images.length - 1) {
-          _currentPage++;
-        } else {
-          _currentPage = 0;
-        }
-
-        if (_pageController.hasClients) {
-          _pageController.animateToPage(
-            _currentPage,
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeIn,
-          );
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -476,14 +537,13 @@ class _OfferImageHeaderState extends ConsumerState<_OfferImageHeader> {
       final shopAsync = ref.watch(shopDetailProvider(widget.offer.shopId!));
       final shop = shopAsync.valueOrNull;
       if (shop != null) {
+        if (shop.imageUrl != null && !images.contains(shop.imageUrl!)) {
+          images.add(shop.imageUrl!);
+        }
         if (shop.shopImages.isNotEmpty) {
           for (final img in shop.shopImages) {
-            if (!images.contains(img)) {
-              images.add(img);
-            }
+            images.add(img);
           }
-        } else if (shop.imageUrl != null && !images.contains(shop.imageUrl!)) {
-          images.add(shop.imageUrl!);
         }
         if (shop.imageUrl != null) {
           circleImageUrl = shop.imageUrl;
@@ -491,10 +551,8 @@ class _OfferImageHeaderState extends ConsumerState<_OfferImageHeader> {
       }
     }
 
-    // Update timer if image count changed
     if (images.length != _images.length) {
       _images = images;
-      _setupTimer();
     }
 
     return SizedBox(
@@ -510,24 +568,28 @@ class _OfferImageHeaderState extends ConsumerState<_OfferImageHeader> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: images.isNotEmpty
-                  ? PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (int page) {
-                        if (mounted) {
-                          setState(() {
-                            _currentPage = page;
-                          });
-                        }
-                      },
-                      itemCount: images.length,
-                      itemBuilder: (context, index) {
+                  ? CarouselSlider(
+                      options: CarouselOptions(
+                        height: 200,
+                        viewportFraction: 1.0,
+                        autoPlay: images.length > 1,
+                        autoPlayInterval: const Duration(seconds: 3),
+                        onPageChanged: (index, reason) {
+                          if (mounted) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          }
+                        },
+                      ),
+                      items: images.map((img) {
                         return AppImage.network(
-                          images[index],
+                          img,
                           fit: BoxFit.cover,
                           height: 200,
                           width: double.infinity,
                         );
-                      },
+                      }).toList(),
                     )
                   : Container(
                       color: AppColors.grey200,
@@ -552,8 +614,8 @@ class _OfferImageHeaderState extends ConsumerState<_OfferImageHeader> {
                     color: Colors.black.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: SmoothPageIndicator(
-                    controller: _pageController,
+                  child: AnimatedSmoothIndicator(
+                    activeIndex: _currentPage,
                     count: images.length,
                     effect: ExpandingDotsEffect(
                       dotHeight: 6,

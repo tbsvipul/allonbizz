@@ -245,6 +245,9 @@ Shop parseShopJson(JsonMap json) {
     imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
     latitude: doubleValue(json, ['latitude', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'Longitude']),
+    shopImages: parseStringList(
+      firstPresent(json, ['shopImages', 'ShopImages']),
+    ),
     offers: parseOfferList(
       firstPresent(json, ['offers', 'Offers', 'recentOffers', 'RecentOffers']),
     ),

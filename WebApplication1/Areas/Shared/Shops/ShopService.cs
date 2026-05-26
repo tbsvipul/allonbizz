@@ -71,6 +71,7 @@ public class ShopService : IShopService
             Status = s.IsActive ? "Active" : "Inactive",
             IsVerified = s.IsVerified,
             VerifyStatus = s.VerifyStatus,
+            IsOpen = s.IsOpen,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
@@ -117,6 +118,7 @@ public class ShopService : IShopService
             CategoryId = s.CategoryId,
             CategoryName = s.Category != null ? s.Category.Name : null,
             KeeperId = s.KeeperId,
+            KeeperUserId = s.Keeper != null ? s.Keeper.UserId : Guid.Empty,
             KeeperBusinessName = s.Keeper != null ? s.Keeper.BusinessName : null,
             KeeperName = s.Keeper != null && s.Keeper.User != null ? $"{s.Keeper.User.FirstName} {s.Keeper.User.LastName}".Trim() : null,
             IsActive = s.IsActive,
@@ -220,10 +222,10 @@ public class ShopService : IShopService
         shop.Tags = tagsList;
         shop.UpdatedAt = DateTime.UtcNow;
 
-        // Reset verification and clear rejection reason on update so keeper can re-apply and admin can review again
-        shop.IsVerified = false;
-        shop.VerifyStatus = "Pending";
-        shop.RejectionReason = null;
+        if (shop.VerifyStatus == "Rejected")
+        {
+            shop.RejectionReason = null;
+        }
 
         _context.Shops.Update(shop);
         await _context.SaveChangesAsync(ct);
@@ -390,6 +392,7 @@ public class ShopService : IShopService
             Status = s.IsActive ? "Active" : "Inactive",
             IsVerified = s.IsVerified,
             VerifyStatus = s.VerifyStatus,
+            IsOpen = s.IsOpen,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
@@ -407,6 +410,20 @@ public class ShopService : IShopService
         shop.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> ToggleShopOpenAsync(Guid shopId, CancellationToken ct = default)
+    {
+        var shop = await _context.Shops.FindAsync(new object[] { shopId }, ct);
+        if (shop == null) throw new KeyNotFoundException($"Shop {shopId} not found.");
+
+        shop.IsOpen = !shop.IsOpen;
+        shop.UpdatedAt = DateTime.UtcNow;
+
+        _context.Shops.Update(shop);
+        await _context.SaveChangesAsync(ct);
+
+        return shop.IsOpen;
     }
 
     private ShopDetailDto MapToDetailDto(Shop shop)

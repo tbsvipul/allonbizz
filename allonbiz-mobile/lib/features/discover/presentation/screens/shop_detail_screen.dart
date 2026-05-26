@@ -7,8 +7,9 @@ import '../../../../shared/widgets/app_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../data/repositories/shops_repository.dart';
-import 'dart:async';
+
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import '../../../../shared/models/shop.dart';
 
 final shopDetailProvider = FutureProvider.family<Shop, String>((ref, id) {
@@ -188,48 +189,19 @@ class _ShopImageHeader extends StatefulWidget {
 }
 
 class _ShopImageHeaderState extends State<_ShopImageHeader> {
-  late PageController _pageController;
   int _currentPage = 0;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-    final images = widget.shop.shopImages.isNotEmpty
-        ? widget.shop.shopImages
-        : (widget.shop.imageUrl != null ? [widget.shop.imageUrl!] : <String>[]);
-    if (images.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-        if (_currentPage < images.length - 1) {
-          _currentPage++;
-        } else {
-          _currentPage = 0;
-        }
-
-        if (_pageController.hasClients) {
-          _pageController.animateToPage(
-            _currentPage,
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeIn,
-          );
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final images = widget.shop.shopImages.isNotEmpty
-        ? widget.shop.shopImages
-        : (widget.shop.imageUrl != null ? [widget.shop.imageUrl!] : <String>[]);
+    List<String> images = [];
+    if (widget.shop.imageUrl != null && widget.shop.imageUrl!.isNotEmpty) {
+      images.add(widget.shop.imageUrl!);
+    }
+    for (final img in widget.shop.shopImages) {
+      if (img.isNotEmpty) {
+        images.add(img);
+      }
+    }
 
     return SizedBox(
       height: 240,
@@ -244,22 +216,26 @@ class _ShopImageHeaderState extends State<_ShopImageHeader> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: images.isNotEmpty
-                  ? PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (int page) {
-                        setState(() {
-                          _currentPage = page;
-                        });
-                      },
-                      itemCount: images.length,
-                      itemBuilder: (context, index) {
+                  ? CarouselSlider(
+                      options: CarouselOptions(
+                        height: 200,
+                        viewportFraction: 1.0,
+                        autoPlay: images.length > 1,
+                        autoPlayInterval: const Duration(seconds: 3),
+                        onPageChanged: (index, reason) {
+                          setState(() {
+                            _currentPage = index;
+                          });
+                        },
+                      ),
+                      items: images.map((img) {
                         return AppImage.network(
-                          images[index],
+                          img,
                           fit: BoxFit.cover,
                           height: 200,
                           width: double.infinity,
                         );
-                      },
+                      }).toList(),
                     )
                   : Container(
                       color: AppColors.grey200,
@@ -284,8 +260,8 @@ class _ShopImageHeaderState extends State<_ShopImageHeader> {
                     color: Colors.black.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: SmoothPageIndicator(
-                    controller: _pageController,
+                  child: AnimatedSmoothIndicator(
+                    activeIndex: _currentPage,
                     count: images.length,
                     effect: ExpandingDotsEffect(
                       dotHeight: 6,
@@ -317,7 +293,7 @@ class _ShopImageHeaderState extends State<_ShopImageHeader> {
               ),
               child: ClipOval(
                 child: AppImage.network(
-                  widget.shop.imageUrl ?? '',
+                  widget.shop.imageUrl ?? (widget.shop.shopImages.isNotEmpty ? widget.shop.shopImages.first : ''),
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,

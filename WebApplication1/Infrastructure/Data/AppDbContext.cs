@@ -33,6 +33,9 @@ public class AppDbContext : DbContext
     public DbSet<LoyaltyWallet> LoyaltyWallets { get; set; } = null!;
     public DbSet<ShopLoyaltyProgram> ShopLoyaltyPrograms { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
+    public DbSet<UserNotification> UserNotifications { get; set; } = null!;
+    public DbSet<ShopNotificationSetting> ShopNotificationSettings { get; set; } = null!;
+    public DbSet<NotificationLog> NotificationLogs { get; set; } = null!;
     public DbSet<NotificationDeliveryJob> NotificationDeliveryJobs { get; set; } = null!;
     public DbSet<PlatformRule> PlatformRules { get; set; } = null!;
     public DbSet<Journey> Journeys { get; set; } = null!;

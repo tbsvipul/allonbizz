@@ -34,9 +34,15 @@ public class CreateNotificationDto
     public string Title { get; set; } = string.Empty;
     [Required]
     public string Message { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
     public string Type { get; set; } = "SystemMessage";
     public string Priority { get; set; } = "Normal";
     public string TargetAudience { get; set; } = "all";
+    public bool IsGlobal { get; set; } = false;
+    public decimal? RadiusKm { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+    public List<Guid>? TargetUserIds { get; set; }
     public DateTime? ScheduledAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
     public string? MetadataJson { get; set; }

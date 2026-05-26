@@ -5,6 +5,7 @@ import '../../app/routes/app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../constants/app_colors.dart';
 import '../providers/app_bar_provider.dart';
+import '../../features/profile/data/repositories/notifications_repository.dart';
 import 'custom_navbar.dart';
 
 class MainLayout extends ConsumerWidget {
@@ -51,10 +52,22 @@ class MainLayout extends ConsumerWidget {
                     actions: [
                       if (appBarConfig.actions != null)
                         ...appBarConfig.actions!,
-                      IconButton(
-                        icon: const Icon(Icons.notifications_none_rounded),
-                        onPressed: () {
-                          context.push(AppRoutes.notifications);
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
+                          return IconButton(
+                            icon: Badge(
+                              isLabelVisible: unreadCountAsync.valueOrNull != null && unreadCountAsync.valueOrNull! > 0,
+                              label: Text('${unreadCountAsync.valueOrNull ?? 0}'),
+                              backgroundColor: AppColors.error,
+                              child: const Icon(Icons.notifications_none_rounded),
+                            ),
+                            onPressed: () {
+                              context.push(AppRoutes.notifications).then((_) {
+                                ref.invalidate(unreadNotificationCountProvider);
+                              });
+                            },
+                          );
                         },
                       ),
                     ],

@@ -2,22 +2,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
-import api from '@/lib/api';
-import { unwrapPagedResponse } from '@/lib/api-response';
-import { getApiErrorMessage } from '@/lib/api-error';
+import { ShopSummary } from '@/lib/types';
 
-interface DashboardMapShop {
-  id: string;
-  name: string;
-  businessName: string;
-  category: string;
-  location: string;
-  status: string;
-  isVerified: boolean;
-  latitude?: number | null;
-  longitude?: number | null;
-  imageUrl?: string | null;
-  isOpen?: boolean;
+interface KeeperShopMapProps {
+  shops: ShopSummary[];
 }
 
 interface ResolvedCoordinate {
@@ -32,8 +20,6 @@ type GoogleMapsWindow = Window & {
 
 const GOOGLE_MAP_SCRIPT_ID = 'navideals-google-maps-script';
 const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-const GEOCODING_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_MAPS_GEOCODING_ENABLED === 'true';
-const GEOCODE_CACHE_KEY = 'navideals-dashboard-shop-geocodes-v1';
 
 function loadGoogleMapsApi(apiKey: string) {
   const win = window as GoogleMapsWindow;
@@ -83,32 +69,6 @@ function hasValidCoordinates(latitude?: number | null, longitude?: number | null
   );
 }
 
-function buildGeocodeQuery(shop: DashboardMapShop) {
-  return [shop.location, shop.businessName, shop.name]
-    .map((value) => value?.trim())
-    .filter((value) => value && value.toLowerCase() !== 'unknown')
-    .join(', ');
-}
-
-function geocodeAddress(geocoder: any, address: string): Promise<{ latitude: number; longitude: number } | null> {
-  return new Promise((resolve) => {
-    geocoder.geocode({ address }, (results: any, status: string) => {
-      if (status === 'OK' && results?.[0]?.geometry?.location) {
-        resolve({
-          latitude: results[0].geometry.location.lat(),
-          longitude: results[0].geometry.location.lng(),
-        });
-        return;
-      }
-
-      resolve(null);
-    });
-  });
-}
-
-// We will dynamically create a custom OverlayView inside the component
-// to support HTML and CSS-based markers with external images.
-
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -118,7 +78,7 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;');
 }
 
-function buildInfoWindowContent(shop: DashboardMapShop) {
+function buildInfoWindowContent(shop: ShopSummary) {
   const statusIsActive = shop.status.toLowerCase() === 'active';
   const statusBg = statusIsActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
   const statusColor = statusIsActive ? '#059669' : '#dc2626';
@@ -131,7 +91,6 @@ function buildInfoWindowContent(shop: DashboardMapShop) {
 
   return `
     <div style="min-width: 250px; max-width: 280px; padding: 4px; font-family: Inter, system-ui, sans-serif; color: #0f172a;">
-      <!-- Header Row -->
       <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06);">
         ${image}
         <div style="min-width: 0; flex: 1;">
@@ -142,14 +101,11 @@ function buildInfoWindowContent(shop: DashboardMapShop) {
           <p style="margin: 3px 0 0; color: #64748b; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(shop.businessName || shop.category || 'Business')}</p>
         </div>
       </div>
-
-      <!-- Details List -->
       <div style="padding: 12px 0; display: flex; flex-direction: column; gap: 10px;">
         <div style="display: flex; align-items: flex-start; gap: 8px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           <div style="font-size: 13px; font-weight: 500; color: #334155; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(shop.location || 'Unknown location')}</div>
         </div>
-        
         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
           <span style="padding: 4px 8px; border-radius: 6px; background: ${statusBg}; color: ${statusColor}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
             ${escapeHtml(shop.status)}
@@ -159,58 +115,28 @@ function buildInfoWindowContent(shop: DashboardMapShop) {
           </span>
         </div>
       </div>
-
-      <!-- Actions -->
       <div style="display: flex; gap: 8px; margin-top: 4px;">
         <a href="/shops/${encodeURIComponent(shop.id)}" style="flex: 1; text-align: center; padding: 8px; border-radius: 8px; background: #2563eb; color: #fff; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
           Details
-        </a>
-        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${shop.latitude},${shop.longitude}`)}" target="_blank" rel="noopener noreferrer" style="flex: 1; text-align: center; padding: 8px; border-radius: 8px; background: #fff; color: #0f172a; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-          Maps
         </a>
       </div>
     </div>
   `;
 }
 
-export default function DashboardShopMap() {
+export function KeeperShopMap({ shops }: KeeperShopMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const infoWindowRef = useRef<any>(null);
   const markersRef = useRef<Array<{ shopId: string; marker: any }>>([]);
   const currentLocationMarkerRef = useRef<any>(null);
-  const geocodeAttemptedRef = useRef<Set<string>>(new Set());
-  const [shops, setShops] = useState<DashboardMapShop[]>([]);
-  const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, ResolvedCoordinate>>({});
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
 
-  const resolvedShops = useMemo(
-    () =>
-      shops.map((shop) => {
-        if (hasValidCoordinates(shop.latitude, shop.longitude)) {
-          return shop;
-        }
-
-        const cached = resolvedCoordinates[shop.id];
-        if (!cached) {
-          return shop;
-        }
-
-        return {
-          ...shop,
-          latitude: cached.latitude,
-          longitude: cached.longitude,
-        };
-      }),
-    [resolvedCoordinates, shops]
-  );
-
   const mappableShops = useMemo(
-    () => resolvedShops.filter((shop) => hasValidCoordinates(shop.latitude, shop.longitude)),
-    [resolvedShops]
+    () => shops.filter((shop) => hasValidCoordinates(shop.latitude, shop.longitude)),
+    [shops]
   );
 
   const openCount = useMemo(
@@ -229,94 +155,10 @@ export default function DashboardShopMap() {
   );
 
   useEffect(() => {
-    if (!GEOCODING_ENABLED || typeof window === 'undefined') {
-      return;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(GEOCODE_CACHE_KEY);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Record<string, ResolvedCoordinate>;
-      setResolvedCoordinates(parsed);
-      Object.keys(parsed).forEach((shopId) => geocodeAttemptedRef.current.add(shopId));
-    } catch {
-      // Ignore corrupt cache.
-    }
-  }, []);
-
-  useEffect(() => {
     let isMounted = true;
-
-    const fetchAllShops = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const pageSize = 100;
-        const firstResponse = await api.get('/admin/shops', {
-          params: { pageNumber: 1, pageSize },
-        });
-        const firstPage = unwrapPagedResponse<DashboardMapShop>(firstResponse);
-        const totalPages = Math.max(
-          1,
-          firstPage.pagination.totalPages ||
-            Math.ceil((firstPage.pagination.totalCount || firstPage.data.length) / pageSize)
-        );
-
-        let allShops = firstPage.data;
-
-        if (totalPages > 1) {
-          const remainingResponses = await Promise.all(
-            Array.from({ length: totalPages - 1 }, (_, index) =>
-              api.get('/admin/shops', {
-                params: { pageNumber: index + 2, pageSize },
-              })
-            )
-          );
-
-          allShops = [
-            ...allShops,
-            ...remainingResponses.flatMap((response) => unwrapPagedResponse<DashboardMapShop>(response).data),
-          ];
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        setShops(allShops);
-      } catch (err) {
-        if (!isMounted) {
-          return;
-        }
-
-        setError(getApiErrorMessage(err, 'Failed to load shop map data.'));
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchAllShops();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
     if (!MAPS_API_KEY) {
-      setError('Google Maps API key is missing. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to admin-fronend/.env.local.');
-      setLoading(false);
-      return () => {
-        isMounted = false;
-      };
+      setError('Google Maps API key is missing.');
+      return () => { isMounted = false; };
     }
 
     loadGoogleMapsApi(MAPS_API_KEY)
@@ -330,86 +172,11 @@ export default function DashboardShopMap() {
         }
       })
       .catch((err: Error) => {
-        if (isMounted) {
-          setError(err.message);
-        }
+        if (isMounted) setError(err.message);
       });
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
-
-  useEffect(() => {
-    const win = window as GoogleMapsWindow;
-
-    if (!GEOCODING_ENABLED || !isMapReady || !win.google?.maps || shops.length === 0) {
-      return;
-    }
-
-    const pendingShops = shops.filter((shop) => {
-      if (hasValidCoordinates(shop.latitude, shop.longitude)) {
-        return false;
-      }
-
-      if (resolvedCoordinates[shop.id]) {
-        return false;
-      }
-
-      if (geocodeAttemptedRef.current.has(shop.id)) {
-        return false;
-      }
-
-      return buildGeocodeQuery(shop).length > 0;
-    });
-
-    if (pendingShops.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const geocodeMissingShops = async () => {
-      const geocoder = new win.google.maps.Geocoder();
-      const discoveredCoordinates: Record<string, ResolvedCoordinate> = {};
-
-      for (const shop of pendingShops) {
-        if (cancelled) {
-          return;
-        }
-
-        geocodeAttemptedRef.current.add(shop.id);
-        const coordinate = await geocodeAddress(geocoder, buildGeocodeQuery(shop));
-        if (coordinate) {
-          discoveredCoordinates[shop.id] = coordinate;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
-
-      if (cancelled || Object.keys(discoveredCoordinates).length === 0) {
-        return;
-      }
-
-      setResolvedCoordinates((previous) => {
-        const next = { ...previous, ...discoveredCoordinates };
-        try {
-          window.localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(next));
-        } catch {
-          // Ignore cache write issues.
-        }
-        return next;
-      });
-    };
-
-    geocodeMissingShops().catch(() => {
-      // Ignore geocoding failures when the fallback is enabled explicitly.
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isMapReady, resolvedCoordinates, shops]);
 
   useEffect(() => {
     const win = window as GoogleMapsWindow;
@@ -423,10 +190,6 @@ export default function DashboardShopMap() {
         center: { lat: 23.0375, lng: 72.566 },
         zoom: 11,
         minZoom: 3,
-        restriction: {
-          latLngBounds: { north: 85, south: -85, west: -180, east: 180 },
-          strictBounds: true,
-        },
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: true,
@@ -531,7 +294,7 @@ export default function DashboardShopMap() {
               const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
               mapRef.current.panTo(pos);
               mapRef.current.setZoom(15);
-              
+
               if (currentLocationMarkerRef.current) {
                 currentLocationMarkerRef.current.updatePosition(pos);
               } else {
@@ -569,14 +332,13 @@ export default function DashboardShopMap() {
 
     const bounds = new googleMaps.LatLngBounds();
 
-    // Define Custom HTML Marker OverlayView Class
     class ShopMarkerOverlay extends googleMaps.OverlayView {
       private container: HTMLDivElement | null = null;
-      private shop: DashboardMapShop;
+      private shop: ShopSummary;
       private isSelected: boolean;
       private onClick: () => void;
 
-      constructor(shop: DashboardMapShop, isSelected: boolean, onClick: () => void) {
+      constructor(shop: ShopSummary, isSelected: boolean, onClick: () => void) {
         super();
         this.shop = shop;
         this.isSelected = isSelected;
@@ -586,7 +348,6 @@ export default function DashboardShopMap() {
       onAdd() {
         const div = document.createElement('div');
         div.style.position = 'absolute';
-        // Shift up by half the teardrop diagonal (46 / sqrt(2) ≈ 32.5px) so the tip points exactly at the coordinate
         const tipOffset = this.isSelected ? 38 : 32.5; 
         div.style.transform = `translate(-50%, calc(-50% - ${tipOffset}px))`;
         div.style.cursor = 'pointer';
@@ -607,7 +368,6 @@ export default function DashboardShopMap() {
 
         div.innerHTML = `
           <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <!-- Rotated teardrop background -->
             <div style="
               position: absolute;
               width: 100%;
@@ -618,8 +378,6 @@ export default function DashboardShopMap() {
               box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
               ${this.isSelected ? `border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.4), 2px 4px 16px rgba(0,0,0,0.4);` : ''}
             "></div>
-            
-            <!-- Inner Circle with Image -->
             <div style="
               position: absolute;
               width: ${innerSize}px;
@@ -648,7 +406,7 @@ export default function DashboardShopMap() {
         if (!this.container) return;
         const projection = this.getProjection();
         if (!projection) return;
-        const pos = new win.google.maps.LatLng(this.shop.latitude, this.shop.longitude);
+        const pos = new win.google.maps.LatLng(this.shop.latitude!, this.shop.longitude!);
         const positionPixel = projection.fromLatLngToDivPixel(pos);
         if (!positionPixel) return;
 
@@ -671,7 +429,7 @@ export default function DashboardShopMap() {
       });
       
       markerOverlay.setMap(map);
-      bounds.extend(new googleMaps.LatLng(shop.latitude, shop.longitude));
+      bounds.extend(new googleMaps.LatLng(shop.latitude!, shop.longitude!));
       markersRef.current.push({ shopId: shop.id, marker: markerOverlay });
     });
 
@@ -705,11 +463,9 @@ export default function DashboardShopMap() {
       return;
     }
 
-    const pos = new win.google.maps.LatLng(selectedShop.latitude, selectedShop.longitude);
+    const pos = new win.google.maps.LatLng(selectedShop.latitude!, selectedShop.longitude!);
     infoWindowRef.current.setContent(buildInfoWindowContent(selectedShop));
     infoWindowRef.current.setPosition(pos);
-    
-    // Slight pixel offset so info window appears above the teardrop pin
     infoWindowRef.current.setOptions({ pixelOffset: new win.google.maps.Size(0, -35) });
 
     infoWindowRef.current.open({
@@ -719,14 +475,14 @@ export default function DashboardShopMap() {
   }, [selectedShop]);
 
   return (
-    <div className="glass-card" style={{ padding: '1.5rem', height: '100%' }}>
+    <div className="glass-card" style={{ padding: '2rem', height: '100%', width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-            <MapPin size={18} color="#2563eb" /> Shop Map
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', color: 'hsl(var(--foreground))' }}>
+            <MapPin size={18} color="#2563eb" /> Your Shops on Map
           </h3>
           <p style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>
-            Click a marker to open the shop details popup inside the map.
+            Click a marker to view shop details.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -741,26 +497,17 @@ export default function DashboardShopMap() {
         </div>
       )}
 
-      <div
-        ref={mapContainerRef}
-        style={{
-          minHeight: '520px',
-          width: '100%',
-          borderRadius: '18px',
-          overflow: 'hidden',
-          background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(16, 185, 129, 0.14))',
-          border: '1px solid hsl(var(--border))',
-          position: 'relative',
-        }}
-      >
+      <div style={{ position: 'relative', minHeight: '520px', width: '100%', borderRadius: '18px', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(16, 185, 129, 0.14))', border: '1px solid hsl(var(--border))' }}>
+        <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+
         {!isMapReady && (
-          <div style={{ width: '100%', height: '100%', minHeight: '520px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--muted-foreground))', fontWeight: 600 }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--muted-foreground))', fontWeight: 600, zIndex: 10 }}>
             Loading map...
           </div>
         )}
 
-        {isMapReady && !loading && mappableShops.length === 0 && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--muted-foreground))', fontWeight: 600, background: 'rgba(10, 15, 28, 0.45)', textAlign: 'center', padding: '1.5rem' }}>
+        {isMapReady && mappableShops.length === 0 && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--muted-foreground))', fontWeight: 600, background: 'rgba(10, 15, 28, 0.45)', textAlign: 'center', padding: '1.5rem', zIndex: 10, pointerEvents: 'none' }}>
             Shop markers appear here when shops have saved latitude and longitude values.
           </div>
         )}

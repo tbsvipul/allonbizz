@@ -111,7 +111,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                     <>
                       <div className="portal-nav-copy">
                         <span>{item.label}</span>
-                        <small>{item.description}</small>
                       </div>
                       <ChevronRight size={16} className="portal-nav-arrow" />
                     </>

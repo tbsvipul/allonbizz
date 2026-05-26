@@ -75,6 +75,7 @@ export interface KeeperDashboard {
   activeOffersCount: number;
   totalRedemptions: number;
   totalSalesValue: number;
+  totalReviews: number;
   redemptionTrend: RedemptionTrendPoint[];
 }
 
@@ -116,6 +117,7 @@ export interface ShopSummary {
   status: string;
   isVerified: boolean;
   verifyStatus?: string;
+  isOpen?: boolean;
   latitude?: number | null;
   longitude?: number | null;
   imageUrl?: string | null;

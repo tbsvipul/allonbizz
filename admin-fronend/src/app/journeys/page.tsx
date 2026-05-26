@@ -373,7 +373,6 @@ export default function JourneysPage() {
             {[
               { icon: TrendingUp, label: 'Total Distance', value: fmtDist(summary?.totalDistanceKm || 0), color: '#7c3aed' },
               { icon: Award, label: 'Offers Redeemed', value: fmt(summary?.totalOffersRedeemed || 0), color: '#f59e0b' },
-              { icon: Store, label: 'Total Savings', value: `₹${(summary?.totalSavings || 0).toFixed(2)}`, color: '#10b981' },
               { icon: Clock, label: 'Avg Duration', value: fmtDur(summary?.avgDurationMinutes || 0), color: '#ec4899' },
               { icon: MapPin, label: 'Avg Distance', value: fmtDist(summary?.avgDistanceKm || 0), color: '#6366f1' },
             ].map((m, i) => (
@@ -609,12 +608,11 @@ export default function JourneysPage() {
                     </div>
 
                     {/* Performance Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                       {[
                         { label: 'Distance', value: fmtDist(selectedJourney.distance), icon: MapPin, color: '#6366f1' },
                         { label: 'Duration', value: fmtDur(selectedJourney.duration / 60), icon: Clock, color: '#f59e0b' },
                         { label: 'Offers', value: selectedJourney.offersRedeemed?.toString() || '0', icon: Award, color: '#10b981' },
-                        { label: 'Savings', value: `₹${(selectedJourney.totalSavings || 0).toFixed(2)}`, icon: TrendingUp, color: '#ec4899' },
                       ].map((m, i) => (
                         <div key={i} style={{ padding: '1rem 0.5rem', textAlign: 'center', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px' }}>
                           <m.icon size={16} color={m.color} style={{ marginBottom: '0.5rem' }} />

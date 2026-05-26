@@ -29,17 +29,18 @@ interface ShopDetails {
   address: string;
   phoneNumber: string;
   email: string;
-  keeperId: string;
-  keeperBusinessName: string;
+  categoryId?: string | null;
+  keeperBusinessName?: string | null;
   keeperName?: string | null;
-  categoryId: string;
-  categoryName: string;
+  keeperId: string;
+  keeperUserId: string;
   latitude: number;
   longitude: number;
   imageUrl: string;
   shopImages: string[];
   tags: string[];
   amenities: string[];
+  categoryName: string;
   isOpen: boolean;
   notificationRadius: number;
   isVerified: boolean;
@@ -222,6 +223,10 @@ export default function ShopDetailsPage() {
     loadGoogleMapsApi(MAPS_API_KEY)
       .then(() => {
         setIsMapReady(true);
+        const win = window as any;
+        win.gm_authFailure = () => {
+          setToast('Google Maps API quota exceeded. Please upgrade your API key.');
+        };
       })
       .catch((err: any) => {
         console.error('Failed to load Google Maps library:', err);
@@ -995,7 +1000,7 @@ export default function ShopDetailsPage() {
                 </div>
               </div>
               <button 
-                onClick={() => router.push(`/keepers/${shop.keeperId}`)}
+                onClick={() => router.push(`/users/${shop.keeperUserId}`)}
                 className="btn-outline" 
                 style={{ width: '100%', marginTop: '1.25rem', fontSize: '0.85rem', padding: '0.625rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
               >

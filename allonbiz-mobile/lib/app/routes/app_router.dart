@@ -71,15 +71,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return isSplash ? null : AppRoutes.splash;
       }
 
-      // Once auth is resolved, route away from splash immediately.
+      // DO NOT route away from splash immediately via redirect!
+      // We must wait for the 2.8s animation to finish.
+      // SplashScreen widget will call context.go() when it's done.
       if (isSplash) {
-        if (isLoggedIn) {
-          return storage.activeJourneySession != null
-              ? AppRoutes.navigate
-              : AppRoutes.home;
-        }
-        if (!storage.hasSeenOnboarding) return AppRoutes.onboarding;
-        return AppRoutes.login;
+        return null;
       }
 
       // If logged in, redirect away from auth pages

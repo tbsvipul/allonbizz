@@ -56,7 +56,7 @@ class DealSectionWidget extends ConsumerWidget {
                     discountPercent: offer.discountPercent,
                     distance: offer.distance ?? '0 km',
                     onTap: () =>
-                        context.push(AppRoutes.offerDetail, extra: offer),
+                        context.push(AppRoutes.offerDetail.replaceFirst(':id', offer.id), extra: offer),
                   ),
                 );
               },

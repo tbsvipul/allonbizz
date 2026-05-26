@@ -9,6 +9,10 @@ final notificationsRepositoryProvider = Provider<NotificationsRepository>((
   return NotificationsRepository(apiClient: ref.watch(apiClientProvider));
 });
 
+final unreadNotificationCountProvider = FutureProvider<int>((ref) {
+  return ref.watch(notificationsRepositoryProvider).getUnreadCount();
+});
+
 class NotificationsRepository {
   final ApiClient _apiClient;
 
@@ -20,7 +24,7 @@ class NotificationsRepository {
     int pageSize = 10,
   }) async {
     try {
-      return _apiClient.getPage<UserNotification>(
+      return await _apiClient.getPage<UserNotification>(
         '/user/notifications?pageNumber=$page&pageSize=$pageSize',
         parser: UserNotification.fromJson,
         options: ApiReadOptions(
@@ -28,6 +32,24 @@ class NotificationsRepository {
           ttl: const Duration(minutes: 5),
         ),
       );
+    } on ServerFailure catch (e) {
+      throw DatabaseFailure(e.message);
+    }
+  }
+
+  Future<void> markAsRead(String notificationId) async {
+    try {
+      await _apiClient.put('/user/notifications/$notificationId/read');
+      await _apiClient.invalidateCacheByPrefix('notifications');
+    } on ServerFailure catch (e) {
+      throw DatabaseFailure(e.message);
+    }
+  }
+
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _apiClient.get('/user/notifications/unread-count');
+      return (response.data as Map<String, dynamic>)['data'] as int? ?? 0;
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);
     }
@@ -42,6 +64,8 @@ class UserNotification {
   final DateTime sentAt;
   final bool isRead;
   final String? metadata;
+  final String? actionOfferId;
+  final String? actionShopId;
 
   UserNotification({
     required this.id,
@@ -51,6 +75,8 @@ class UserNotification {
     required this.sentAt,
     this.isRead = false,
     this.metadata,
+    this.actionOfferId,
+    this.actionShopId,
   });
 
   factory UserNotification.fromJson(Map<String, dynamic> json) {
@@ -70,6 +96,8 @@ class UserNotification {
           DateTime.now(),
       isRead: json['isRead'] as bool? ?? json['IsRead'] as bool? ?? false,
       metadata: (json['metadataJson'] ?? json['MetadataJson'])?.toString(),
+      actionOfferId: (json['actionOfferId'] ?? json['ActionOfferId'])?.toString(),
+      actionShopId: (json['actionShopId'] ?? json['ActionShopId'])?.toString(),
     );
   }
 }

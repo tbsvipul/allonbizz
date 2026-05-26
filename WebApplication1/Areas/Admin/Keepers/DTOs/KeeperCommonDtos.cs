@@ -38,6 +38,7 @@ public class KeeperDashboardDto
     public int ActiveOffersCount { get; set; }
     public int TotalRedemptions { get; set; }
     public decimal TotalSalesValue { get; set; } // Estimated
+    public int TotalReviews { get; set; }
     public List<RedemptionTrendDto> RedemptionTrend { get; set; } = new();
 }
 

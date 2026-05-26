@@ -12,6 +12,7 @@ public class ShopSummaryDto
     public string Status { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
     public string VerifyStatus { get; set; } = "Pending";
+    public bool IsOpen { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? ImageUrl { get; set; }
@@ -34,6 +35,7 @@ public class ShopDetailDto
     public string? KeeperBusinessName { get; set; }
     public string? KeeperName { get; set; }
     public Guid KeeperId { get; set; }
+    public Guid KeeperUserId { get; set; }
     public bool IsActive { get; set; }
     public bool IsVerified { get; set; }
     public string VerifyStatus { get; set; } = "Pending";

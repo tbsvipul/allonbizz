@@ -15,10 +15,15 @@ class ProfileRepository {
 
   Future<AppUser> getProfile() async {
     try {
-      final response = await _apiClient.get('/user/profile');
-      final data = response['data'];
-      if (data == null) throw const DatabaseFailure('Profile data not found');
-      return AppUser.fromJson(data);
+      return await _apiClient.getObject<AppUser>(
+        '/user/profile',
+        parser: (json) => AppUser.fromJson(json),
+        options: const ApiReadOptions(
+          cacheKey: 'user:profile',
+          ttl: Duration(minutes: 15),
+          decodeInBackground: true,
+        ),
+      );
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);
     }
@@ -38,6 +43,7 @@ class ProfileRepository {
           'phoneNumber': phoneNumber,
         },
       );
+      await _apiClient.invalidateCacheKey('user:profile');
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);
     }
@@ -58,6 +64,7 @@ class ProfileRepository {
       if (data == null || data['photoUrl'] == null) {
         throw const DatabaseFailure('Photo upload failed');
       }
+      await _apiClient.invalidateCacheKey('user:profile');
       return data['photoUrl'];
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);

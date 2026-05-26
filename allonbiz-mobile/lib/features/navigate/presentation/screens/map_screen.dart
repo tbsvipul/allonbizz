@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/app_image.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,17 +250,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     ),
                   ],
                 ),
-              MarkerLayer(
-                markers: _buildStaticMarkers(
-                  origin: origin,
-                  destination: destination,
-                  isFreeRoam: isFreeRoam,
-                  hasActiveRoute: hasActiveRoute,
-                  nearbyOffers: nearbyOffers,
-                  nearbyShops: nearbyShops,
-                  ref: ref,
+              if (isJourneyActive)
+                MarkerLayer(
+                  markers: _buildStaticMarkers(
+                    origin: origin,
+                    destination: destination,
+                    isFreeRoam: isFreeRoam,
+                    hasActiveRoute: hasActiveRoute,
+                    nearbyOffers: nearbyOffers,
+                    nearbyShops: nearbyShops,
+                    ref: ref,
+                  ),
                 ),
-              ),
               UserLocationMarkerLayer(hasActiveRoute: hasActiveRoute),
               const RichAttributionWidget(
                 alignment: AttributionAlignment.bottomRight,
@@ -320,7 +322,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ],
             ),
           ),
-          if (nearbyOffers.isNotEmpty && _isOffersExpanded)
+          if (isJourneyActive && nearbyOffers.isNotEmpty && _isOffersExpanded)
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => setState(() => _isOffersExpanded = false),
@@ -328,7 +330,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ),
 
-          if (nearbyOffers.isNotEmpty)
+          if (isJourneyActive && nearbyOffers.isNotEmpty)
             Positioned(
               left: AppDimensions.md,
               bottom: AppDimensions.lg + MediaQuery.of(context).padding.bottom,
@@ -379,7 +381,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
           child: OfferDetailScreen(initialOffer: offer, isSheet: true),
         ),
       ),
-    );
+    ).whenComplete(() {
+      ref.read(navigationControllerProvider.notifier).selectOffer(null);
+    });
   }
 
   Widget _buildOffersOverlay(BuildContext context, List<Offer> offers) {
@@ -534,11 +538,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
               child: AspectRatio(
                 aspectRatio: 22 / 10,
                 child: offer.imageUrl != null && offer.imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: offer.imageUrl!,
+                    ? AppImage.network(
+                        offer.imageUrl!,
                         fit: BoxFit.cover,
-                        errorWidget: (context, error, stackTrace) =>
-                            _buildOfferPlaceholder(),
+                        errorWidget: _buildOfferPlaceholder(),
                       )
                     : _buildOfferPlaceholder(),
               ),
@@ -578,7 +581,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          '5',
+                          offer.rating != null ? offer.rating!.toStringAsFixed(1) : '0.0',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
@@ -649,7 +652,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
           child: ShopDetailScreen(shopId: shopId),
         ),
       ),
-    );
+    ).whenComplete(() {
+      ref.read(navigationControllerProvider.notifier).selectShop(null);
+    });
   }
 }
 
@@ -769,25 +774,17 @@ List<Marker> _buildStaticMarkers({
                   shape: BoxShape.circle,
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: shop.imageUrl != null && shop.imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: shop.imageUrl!,
+                child: (shop.shopImages.isNotEmpty ? shop.shopImages.first : shop.imageUrl) != null && (shop.shopImages.isNotEmpty ? shop.shopImages.first : shop.imageUrl)!.isNotEmpty
+                    ? AppImage.network(
+                        shop.shopImages.isNotEmpty ? shop.shopImages.first : shop.imageUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
+                        errorWidget: const Center(
                           child: Icon(
                             Icons.storefront_rounded,
                             color: AppColors.accent,
                             size: 20,
                           ),
                         ),
-                        errorWidget: (context, error, stackTrace) =>
-                            const Center(
-                              child: Icon(
-                                Icons.storefront_rounded,
-                                color: AppColors.accent,
-                                size: 20,
-                              ),
-                            ),
                       )
                     : const Center(
                         child: Icon(
@@ -862,24 +859,16 @@ List<Marker> _buildStaticMarkers({
                 child:
                     firstOffer.imageUrl != null &&
                         firstOffer.imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: firstOffer.imageUrl!,
+                    ? AppImage.network(
+                        firstOffer.imageUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
+                        errorWidget: const Center(
                           child: Icon(
                             Icons.local_offer_rounded,
                             color: AppColors.primary,
                             size: 20,
                           ),
                         ),
-                        errorWidget: (context, error, stackTrace) =>
-                            const Center(
-                              child: Icon(
-                                Icons.local_offer_rounded,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                            ),
                       )
                     : const Center(
                         child: Icon(

@@ -10,10 +10,6 @@ export default async function ShopDetailPage({
 
   return (
     <div className="field-stack">
-      <PageHeader
-        title="Shop details"
-        description="Update listing content, map coordinates, and verification-related metadata for this location."
-      />
       <ShopEditor shopId={shopId} />
     </div>
   );

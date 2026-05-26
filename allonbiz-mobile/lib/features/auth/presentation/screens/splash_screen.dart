@@ -1,30 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../controllers/auth_controller.dart';
 
 /// Animated splash screen with logo and route line animation.
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
 
   const SplashScreen({super.key, required this.onComplete});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _animationComplete = false;
+
   @override
   void initState() {
     super.initState();
-    // Navigate after animation completes
+    // Navigate after animation completes, if session is already resolved
     Future.delayed(const Duration(milliseconds: 2800), () {
-      if (mounted) widget.onComplete();
+      if (!mounted) return;
+      setState(() => _animationComplete = true);
+      _checkAndNavigate();
     });
+  }
+
+  void _checkAndNavigate() {
+    if (!_animationComplete) return;
+    final authState = ref.read(authControllerProvider);
+    if (authState.hasResolvedSession) {
+      widget.onComplete();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Listen for auth state changes to navigate if animation is already complete
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next.hasResolvedSession && _animationComplete) {
+        widget.onComplete();
+      }
+    });
+
     return Scaffold(
       body: Container(
         width: double.infinity,

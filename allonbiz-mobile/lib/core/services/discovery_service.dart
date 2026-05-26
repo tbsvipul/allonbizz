@@ -93,9 +93,11 @@ class DiscoveryService {
 }
 
 final categoriesProvider = StreamProvider<List<CategoryModel>>((ref) {
+  ref.keepAlive();
   return ref.watch(discoveryServiceProvider).watchCategories();
 });
 
 final tagsProvider = StreamProvider<List<TagModel>>((ref) {
+  ref.keepAlive();
   return ref.watch(discoveryServiceProvider).watchTags();
 });

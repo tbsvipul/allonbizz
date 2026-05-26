@@ -649,10 +649,6 @@ export default function UserProfilePage() {
                               <p style={{ fontWeight: 600 }}>{formatDateTime(redemption.redeemedAt)}</p>
                             </div>
                             <div>
-                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Saved amount</p>
-                              <p style={{ fontWeight: 600 }}>{formatCurrency(redemption.savedAmount)}</p>
-                            </div>
-                            <div>
                               <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Points earned</p>
                               <p style={{ fontWeight: 600 }}>{redemption.loyaltyPointsEarned}</p>
                             </div>

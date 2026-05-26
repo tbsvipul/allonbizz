@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
@@ -9,6 +9,7 @@ import { readFilesAsDataUrls, resolveMediaSource } from '@/lib/media';
 import { getShopListingStatusLabel, getShopVerificationStatusLabel } from '@/lib/shop-status';
 import { CategoryTree, ShopDetail } from '@/lib/types';
 import { useToast } from '@/context/ToastContext';
+import { Store, MapPin, Image as ImageIcon, Tag, Settings, AlertCircle, Info, Send, Save, RefreshCw, Layers, Phone, Compass } from 'lucide-react';
 import { InlineNotice } from '@/components/InlineNotice';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusPill } from '@/components/StatusPill';
@@ -77,10 +78,52 @@ function hasOnlyImageFiles(files: File[]) {
   return files.every((file) => file.type.startsWith('image/'));
 }
 
+const GOOGLE_MAP_SCRIPT_ID = 'navideals-google-maps-script';
+const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+function loadGoogleMapsApi(apiKey: string) {
+  if (typeof window === 'undefined') return Promise.resolve();
+  const win = window as any;
+
+  if (win.google?.maps) {
+    return Promise.resolve();
+  }
+
+  if (win.__navidealsGoogleMapsPromise) {
+    return win.__navidealsGoogleMapsPromise;
+  }
+
+  win.__navidealsGoogleMapsPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.getElementById(GOOGLE_MAP_SCRIPT_ID) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Failed to load Google Maps.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = GOOGLE_MAP_SCRIPT_ID;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Maps.'));
+    document.head.appendChild(script);
+  });
+
+  return win.__navidealsGoogleMapsPromise;
+}
+
 export function ShopEditor({ shopId }: { shopId?: string }) {
   const router = useRouter();
   const { showToast } = useToast();
   const isEditing = Boolean(shopId);
+
+  // Real Map Integration References & State
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -141,6 +184,143 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
 
   const verificationStatusLabel = getShopVerificationStatusLabel(shop?.verifyStatus, shop?.isVerified);
   const listingStatusLabel = getShopListingStatusLabel(shop?.isActive ? 'Active' : 'Inactive', shop?.isActive);
+
+  // Load Google Maps API Script
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!MAPS_API_KEY) {
+      console.warn('Google Maps API key is missing in environment configurations.');
+      return;
+    }
+
+    loadGoogleMapsApi(MAPS_API_KEY)
+      .then(() => {
+        setIsMapReady(true);
+      })
+      .catch((err: any) => {
+        console.error('Failed to load Google Maps library:', err);
+      });
+  }, []);
+
+  // Initialize Map and bind custom animated Overlay
+  useEffect(() => {
+    const win = window as any;
+    if (!isMapReady || !mapContainerRef.current || !win.google?.maps) {
+      return;
+    }
+
+    const lat = parseFloat(form.latitude) || 0;
+    const lng = parseFloat(form.longitude) || 0;
+
+    if (lat !== 0 && lng !== 0) {
+      const position = { lat, lng };
+
+      if (!mapRef.current) {
+        mapRef.current = new win.google.maps.Map(mapContainerRef.current, {
+          center: position,
+          zoom: 15,
+          minZoom: 3,
+          disableDefaultUI: true,
+          zoomControl: false,
+          gestureHandling: 'cooperative',
+          styles: []
+        });
+      } else {
+        mapRef.current.setCenter(position);
+      }
+
+      // Custom OverlayView class definition to position animated marker precisely over coordinate projection
+      class GeofenceRadarOverlay extends win.google.maps.OverlayView {
+        private container: HTMLDivElement | null = null;
+        private pos: any;
+
+        constructor(pos: any) {
+          super();
+          this.pos = pos;
+        }
+
+        onAdd() {
+          const div = document.createElement('div');
+          div.style.position = 'absolute';
+          div.style.transform = 'translate(-50%, -50%)';
+          div.style.display = 'flex';
+          div.style.alignItems = 'center';
+          div.style.justifyContent = 'center';
+          div.style.pointerEvents = 'none';
+
+          // Concentric animated circles and map pin
+          div.innerHTML = `
+            <!-- Double Expanding Purple Pulsing Radar Rings -->
+            <div class="radar-ring" style="position: absolute; width: 110px; height: 110px; border-radius: 50%; border: 2px solid #a855f7; opacity: 0; animation: pulse-radar 2.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div class="radar-ring-delayed" style="position: absolute; width: 110px; height: 110px; border-radius: 50%; border: 2px solid #a855f7; opacity: 0; animation: pulse-radar 2.8s cubic-bezier(0, 0, 0.2, 1) infinite; animation-delay: 1.4s;"></div>
+            
+            <!-- Dashed circular boundary ring -->
+            <div style="position: absolute; width: 140px; height: 140px; border-radius: 50%; border: 1px dashed rgba(168, 85, 247, 0.25);"></div>
+            
+            <!-- Solid static accent rings -->
+            <div style="position: absolute; width: 80px; height: 80px; border-radius: 50%; border: 1px solid rgba(168, 85, 247, 0.25);"></div>
+            <div style="position: absolute; width: 180px; height: 180px; border-radius: 50%; border: 1px solid rgba(168, 85, 247, 0.12);"></div>
+
+            <!-- Centered Floating Map Pin -->
+            <div class="floating-pin" style="position: relative; z-index: 12; animation: subtle-float 2.5s ease-in-out infinite;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 24 24" fill="rgba(168, 85, 247, 0.2)" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            
+            <style>
+              @keyframes pulse-radar {
+                0% { transform: scale(0.6); opacity: 0.8; }
+                100% { transform: scale(2.5); opacity: 0; }
+              }
+              @keyframes subtle-float {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-5px); }
+              }
+            </style>
+          `;
+
+          this.container = div;
+          const panes = this.getPanes();
+          panes.overlayMouseTarget.appendChild(div);
+        }
+
+        draw() {
+          if (!this.container) return;
+          const projection = this.getProjection();
+          if (!projection) return;
+          const positionPixel = projection.fromLatLngToDivPixel(this.pos);
+          if (!positionPixel) return;
+
+          this.container.style.left = positionPixel.x + 'px';
+          this.container.style.top = positionPixel.y + 'px';
+        }
+
+        onRemove() {
+          if (this.container && this.container.parentNode) {
+            this.container.parentNode.removeChild(this.container);
+            this.container = null;
+          }
+        }
+      }
+
+      const activeOverlay = new GeofenceRadarOverlay(new win.google.maps.LatLng(lat, lng));
+      activeOverlay.setMap(mapRef.current);
+
+      // Clean up overlay when coords update or component unmounts
+      return () => {
+        activeOverlay.setMap(null);
+      };
+    }
+  }, [isMapReady, form.latitude, form.longitude]);
+
+  const handleRecenterMap = () => {
+    const lat = parseFloat(form.latitude) || 0;
+    const lng = parseFloat(form.longitude) || 0;
+    if (mapRef.current && lat !== 0 && lng !== 0) {
+      mapRef.current.panTo({ lat, lng });
+      mapRef.current.setZoom(15);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -278,8 +458,11 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
       if (hasLongitude && (Number(form.longitude) < -180 || Number(form.longitude) > 180)) {
         throw new Error('Longitude must be between -180 and 180.');
       }
-      if (form.notificationRadius.trim() && (Number.isNaN(Number(form.notificationRadius)) || Number(form.notificationRadius) <= 0)) {
-        throw new Error('Notification radius must be a valid number greater than zero.');
+      if (form.notificationRadius.trim()) {
+        const radiusVal = Number(form.notificationRadius);
+        if (Number.isNaN(radiusVal) || radiusVal <= 0) {
+          throw new Error('Notification radius must be a valid number greater than zero.');
+        }
       }
 
       const payload = {
@@ -377,438 +560,430 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
   }
 
   return (
-    <div className="field-stack">
-      {error ? <InlineNotice tone="error" message={error} /> : null}
+    <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
+      
+      {/* CSS Embedded Styles mimicking Admin Side */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes custom-ping {
+          0% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+        .pulsing-dot-ring {
+          animation: custom-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        .gallery-thumbnail:hover img {
+          transform: scale(1.06);
+          filter: brightness(0.85);
+        }
+        .gallery-thumbnail:hover .gallery-overlay {
+          opacity: 1 !important;
+        }
+        .chip-item:hover {
+          transform: translateY(-2px);
+          border-color: rgba(168, 85, 247, 0.4) !important;
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.06);
+        }
+        .tag-item:hover {
+          transform: translateY(-2px);
+          border-color: rgba(99, 102, 241, 0.4) !important;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.06);
+        }
+        .keeper-input {
+          width: 100%;
+          padding: 0.85rem 1rem;
+          border-radius: 12px;
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          background: rgba(0, 0, 0, 0.15);
+          color: hsl(var(--foreground));
+          outline: none;
+          font-weight: 500;
+          font-size: 0.95rem;
+          transition: all 0.2s ease;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .keeper-input:focus {
+          border-color: hsl(var(--primary));
+          background: rgba(0, 0, 0, 0.25);
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .keeper-input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .metric-icon-box {
+          padding: 0.7rem;
+          border-radius: 12px;
+          background: rgba(99, 102, 241, 0.1);
+          color: hsl(var(--primary));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}} />
 
-      {isEditing && shop ? (
-        <SectionCard
-          title="Current shop status"
-          description="Verification, listing health, and review feedback for this location."
-          action={
-            <div className="button-row">
-              {String(shop.verifyStatus || '').toLowerCase() === 'rejected' ? (
-                <button type="button" className="button-secondary" onClick={() => void handleReapply()} disabled={reapplying || syncing}>
-                  {reapplying ? 'Reapplying...' : 'Reapply'}
-                </button>
-              ) : null}
+      {error ? <InlineNotice tone="error" message={error} /> : null}
+      {shop?.rejectionReason ? <InlineNotice tone="error" message={`Review feedback: ${shop.rejectionReason}`} /> : null}
+      {shop?.deactivateReason ? <InlineNotice tone="info" message={`Listing note: ${shop.deactivateReason}`} /> : null}
+
+      <form onSubmit={handleSubmit}>
+        {/* Top Header Controls */}
+        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem' }}>
+          <div>
+            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isEditing ? 'Shop Editor Workspace' : 'New Shop Creation'}
+            </p>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
+              {isEditing ? 'Manage Shop Details' : 'Create New Shop'}
+            </h1>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {isEditing && String(shop?.verifyStatus || '').toLowerCase() === 'rejected' ? (
+              <button type="button" className="button-secondary" onClick={() => void handleReapply()} disabled={reapplying || syncing}>
+                <Send size={16} />
+                {reapplying ? 'Reapplying...' : 'Reapply'}
+              </button>
+            ) : null}
+            {isEditing && (
               <button type="button" className="button-ghost" onClick={() => void handleGoogleSync()} disabled={syncing || reapplying}>
+                <RefreshCw size={16} />
                 {syncing ? 'Syncing...' : 'Google sync'}
               </button>
-            </div>
-          }
-        >
-          <div className="field-stack">
-            <div className="list-grid">
-              <div className="list-item">
-                <div className="inline-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>Listing status</strong>
-                  <StatusPill status={listingStatusLabel} />
-                </div>
-                <p className="muted-text tiny-text" style={{ marginTop: '0.45rem' }}>
-                  {shop.isActive ? 'Customers can discover this shop in the app.' : 'This shop is currently hidden from customers.'}
-                </p>
+            )}
+            <button type="submit" className="button" disabled={loading || saving || uploadingCover || uploadingGallery} style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, #a855f7 100%)', border: 'none', boxShadow: '0 4px 14px rgba(139, 92, 246, 0.3)' }}>
+              <Save size={16} />
+              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Shop'}
+            </button>
+          </div>
+        </div>
+
+        {/* 2-Column Responsive Layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr minmax(320px, 360px)', gap: '2rem' }}>
+          
+          {/* Main Content Area */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            
+            {/* Header Profile Glass Card */}
+            <div className="glass-card" style={{ padding: '2rem', overflow: 'hidden', position: 'relative', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)' }}>
+              {/* Premium Gradient Hero Cover Banner */}
+              <div style={{
+                height: '140px',
+                margin: '-2rem -2rem 0 -2rem',
+                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, #a855f7 100%)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '220px', height: '220px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', filter: 'blur(30px)' }}></div>
+                <div style={{ position: 'absolute', bottom: '-70px', left: '15%', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.12)', filter: 'blur(20px)' }}></div>
+                
+                <label htmlFor="shopCoverImage" style={{ position: 'absolute', right: '1.5rem', top: '1.5rem', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, backdropFilter: 'blur(4px)', transition: 'background 0.2s' }}>
+                  <ImageIcon size={16} /> {uploadingCover ? 'Uploading...' : 'Change Cover'}
+                  <input id="shopCoverImage" type="file" accept="image/*" onChange={handleCoverImageChange} disabled={loading || saving || uploadingCover} style={{ display: 'none' }} />
+                </label>
               </div>
-              <div className="list-item">
-                <div className="inline-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>Verification</strong>
-                  <StatusPill status={verificationStatusLabel} />
-                </div>
-                <p className="muted-text tiny-text" style={{ marginTop: '0.45rem' }}>
-                  {verificationStatusLabel === 'Verified'
-                    ? 'The current business details have passed review.'
-                    : verificationStatusLabel === 'Rejected'
-                      ? 'This shop needs updates before it can be approved again.'
-                      : 'The latest shop details are waiting for review.'}
-                </p>
-              </div>
-              <div className="list-item">
-                <div className="inline-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>Open state</strong>
-                  <StatusPill status={shop.isOpen ? 'Open' : 'Closed'} />
-                </div>
-                <p className="muted-text tiny-text" style={{ marginTop: '0.45rem' }}>
-                  Use the operational toggle below to reflect daily storefront availability.
-                </p>
-              </div>
-            </div>
 
-            {(shop.rejectionReason || shop.deactivateReason) ? (
-              <div className="reason-stack">
-                {shop.rejectionReason ? <InlineNotice tone="error" message={`Review feedback: ${shop.rejectionReason}`} /> : null}
-                {shop.deactivateReason ? <InlineNotice tone="info" message={`Listing note: ${shop.deactivateReason}`} /> : null}
-              </div>
-            ) : null}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      <SectionCard
-        title={isEditing ? 'Edit shop' : 'Create shop'}
-        description={
-          isEditing
-            ? 'Update listing content, storefront images, coordinates, and review metadata in one place.'
-            : 'Create the public listing with the latest address, discovery tags, and storefront images.'
-        }
-      >
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="shopName">Shop name</label>
-              <input id="shopName" value={form.name} onChange={(event) => updateField('name', event.target.value)} disabled={loading || saving} required />
-            </div>
-            <div className="field">
-              <label htmlFor="categoryId">Category</label>
-              <select id="categoryId" value={form.categoryId} onChange={(event) => updateField('categoryId', event.target.value)} disabled={loading || saving}>
-                <option value="">Select a category</option>
-                {categoryOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="shopDescription">Description</label>
-            <textarea id="shopDescription" value={form.description} onChange={(event) => updateField('description', event.target.value)} disabled={loading || saving} />
-          </div>
-
-          <div className="field">
-            <label htmlFor="shopAddress">Address</label>
-            <input id="shopAddress" value={form.address} onChange={(event) => updateField('address', event.target.value)} disabled={loading || saving} required />
-          </div>
-
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="shopLatitude">Latitude</label>
-              <input id="shopLatitude" value={form.latitude} onChange={(event) => updateField('latitude', event.target.value)} disabled={loading || saving} />
-            </div>
-            <div className="field">
-              <label htmlFor="shopLongitude">Longitude</label>
-              <input id="shopLongitude" value={form.longitude} onChange={(event) => updateField('longitude', event.target.value)} disabled={loading || saving} />
-            </div>
-          </div>
-
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="shopNotificationRadius">Notification radius (km)</label>
-              <input
-                id="shopNotificationRadius"
-                type="number"
-                min="0.1"
-                step="0.1"
-                value={form.notificationRadius}
-                onChange={(event) => updateField('notificationRadius', event.target.value)}
-                disabled={loading || saving}
-              />
-            </div>
-            <div className="field">
-              <label className="inline-row" style={{ alignItems: 'center', gap: '0.65rem', marginTop: '1.9rem' }}>
-                <input
-                  type="checkbox"
-                  checked={form.isOpen}
-                  onChange={(event) => updateField('isOpen', event.target.checked)}
-                  disabled={loading || saving}
-                />
-                <span>Shop currently open</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="shopPhone">Phone number</label>
-              <input id="shopPhone" value={form.phoneNumber} onChange={(event) => updateField('phoneNumber', event.target.value)} disabled={loading || saving} />
-            </div>
-            <div className="field">
-              <label htmlFor="shopEmail">Contact email</label>
-              <input id="shopEmail" type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} disabled={loading || saving} />
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="shopCoverImage">Cover image</label>
-            <div className="media-uploader">
-              <label className="media-dropzone" htmlFor="shopCoverImage">
-                <strong>{uploadingCover ? 'Preparing cover image...' : 'Upload a shop cover image'}</strong>
-                <span className="muted-text tiny-text">JPG, PNG, and WebP work best. The image is stored directly with the shop.</span>
-                <input id="shopCoverImage" type="file" accept="image/*" onChange={handleCoverImageChange} disabled={loading || saving || uploadingCover} />
-              </label>
-
-              {form.imageUrl ? (
-                <div className="media-preview-grid">
-                  <div className="media-preview-card media-preview-card-compact">
-                    <button
-                      type="button"
-                      className="media-preview-frame media-preview-trigger"
-                      onClick={() => openImagePreview(form.imageUrl)}
-                    >
-                      <img src={resolveMediaSource(form.imageUrl)} alt="Shop cover preview" />
-                    </button>
-                    <div className="media-preview-meta">
-                      <strong>Primary cover image</strong>
-                      <span className="muted-text tiny-text">This image is used as the main storefront thumbnail.</span>
+              {/* Overlapping Profile Info Wrapper */}
+              <div style={{ display: 'flex', flexDirection: 'column', marginTop: '-70px', position: 'relative', zIndex: 2, paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div style={{ 
+                    width: '130px', height: '130px', borderRadius: '24px', background: 'hsl(var(--card))', 
+                    border: '4px solid hsl(var(--card))', boxShadow: '0 12px 28px rgba(0, 0, 0, 0.16)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0
+                  }}>
+                    {form.imageUrl ? (
+                      <img src={resolveMediaSource(form.imageUrl)} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Store size={54} color="hsl(var(--primary))" />
+                    )}
+                  </div>
+                  
+                  <div style={{ flex: 1, minWidth: '250px', paddingTop: '4.5rem' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '12px', border: '1px solid rgba(148,163,184,0.2)', padding: '0.2rem 0.5rem', marginBottom: '1rem' }}>
+                      <input 
+                        value={form.name} 
+                        onChange={(event) => updateField('name', event.target.value)} 
+                        disabled={loading || saving} 
+                        required 
+                        placeholder="Shop Name" 
+                        style={{ width: '100%', fontSize: '1.75rem', fontWeight: 800, padding: '0.5rem', background: 'transparent', border: 'none', color: 'hsl(var(--foreground))', outline: 'none' }} 
+                      />
                     </div>
-                    <div className="media-preview-actions">
-                      <button type="button" className="button-secondary" onClick={() => openImagePreview(form.imageUrl)} disabled={loading || saving}>
-                        Preview full
-                      </button>
-                      <button type="button" className="button-ghost" onClick={clearCoverImage} disabled={loading || saving}>
-                        Remove cover
-                      </button>
+                    
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <StatusPill status={verificationStatusLabel} />
+                      <StatusPill status={listingStatusLabel} />
+
+                      {/* Pulsing Open Now Toggle */}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', background: form.isOpen ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)', padding: '0.4rem 0.85rem', borderRadius: '30px', border: form.isOpen ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(245, 158, 11, 0.2)', transition: 'all 0.2s' }}>
+                        <input type="checkbox" checked={form.isOpen} onChange={(event) => updateField('isOpen', event.target.checked)} disabled={loading || saving} style={{ display: 'none' }} />
+                        <span style={{ position: 'relative', display: 'flex', height: '8px', width: '8px' }}>
+                          <span className={form.isOpen ? 'pulsing-dot-ring' : ''} style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '50%', backgroundColor: form.isOpen ? '#10b981' : '#f59e0b', opacity: 0.75 }}></span>
+                          <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', height: '8px', width: '8px', backgroundColor: form.isOpen ? '#10b981' : '#f59e0b' }}></span>
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: form.isOpen ? '#10b981' : '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                          {form.isOpen ? 'Set Closed' : 'Set Open'}
+                        </span>
+                      </label>
                     </div>
                   </div>
                 </div>
-              ) : null}
-            </div>
-          </div>
+              </div>
 
-          <div className="field">
-            <label htmlFor="shopGalleryImages">Gallery images</label>
-            <div className="media-uploader">
-              <label className="media-dropzone" htmlFor="shopGalleryImages">
-                <strong>{uploadingGallery ? 'Preparing gallery images...' : 'Upload additional shop images'}</strong>
-                <span className="muted-text tiny-text">Add storefront, interior, shelf, or ambience photos to support review and discovery.</span>
-                <input id="shopGalleryImages" type="file" accept="image/*" multiple onChange={handleGalleryImagesChange} disabled={loading || saving || uploadingGallery} />
-              </label>
-
-              {form.shopImages.length > 0 ? (
-                <div className="media-preview-grid">
-                  {form.shopImages.map((image, index) => (
-                    <div key={`${image.slice(0, 32)}-${index}`} className="media-preview-card">
-                      <button
-                        type="button"
-                        className="media-preview-frame media-preview-trigger"
-                        onClick={() => openImagePreview(image)}
-                      >
-                        <img src={resolveMediaSource(image)} alt={`Shop gallery preview ${index + 1}`} />
-                      </button>
-                      <div className="media-preview-meta">
-                        <strong>Gallery image {index + 1}</strong>
-                        <span className="muted-text tiny-text">Additional storefront media saved with this shop.</span>
+              {/* Grid Contact Metrics Editable */}
+              <div style={{ marginTop: '1.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div className="metric-icon-box"><MapPin size={20} /></div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                      Location Address
+                    </label>
+                    <input value={form.address} onChange={(event) => updateField('address', event.target.value)} disabled={loading || saving} required placeholder="123 Main St..." className="keeper-input" />
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div className="metric-icon-box"><Phone size={20} /></div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                      Phone Number
+                    </label>
+                    <input value={form.phoneNumber} onChange={(event) => updateField('phoneNumber', event.target.value)} disabled={loading || saving} placeholder="+1 (555) 000-0000" className="keeper-input" />
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div className="metric-icon-box"><Info size={20} /></div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                      Email Address
+                    </label>
+                    <input type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} disabled={loading || saving} placeholder="hello@shop.com" className="keeper-input" />
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div className="metric-icon-box"><Tag size={20} /></div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                      Primary Category
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <select value={form.categoryId} onChange={(event) => updateField('categoryId', event.target.value)} disabled={loading || saving} className="keeper-input" style={{ appearance: 'none', paddingRight: '2rem' }}>
+                        <option value="">Select a category</option>
+                        {categoryOptions.map((category) => (
+                          <option key={category.id} value={category.id}>{category.label}</option>
+                        ))}
+                      </select>
+                      <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'hsl(var(--muted-foreground))' }}>
+                        ▼
                       </div>
-                      <div className="media-preview-actions">
-                        <button type="button" className="button-secondary" onClick={() => openImagePreview(image)} disabled={loading || saving}>
-                          Preview full
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* About Business Card */}
+            <div className="glass-card" style={{ padding: '2rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '-0.01em' }}>
+                <Info size={20} color="hsl(var(--primary))" /> About Business
+              </h3>
+              <textarea 
+                value={form.description} 
+                onChange={(event) => updateField('description', event.target.value)} 
+                disabled={loading || saving} 
+                placeholder="Describe your shop to attract customers... What makes it special?" 
+                className="keeper-input" 
+                style={{ minHeight: '140px', resize: 'vertical', lineHeight: 1.6 }} 
+              />
+            </div>
+
+            {/* Amenities & Tags */}
+            <div className="glass-card" style={{ padding: '2rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '2.5rem' }}>
+                
+                {/* Amenities Column */}
+                <div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '-0.01em' }}>
+                    <AlertCircle size={18} color="#10b981" /> Services & Amenities
+                  </h3>
+                  <input
+                    value={form.amenities}
+                    onChange={(event) => updateField('amenities', event.target.value)}
+                    disabled={loading || saving}
+                    placeholder="e.g. wifi, parking, seating..."
+                    className="keeper-input"
+                  />
+                  <p className="muted-text" style={{ marginTop: '0.75rem', fontSize: '0.8rem' }}>Separate amenities with commas to display them as chips.</p>
+                </div>
+
+                {/* Search Tags Column */}
+                <div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '-0.01em' }}>
+                    <Tag size={18} color="hsl(var(--primary))" /> Search Tags
+                  </h3>
+                  <div className="keeper-input" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', padding: '0.75rem', cursor: 'text', minHeight: '100px', alignItems: 'flex-start', alignContent: 'flex-start' }} onClick={() => document.getElementById('shopTags')?.focus()}>
+                    {selectedTags.map((tag, index) => (
+                      <span key={`${tag}-${index}`} className="tag-item" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '30px', padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, color: 'hsl(var(--primary))' }}>
+                        <span style={{ color: 'rgba(99, 102, 241, 0.7)' }}>#</span>{tag}
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); }} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}>&times;</button>
+                      </span>
+                    ))}
+                    <input
+                      id="shopTags"
+                      value={tagInputValue}
+                      onChange={(event) => setTagInputValue(event.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); if (tagInputValue.trim()) { handleAddTag(tagInputValue.trim()); setTagInputValue(''); } }
+                        else if (e.key === 'Backspace' && !tagInputValue && selectedTags.length > 0) { handleRemoveTag(selectedTags[selectedTags.length - 1]); }
+                      }}
+                      onBlur={() => { if (tagInputValue.trim()) { handleAddTag(tagInputValue.trim()); setTagInputValue(''); } }}
+                      disabled={loading || saving}
+                      placeholder={selectedTags.length === 0 ? "Type and press Enter..." : ""}
+                      style={{ flex: 1, minWidth: '120px', border: 'none', background: 'transparent', outline: 'none', color: 'hsl(var(--foreground))', fontSize: '0.9rem', marginTop: '0.2rem' }}
+                    />
+                  </div>
+                  {availableTagsToDisplay.length > 0 ? (
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {availableTagsToDisplay.slice(0, 8).map((tag) => (
+                        <button key={tag.tagId} type="button" onClick={() => handleAddTag(tag.name)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, borderRadius: '999px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'transparent', color: 'hsl(var(--muted-foreground))', cursor: 'pointer', transition: 'all 0.2s' }} className="tag-item">
+                          + {tag.name}
                         </button>
-                        <button type="button" className="button-ghost" onClick={() => removeGalleryImage(index)} disabled={loading || saving}>
-                          Remove image
-                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {/* Shop Media Gallery Section */}
+            <div className="glass-card" style={{ padding: '2rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '-0.01em' }}>
+                  <ImageIcon size={20} color="hsl(var(--primary))" /> Shop Media Gallery ({form.shopImages.length})
+                </h3>
+                <label className="button-secondary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'center', borderRadius: '12px' }}>
+                  <ImageIcon size={16} /> {uploadingGallery ? 'Uploading...' : 'Add Photos'}
+                  <input type="file" accept="image/*" multiple onChange={handleGalleryImagesChange} disabled={loading || saving || uploadingGallery} style={{ display: 'none' }} />
+                </label>
+              </div>
+              
+              {form.shopImages.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1.25rem' }}>
+                  {form.shopImages.map((image, idx) => (
+                    <div key={idx} className="gallery-thumbnail" style={{ position: 'relative', height: '140px', borderRadius: '16px', overflow: 'hidden', border: '1px solid hsl(var(--border))', background: 'rgba(0,0,0,0.2)', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', transition: 'all 0.25s ease' }}>
+                      <img src={resolveMediaSource(image)} alt={`Gallery ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s ease, filter 0.3s ease' }} />
+                      <div className="gallery-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', opacity: 0, transition: 'opacity 0.25s ease' }}>
+                        <button type="button" onClick={() => openImagePreview(image)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer', backdropFilter: 'blur(4px)' }}><ImageIcon size={18} /></button>
+                        <button type="button" onClick={() => removeGalleryImage(idx)} style={{ background: 'rgba(239,68,68,0.5)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer', backdropFilter: 'blur(4px)' }}><AlertCircle size={18} /></button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="muted-text tiny-text">No extra gallery images added yet.</p>
+                <div style={{ textAlign: 'center', padding: '4rem 2rem', border: '2px dashed rgba(148, 163, 184, 0.2)', borderRadius: '16px', background: 'rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                  <ImageIcon size={48} color="hsl(var(--muted-foreground))" style={{ opacity: 0.5 }} />
+                  <div>
+                    <h4 style={{ fontWeight: 800, fontSize: '1.05rem', color: 'hsl(var(--foreground))' }}>No Gallery Images</h4>
+                    <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.85rem', marginTop: '0.25rem' }}>Upload storefront, interior, or product photos to attract customers.</p>
+                  </div>
+                </div>
               )}
             </div>
+
           </div>
 
-          <div className="field">
-            <label htmlFor="shopTags">Tags</label>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.4rem',
-                width: '100%',
-                border: '1px solid var(--field-border)',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--field-bg)',
-                padding: '0.4rem 0.6rem',
-                minHeight: '44px',
-                alignItems: 'center',
-                transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
-                cursor: 'text',
-              }}
-              onClick={() => document.getElementById('shopTags')?.focus()}
-            >
-              {selectedTags.map((tag, index) => (
-                <span
-                  key={`${tag}-${index}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    padding: '0.2rem 0.6rem',
-                    fontSize: '0.85rem',
-                    borderRadius: '999px',
-                    background: 'var(--accent-soft)',
-                    color: 'var(--accent-strong)',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={(clickEvent) => {
-                      clickEvent.stopPropagation();
-                      handleRemoveTag(tag);
-                    }}
-                    style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 0.5, padding: 0 }}
-                    aria-label="Remove tag"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-              <input
-                id="shopTags"
-                value={tagInputValue}
-                onChange={(event) => setTagInputValue(event.target.value)}
-                onKeyDown={(keyEvent) => {
-                  if (keyEvent.key === 'Enter' || keyEvent.key === ',') {
-                    keyEvent.preventDefault();
-                    if (tagInputValue.trim()) {
-                      handleAddTag(tagInputValue.trim());
-                      setTagInputValue('');
-                    }
-                  } else if (keyEvent.key === 'Backspace' && !tagInputValue && selectedTags.length > 0) {
-                    handleRemoveTag(selectedTags[selectedTags.length - 1]);
-                  }
-                }}
-                onBlur={() => {
-                  if (tagInputValue.trim()) {
-                    handleAddTag(tagInputValue.trim());
-                    setTagInputValue('');
-                  }
-                }}
-                disabled={loading || saving}
-                placeholder={selectedTags.length === 0 ? 'Type a tag and press Enter' : 'Add more...'}
-                style={{
-                  flex: 1,
-                  minWidth: '120px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: 'var(--text)',
-                  outline: 'none',
-                  padding: '0.3rem',
-                  fontSize: 'inherit',
-                  boxShadow: 'none',
-                }}
-              />
-            </div>
-            {availableTagsToDisplay.length > 0 ? (
-              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {availableTagsToDisplay.slice(0, 10).map((tag) => (
-                  <button
-                    key={tag.tagId}
-                    type="button"
-                    style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem', borderRadius: '999px', border: '1px solid var(--border)', background: 'var(--surface-muted)', color: 'var(--text)', cursor: 'pointer' }}
-                    onClick={() => handleAddTag(tag.name)}
-                  >
-                    + {tag.name}
-                  </button>
-                ))}
-                {availableTagsToDisplay.length > 10 ? (
-                  <button
-                    type="button"
-                    style={{ padding: '0.2rem 0.6rem', fontSize: '0.85rem', borderRadius: '1rem', border: '1px dashed var(--accent)', color: 'var(--accent)', background: 'transparent', cursor: 'pointer', fontWeight: 'bold' }}
-                    onClick={() => setIsTagModalOpen(true)}
-                  >
-                    + {availableTagsToDisplay.length - 10} more...
-                  </button>
-                ) : null}
+          {/* Sidebar Area */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            
+            {/* Styled Location & Geofence Card */}
+            <div className="glass-card" style={{ padding: '2rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '-0.01em' }}>
+                <MapPin size={20} color="hsl(var(--primary))" /> Location & Geofence
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* Real Google Map with Overlaid Animated Radar Marker */}
+                <div style={{ 
+                  position: 'relative', 
+                  height: '220px', 
+                  width: '100%', 
+                  marginBottom: '0.5rem', 
+                  borderRadius: 'var(--radius)', 
+                  overflow: 'hidden', 
+                  border: '1px solid hsl(var(--border))',
+                  background: 'hsl(var(--card))'
+                }}>
+                  {/* Google Map Div */}
+                  <div 
+                    ref={mapContainerRef} 
+                    style={{ width: '100%', height: '100%' }}
+                  />
+
+                  {!isMapReady && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--muted-foreground))', fontSize: '0.85rem', fontWeight: 600, background: 'hsl(var(--card))' }}>
+                      Loading Map View...
+                    </div>
+                  )}
+
+                  {/* Recenter Control Button */}
+                  {isMapReady && form.latitude && form.longitude && (
+                    <button
+                      type="button"
+                      onClick={handleRecenterMap}
+                      style={{
+                        position: 'absolute', bottom: '0.75rem', right: '0.75rem',
+                        background: 'rgba(15, 23, 42, 0.85)', border: '1px solid var(--glass-border)',
+                        borderRadius: '8px', padding: '0.4rem 0.75rem', color: 'white',
+                        fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center',
+                        gap: '0.25rem', backdropFilter: 'blur(4px)', cursor: 'pointer', zIndex: 15,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
+                      }}
+                      className="copy-btn"
+                    >
+                      <Compass size={12} /> Recenter
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>Latitude</label>
+                  <input value={form.latitude} onChange={(event) => updateField('latitude', event.target.value)} disabled={loading || saving} placeholder="e.g. 40.7128" className="keeper-input" style={{ fontFamily: 'monospace' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>Longitude</label>
+                  <input value={form.longitude} onChange={(event) => updateField('longitude', event.target.value)} disabled={loading || saving} placeholder="e.g. -74.0060" className="keeper-input" style={{ fontFamily: 'monospace' }} />
+                </div>
+                
+                {/* Geofence Alert Radius */}
+                <div style={{ background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.15)', borderRadius: '16px', padding: '1.25rem', marginTop: '0.5rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'hsl(var(--primary))', fontWeight: 700, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Alert Radius (km)</label>
+                  <input
+                    type="number" min="0.1" step="0.1"
+                    value={form.notificationRadius}
+                    onChange={(event) => updateField('notificationRadius', event.target.value)}
+                    disabled={loading || saving}
+                    className="keeper-input"
+                    style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(168, 85, 247, 0.2)', fontWeight: 800, color: 'white', fontSize: '1.1rem' }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.75rem', lineHeight: 1.4 }}>
+                    Defines the circular geofence boundary around your shop. Users entering this zone will receive notifications about your active offers.
+                  </p>
+                </div>
               </div>
-            ) : null}
-          </div>
-
-          <div className="field">
-            <label htmlFor="shopAmenities">Amenities</label>
-            <input
-              id="shopAmenities"
-              value={form.amenities}
-              onChange={(event) => updateField('amenities', event.target.value)}
-              disabled={loading || saving}
-              placeholder="wifi, parking, outdoor seating"
-            />
-          </div>
-
-          <p className="muted-text tiny-text">
-            Add both latitude and longitude together when you have them. Saving a rejected shop will submit the refreshed details for review again.
-          </p>
-
-          <button type="submit" className="button" disabled={loading || saving || uploadingCover || uploadingGallery}>
-            {saving ? 'Saving shop...' : isEditing ? 'Save shop changes' : 'Create shop'}
-          </button>
-        </form>
-      </SectionCard>
-
-      {isTagModalOpen ? (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--surface)',
-              padding: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              width: '90%',
-              maxWidth: '500px',
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: 'var(--shadow)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text)' }}>All Available Tags</h3>
-              <button type="button" onClick={() => setIsTagModalOpen(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                &times;
-              </button>
             </div>
-            <input
-              type="text"
-              placeholder="Search tags..."
-              value={tagSearchQuery}
-              onChange={(event) => setTagSearchQuery(event.target.value)}
-              style={{ marginBottom: '1rem', padding: '0.6rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--field-border)', background: 'var(--field-bg)', color: 'var(--text)', width: '100%' }}
-            />
-            <div style={{ overflowY: 'auto', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingBottom: '1rem' }}>
-              {filteredModalTags.length > 0 ? (
-                filteredModalTags.map((tag) => (
-                  <button
-                    key={tag.tagId}
-                    type="button"
-                    style={{ padding: '0.3rem 0.8rem', fontSize: '0.9rem', borderRadius: '999px', border: '1px solid var(--border)', background: 'var(--surface-muted)', color: 'var(--text)', cursor: 'pointer' }}
-                    onClick={() => handleAddTag(tag.name)}
-                  >
-                    + {tag.name}
-                  </button>
-                ))
-              ) : (
-                <p className="muted-text">No tags match your search.</p>
-              )}
-            </div>
-            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
-              <button type="button" className="button" onClick={() => setIsTagModalOpen(false)}>
-                Done
-              </button>
-            </div>
+
           </div>
         </div>
-      ) : null}
+      </form>
 
+      {/* Lightbox / Modals */}
       {activePreviewImage ? (
-        <div className="media-lightbox" onClick={closeImagePreview} role="dialog" aria-modal="true" aria-label="Full image preview">
-          <div className="media-lightbox-content" onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="media-lightbox-close" onClick={closeImagePreview} aria-label="Close image preview">
-              &times;
-            </button>
-            <img src={activePreviewImage} alt="Full shop preview" className="media-lightbox-image" />
+        <div className="media-lightbox" onClick={closeImagePreview} style={{ zIndex: 9999 }}>
+          <div className="media-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="media-lightbox-close" onClick={closeImagePreview}>&times;</button>
+            <img src={activePreviewImage} alt="Enlarged preview" className="media-lightbox-image" />
           </div>
         </div>
       ) : null}

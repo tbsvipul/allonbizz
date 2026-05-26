@@ -458,15 +458,37 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final hasActiveJourney = ref
           .read(navigationControllerProvider)
           .hasActiveJourney;
+
       if (hasActiveJourney) {
         if (!mounted) return;
-        AppSnackbar.showWithScaffoldMessenger(
-          scaffoldMessenger,
-          message: 'Complete your active journey before starting a new one.',
-          type: AppSnackbarType.warning,
+        final shouldStartNew = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Active Journey Detected'),
+            content: const Text('You currently have an active journey. Do you want to end it and start a new journey?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('New Journey'),
+              ),
+            ],
+          ),
         );
-        router.go(AppRoutes.navigate);
-        return;
+
+        if (shouldStartNew != true) {
+          if (mounted) {
+            setState(() {
+              _isStartingJourney = false;
+            });
+          }
+          return;
+        }
+
+        await ref.read(navigationControllerProvider.notifier).clearRoute();
       }
 
       final locationNotifier = ref.read(currentLocationProvider.notifier);
@@ -583,9 +605,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final isDark = theme.brightness == Brightness.dark;
-    final hasActiveJourney = ref.watch(
-      navigationControllerProvider.select((state) => state.hasActiveJourney),
-    );
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -702,11 +721,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _isStartingJourney
-                      ? null
-                      : hasActiveJourney
-                      ? () => context.go(AppRoutes.navigate)
-                      : _startJourney,
+                  onPressed: _isStartingJourney ? null : _startJourney,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
@@ -732,9 +747,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ),
                         )
                       : Text(
-                          hasActiveJourney
-                              ? 'Complete Active Journey'
-                              : 'Start Journey',
+                          'Start Journey',
                           style: textTheme.titleMedium?.copyWith(
                             color: colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,

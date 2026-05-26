@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -56,8 +57,22 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                         side: const BorderSide(color: AppColors.grey200),
                       ),
                       child: ListTile(
+                        onTap: () async {
+                          if (!n.isRead) {
+                            await ref.read(notificationsRepositoryProvider).markAsRead(n.id);
+                            ref.invalidate(unreadNotificationCountProvider);
+                            ref.invalidate(notificationsListProvider);
+                          }
+                          if (!context.mounted) return;
+                          
+                          if (n.actionOfferId != null && n.actionOfferId!.isNotEmpty) {
+                            context.push('/offer-detail/${n.actionOfferId}');
+                          } else if (n.actionShopId != null && n.actionShopId!.isNotEmpty) {
+                            context.push('/shop-detail/${n.actionShopId}');
+                          }
+                        },
                         leading: Icon(
-                          n.type == 'Offer'
+                          n.type == 'OfferAlert' || n.type == 'Offer'
                               ? Icons.local_offer_rounded
                               : Icons.notifications_rounded,
                           color: AppColors.primary,

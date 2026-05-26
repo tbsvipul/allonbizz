@@ -129,7 +129,7 @@ public class UserProfileService : IUserProfileService
             Address = o.Shop.Address,
             Latitude = o.Shop.Latitude,
             Longitude = o.Shop.Longitude,
-            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl),
+            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
             DiscountPercentage = o.DiscountPercentage,
             EndDate = o.EndDate,
             Tags = o.Tags,
@@ -138,6 +138,62 @@ public class UserProfileService : IUserProfileService
         List<Shop> nearby;
         if (lat.HasValue && lng.HasValue)
         {
+            var user = await _db.Users.FindAsync(userId);
+            if (user != null)
+            {
+                user.LastLatitude = lat.Value;
+                user.LastLongitude = lng.Value;
+                user.LastLoginAt = DateTime.UtcNow;
+
+                var shopsInRange = await _db.Shops
+                    .Where(s => s.IsActive && s.IsVerified && s.Latitude.HasValue && s.Longitude.HasValue && s.NotificationRadius.HasValue)
+                    .ToListAsync();
+                    
+                foreach (var s in shopsInRange) 
+                {
+                    var dist = GeoHelper.CalculateDistanceKm(lat.Value, lng.Value, s.Latitude!.Value, s.Longitude!.Value);
+                    if (dist <= s.NotificationRadius!.Value)
+                    {
+                        var recentNotification = await _db.UserNotifications
+                            .AnyAsync(un => un.UserId == userId && 
+                                            un.Notification!.Type == NotificationType.SystemMessage &&
+                                            un.Notification.ShopId == s.ShopId &&
+                                            un.Notification.CreatedAt > DateTime.UtcNow.AddHours(-24));
+                        
+                        if (!recentNotification)
+                        {
+                            var newNotif = new Notification
+                            {
+                                NotificationId = Guid.NewGuid(),
+                                Title = "Shop nearby!",
+                                Message = $"{s.Name} is nearby and active!",
+                                Type = NotificationType.SystemMessage,
+                                Priority = NotificationPriority.Normal,
+                                TargetAudience = "customers",
+                                Status = NotificationStatus.Sent,
+                                ScheduledAt = DateTime.UtcNow,
+                                SentAt = DateTime.UtcNow,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow,
+                                ShopId = s.ShopId,
+                                SenderType = "System"
+                            };
+                            _db.Notifications.Add(newNotif);
+                            _db.UserNotifications.Add(new UserNotification
+                            {
+                                UserId = userId,
+                                NotificationId = newNotif.NotificationId,
+                                IsRead = false,
+                                IsDeleted = false,
+                                DeliveryStatus = "Delivered",
+                                SentAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+                await _db.SaveChangesAsync();
+            }
+
             // Approximate bounding box for 10km radius
             double radiusKm = 10.0;
             double latOffset = radiusKm / 111.0;
@@ -222,7 +278,7 @@ public class UserProfileService : IUserProfileService
                 DistanceKm = lat.HasValue && lng.HasValue && s.Latitude.HasValue && s.Longitude.HasValue
                     ? Math.Round(GeoHelper.CalculateDistanceKm(lat.Value, lng.Value, s.Latitude.Value, s.Longitude.Value), 2)
                     : 0,
-                ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl ?? s.ShopImages.FirstOrDefault()),
             }).ToList(),
             Categories = categories,
         };
@@ -276,7 +332,7 @@ public class RouteService : IRouteService
             Address = o.Shop.Address,
             Latitude = o.Shop.Latitude,
             Longitude = o.Shop.Longitude,
-            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl),
+            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
             DiscountPercentage = o.DiscountPercentage,
             EndDate = o.EndDate,
         }).ToList();
@@ -409,7 +465,7 @@ public class UserOfferService : IOfferService
                 Address = candidate.Shop.Address,
                 Latitude = candidate.Shop.Latitude,
                 Longitude = candidate.Shop.Longitude,
-                ImageUrl = candidate.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl),
+                ImageUrl = candidate.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl ?? candidate.Shop.ShopImages.FirstOrDefault()),
                 DiscountPercentage = candidate.Offer.DiscountPercentage,
                 EndDate = candidate.Offer.EndDate,
                 Tags = candidate.Offer.Tags
@@ -425,7 +481,11 @@ public class UserOfferService : IOfferService
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
             .FirstOrDefaultAsync(o => o.OfferId == offerId);
-        if (offer == null || !offer.IsActive || offer.Shop == null || !offer.Shop.IsActive || !offer.Shop.IsVerified) throw new KeyNotFoundException($"Offer {offerId} not found.");
+        if (offer == null) throw new KeyNotFoundException($"Offer {offerId} not found. (offer is null)");
+        if (!offer.IsActive) throw new KeyNotFoundException($"Offer {offerId} not found. (offer is inactive)");
+        if (offer.Shop == null) throw new KeyNotFoundException($"Offer {offerId} not found. (shop is null)");
+        if (!offer.Shop.IsActive) throw new KeyNotFoundException($"Offer {offerId} not found. (shop is inactive)");
+        if (!offer.Shop.IsVerified) throw new KeyNotFoundException($"Offer {offerId} not found. (shop is unverified)");
         return new OfferDetailDto
         {
             OfferId = offer.OfferId,
@@ -437,7 +497,7 @@ public class UserOfferService : IOfferService
             ShopAddress = offer.Shop?.Address,
             Latitude = offer.Shop?.Latitude,
             Longitude = offer.Shop?.Longitude,
-            ImageUrl = offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl),
+            ImageUrl = offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl ?? offer.Shop?.ShopImages.FirstOrDefault()),
             TermsAndConditions = offer.TermsAndConditions,
             DiscountPercentage = offer.DiscountPercentage,
             MinOrderValue = offer.MinOrderValue,
@@ -512,9 +572,13 @@ public class UserOfferService : IOfferService
 
     public async Task RateOfferAsync(Guid offerId, Guid userId, int rating, string? comment)
     {
+        var offer = await _db.Offers.AsNoTracking().FirstOrDefaultAsync(o => o.OfferId == offerId);
+        if (offer == null) throw new KeyNotFoundException($"Offer {offerId} not found.");
+
         var review = new Review
         {
             UserId = userId,
+            ShopId = offer.ShopId,
             OfferId = offerId,
             Rating = rating,
             Comment = comment,
@@ -634,7 +698,7 @@ public class FavouriteService : IFavouriteService
                     Address = shop?.Address,
                     Latitude = shop?.Latitude,
                     Longitude = shop?.Longitude,
-                    ImageUrl = favourite.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl),
+                    ImageUrl = favourite.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl ?? shop?.ShopImages.FirstOrDefault()),
                     DiscountPercentage = favourite.Offer.DiscountPercentage,
                     EndDate = favourite.Offer.EndDate,
                     IsVerified = shop?.IsVerified ?? false,
@@ -653,7 +717,7 @@ public class FavouriteService : IFavouriteService
                 Address = shopOnly?.Address,
                 Latitude = shopOnly?.Latitude,
                 Longitude = shopOnly?.Longitude,
-                ImageUrl = ImageConversionHelper.ToBase64DataUrl(shopOnly?.ImageUrl),
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(shopOnly?.ImageUrl ?? shopOnly?.ShopImages.FirstOrDefault()),
                 IsVerified = shopOnly?.IsVerified ?? false,
                 SavedAt = favourite.CreatedAt
             };
