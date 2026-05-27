@@ -12,6 +12,7 @@ class Shop {
   final double latitude;
   final double longitude;
   final List<Offer> offers;
+  final bool isOpen;
 
   Shop({
     required this.id,
@@ -25,6 +26,7 @@ class Shop {
     required this.latitude,
     required this.longitude,
     this.offers = const [],
+    this.isOpen = true,
   });
 
   factory Shop.fromJson(Map<String, dynamic> json) {
@@ -62,6 +64,10 @@ class Shop {
           (json['Longitude'] as num?)?.toDouble() ??
           0.0,
       shopImages: (rawImages as List?)?.map((e) => e.toString()).toList() ?? [],
+      isOpen:
+          json['isOpen'] as bool? ??
+          json['IsOpen'] as bool? ??
+          true,
       offers:
           (rawOffers as List?)
               ?.map((offer) => Offer.fromJson(Map<String, dynamic>.from(offer)))

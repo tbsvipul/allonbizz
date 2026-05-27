@@ -245,6 +245,7 @@ Shop parseShopJson(JsonMap json) {
     imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
     latitude: doubleValue(json, ['latitude', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'Longitude']),
+    isOpen: boolValue(json, ['isOpen', 'IsOpen'], fallback: true),
     shopImages: parseStringList(
       firstPresent(json, ['shopImages', 'ShopImages']),
     ),

@@ -30,6 +30,7 @@ public class CreateOfferDto
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string? TermsAndConditions { get; set; }
+    public string? ImageUrl { get; set; }
 }
 
 public class KeeperOfferDetailDto
@@ -44,6 +45,7 @@ public class KeeperOfferDetailDto
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string? TermsAndConditions { get; set; }
+    public string? ImageUrl { get; set; }
     public OfferStatus Status { get; set; }
     public int RedemptionCount { get; set; }
     public DateTime CreatedAt { get; set; }

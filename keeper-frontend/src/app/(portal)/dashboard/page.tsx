@@ -12,6 +12,7 @@ import { KeeperDashboard, KeeperTraffic, ShopSummary } from '@/lib/types';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
 import { useAuth } from '@/context/AuthContext';
 import { Tag, Store, Star, Power } from 'lucide-react';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -148,13 +149,18 @@ export default function DashboardPage() {
             </Link>
           ) : shops.length > 0 ? (
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-              <div className="field" style={{ minWidth: '220px', margin: 0 }}>
-                <label htmlFor="dashboardShop">Select shop for traffic</label>
-                <select id="dashboardShop" value={selectedShopId} onChange={(e) => setSelectedShopId(e.target.value)} disabled={loading}>
-                  {shops.map((shop) => (
-                    <option key={shop.id} value={shop.id}>{shop.name}</option>
-                  ))}
-                </select>
+              <div className="field" style={{ minWidth: '240px', margin: 0 }}>
+                <label htmlFor="dashboardShop" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block', color: 'hsl(var(--muted-foreground))' }}>Select shop for traffic</label>
+                <CustomSelect
+                  value={selectedShopId}
+                  onChange={(val) => setSelectedShopId(val)}
+                  options={shops.map(shop => ({
+                    value: shop.id,
+                    label: shop.name,
+                    icon: <Store size={16} />
+                  }))}
+                  style={{ width: '100%' }}
+                />
               </div>
               <button 
                 onClick={handleToggleOpen} 

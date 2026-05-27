@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_image.dart';
 import '../../data/repositories/notifications_repository.dart';
 import 'package:intl/intl.dart';
 
 final notificationsListProvider =
-    FutureProvider.family<List<UserNotification>, int>((ref, page) {
+    FutureProvider.autoDispose.family<List<UserNotification>, int>((ref, page) {
       return ref
           .watch(notificationsRepositoryProvider)
           .getNotifications(page: page)
@@ -71,12 +72,27 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                             context.push('/shop-detail/${n.actionShopId}');
                           }
                         },
-                        leading: Icon(
-                          n.type == 'OfferAlert' || n.type == 'Offer'
-                              ? Icons.local_offer_rounded
-                              : Icons.notifications_rounded,
-                          color: AppColors.primary,
-                        ),
+                        leading: n.imageUrl != null && n.imageUrl!.isNotEmpty
+                            ? AppImage.network(
+                                n.imageUrl!,
+                                width: 44,
+                                height: 44,
+                                borderRadius: BorderRadius.circular(10),
+                              )
+                            : Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  n.type == 'OfferAlert' || n.type == 'Offer'
+                                      ? Icons.local_offer_rounded
+                                      : Icons.notifications_rounded,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                         title: Text(
                           n.title,
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -86,6 +102,41 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                           children: [
                             const SizedBox(height: 4),
                             Text(n.message),
+                            if (n.actionOfferId != null && n.actionOfferId!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.sell_rounded, size: 12, color: AppColors.success),
+                                    const SizedBox(width: 4),
+                                    Text('Tap to view offer', style: AppTextStyles.labelSmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ] else if (n.actionShopId != null && n.actionShopId!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.storefront_rounded, size: 12, color: AppColors.primary),
+                                    const SizedBox(width: 4),
+                                    Text('Tap to view shop', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Text(
                               DateFormat.yMMMd().add_jm().format(n.sentAt),

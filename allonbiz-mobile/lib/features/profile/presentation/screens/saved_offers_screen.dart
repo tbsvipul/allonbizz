@@ -5,20 +5,53 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../data/repositories/favourites_repository.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
+import '../../../../core/providers/app_bar_provider.dart';
 
 final favouritesProvider = FutureProvider<List<SavedItem>>((ref) {
   return ref.watch(favouritesRepositoryProvider).getFavourites();
 });
 
-class SavedOffersScreen extends ConsumerWidget {
+class SavedOffersScreen extends ConsumerStatefulWidget {
   const SavedOffersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SavedOffersScreen> createState() => _SavedOffersScreenState();
+}
+
+class _SavedOffersScreenState extends ConsumerState<SavedOffersScreen> {
+  late final AppBarNotifier _appBarNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _appBarNotifier = ref.read(appBarProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.pushConfig(
+        AppBarConfig(
+          title: const Text('Saved Items'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.popConfig();
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final favsAsync = ref.watch(favouritesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Saved Items')),
       body: favsAsync.when(
         data: (favs) {
           if (favs.isEmpty) {

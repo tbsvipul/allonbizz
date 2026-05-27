@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   BadgeDollarSign,
+  Bell,
   ChevronRight,
   LayoutDashboard,
   LogOut,
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Daily performance and traffic' },
   { href: '/shops', label: 'Shops', icon: Store, description: 'Locations and storefront details' },
   { href: '/offers', label: 'Offers', icon: BadgeDollarSign, description: 'Campaigns and redemptions' },
+  { href: '/notifications', label: 'Notifications', icon: Bell, description: 'Send alerts to nearby users' },
   { href: '/reviews', label: 'Reviews', icon: MessageSquareReply, description: 'Customer sentiment and replies' },
   { href: '/loyalty', label: 'Loyalty', icon: WalletCards, description: 'Rewards and repeat visits' },
   { href: '/profile', label: 'Profile', icon: UserRound, description: 'Business identity and approval' },

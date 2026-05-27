@@ -357,7 +357,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.2),
               ],
             ),
-          ),
+            ),
         ],
       ),
     );

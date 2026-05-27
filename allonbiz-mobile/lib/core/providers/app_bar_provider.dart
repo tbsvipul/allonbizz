@@ -22,18 +22,41 @@ class AppBarConfig {
 }
 
 class AppBarNotifier extends StateNotifier<AppBarConfig> {
+  final List<AppBarConfig> _configStack = [];
+
   AppBarNotifier() : super(const AppBarConfig());
 
   void setConfig(AppBarConfig config) {
+    if (_configStack.isNotEmpty) {
+      _configStack.removeLast();
+    }
+    _configStack.add(config);
     state = config;
   }
 
+  void pushConfig(AppBarConfig config) {
+    _configStack.add(config);
+    state = config;
+  }
+
+  void popConfig() {
+    if (_configStack.isNotEmpty) {
+      _configStack.removeLast();
+    }
+    if (_configStack.isNotEmpty) {
+      state = _configStack.last;
+    } else {
+      state = const AppBarConfig();
+    }
+  }
+
   void reset() {
+    _configStack.clear();
     state = const AppBarConfig();
   }
 
   void hide() {
-    state = const AppBarConfig.none();
+    setConfig(const AppBarConfig.none());
   }
 }
 

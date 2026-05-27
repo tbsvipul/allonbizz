@@ -7,6 +7,7 @@ import '../../../../shared/widgets/app_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../data/repositories/shops_repository.dart';
+import '../../../../core/providers/app_bar_provider.dart';
 
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -16,19 +17,65 @@ final shopDetailProvider = FutureProvider.family<Shop, String>((ref, id) {
   return ref.watch(shopsRepositoryProvider).getShopDetail(id);
 });
 
-class ShopDetailScreen extends ConsumerWidget {
+class ShopDetailScreen extends ConsumerStatefulWidget {
   final String shopId;
 
   const ShopDetailScreen({super.key, required this.shopId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final shopAsync = ref.watch(shopDetailProvider(shopId));
+  ConsumerState<ShopDetailScreen> createState() => _ShopDetailScreenState();
+}
+
+class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
+  late final AppBarNotifier _appBarNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _appBarNotifier = ref.read(appBarProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.pushConfig(
+            AppBarConfig(
+              title: const Text('Shop Details'),
+              centerTitle: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          );
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.popConfig();
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shopAsync = ref.watch(shopDetailProvider(widget.shopId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Shop Details')),
       body: shopAsync.when(
-        data: (shop) => _buildContent(context, shop),
+        data: (shop) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(appBarProvider.notifier).setConfig(
+                  AppBarConfig(
+                    title: Text(shop.name),
+                    centerTitle: true,
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                );
+          });
+          return _buildContent(context, shop);
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),

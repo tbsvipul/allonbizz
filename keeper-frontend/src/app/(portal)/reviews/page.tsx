@@ -12,6 +12,7 @@ import { PaginationMeta, getApiErrorMessage, unwrapApiData, unwrapPagedResponse 
 import { ReviewItem, ShopSummary } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { StatusPill } from '@/components/StatusPill';
+import CustomSelect from '@/components/CustomSelect';
 
 function renderStars(rating: number) {
   return Array.from({ length: 5 }, (_, index) => (
@@ -120,22 +121,23 @@ export default function ReviewsPage() {
         actions={
           <div className="reviews-filter-card">
             <div className="field">
-              <label htmlFor="reviewShopFilter">Filter by shop</label>
-              <select
-                id="reviewShopFilter"
+              <label htmlFor="reviewShopFilter" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block', color: 'hsl(var(--muted-foreground))' }}>Filter by shop</label>
+              <CustomSelect
                 value={shopId}
-                onChange={(event) => {
-                  setShopId(event.target.value);
+                onChange={(val) => {
+                  setShopId(val);
                   setPage(1);
                 }}
-              >
-                <option value="">All shops</option>
-                {shops.map((shop) => (
-                  <option key={shop.id} value={shop.id}>
-                    {shop.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'All shops', icon: <Store size={16} /> },
+                  ...shops.map(shop => ({
+                    value: shop.id,
+                    label: shop.name,
+                    icon: <Store size={16} />
+                  }))
+                ]}
+                style={{ width: '100%' }}
+              />
             </div>
           </div>
         }

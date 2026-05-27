@@ -60,9 +60,9 @@ class AppImage extends StatelessWidget {
       case AppImageVariant.network:
         if (url == null || url!.isEmpty) {
           imageWidget = _buildFallback();
-        } else if (url!.startsWith('data:image')) {
+        } else if (url!.startsWith('data:image') || (!url!.startsWith('http') && url!.length > 100)) {
           try {
-            final base64String = url!.split(',').last;
+            final base64String = url!.startsWith('data:image') ? url!.split(',').last : url!;
             final bytes = base64Decode(base64String);
             imageWidget = Image.memory(
               bytes,
@@ -126,9 +126,9 @@ class AppImage extends StatelessWidget {
                   size: (width ?? 40) * 0.6,
                   color: AppColors.grey500,
                 )
-              : url!.startsWith('data:image')
+              : url!.startsWith('data:image') || (!url!.startsWith('http') && url!.length > 100)
                   ? Image.memory(
-                      base64Decode(url!.split(',').last),
+                      base64Decode(url!.startsWith('data:image') ? url!.split(',').last : url!),
                       width: width,
                       height: height,
                       fit: BoxFit.cover,

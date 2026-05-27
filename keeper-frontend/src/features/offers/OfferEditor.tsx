@@ -11,6 +11,8 @@ import { useToast } from '@/context/ToastContext';
 import { InlineNotice } from '@/components/InlineNotice';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusPill } from '@/components/StatusPill';
+import CustomSelect from '@/components/CustomSelect';
+import { Store } from 'lucide-react';
 
 interface OfferFormState {
   shopId: string;
@@ -21,6 +23,7 @@ interface OfferFormState {
   startDate: string;
   endDate: string;
   termsAndConditions: string;
+  imageUrl: string;
 }
 
 function toFormState(offer: OfferDetail | null): OfferFormState {
@@ -33,6 +36,7 @@ function toFormState(offer: OfferDetail | null): OfferFormState {
     startDate: toDateTimeLocalInput(offer?.startDate),
     endDate: toDateTimeLocalInput(offer?.endDate),
     termsAndConditions: offer?.termsAndConditions || '',
+    imageUrl: offer?.imageUrl || '',
   };
 }
 
@@ -113,6 +117,7 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
         startDate: new Date(form.startDate).toISOString(),
         endDate: new Date(form.endDate).toISOString(),
         termsAndConditions: form.termsAndConditions.trim() || null,
+        imageUrl: form.imageUrl || null,
       };
 
       if (isEditing && offerId) {
@@ -206,15 +211,20 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
           <form className="form-stack" onSubmit={handleSubmit}>
             <div className="field-grid">
               <div className="field">
-                <label htmlFor="offerShop">Shop</label>
-                <select id="offerShop" value={form.shopId} onChange={(event) => updateField('shopId', event.target.value)} disabled={loading || saving} required>
-                  <option value="">Select a shop</option>
-                  {shops.map((shop) => (
-                    <option key={shop.id} value={shop.id}>
-                      {shop.name}
-                    </option>
-                  ))}
-                </select>
+                <label htmlFor="offerShop" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block', color: 'hsl(var(--muted-foreground))' }}>Shop</label>
+                <CustomSelect
+                  value={form.shopId}
+                  onChange={(val) => updateField('shopId', val)}
+                  options={[
+                    { value: '', label: 'Select a shop', icon: <Store size={16} /> },
+                    ...shops.map(shop => ({
+                      value: shop.id,
+                      label: shop.name,
+                      icon: <Store size={16} />
+                    }))
+                  ]}
+                  style={{ width: '100%' }}
+                />
               </div>
               <div className="field">
                 <label htmlFor="offerTitle">Title</label>
@@ -252,6 +262,43 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
             <div className="field">
               <label htmlFor="offerTerms">Terms and conditions</label>
               <textarea id="offerTerms" value={form.termsAndConditions} onChange={(event) => updateField('termsAndConditions', event.target.value)} disabled={loading || saving} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="offerImage" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                Offer Image (Optional)
+                <label style={{ cursor: 'pointer', fontSize: '0.75rem', color: '#6366f1', fontWeight: 700, textDecoration: 'underline' }}>
+                  Upload File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        if (ev.target?.result) {
+                          updateField('imageUrl', ev.target.result as string);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+              </label>
+              {form.imageUrl && (
+                <div style={{ marginTop: '0.5rem', position: 'relative', width: 'fit-content' }}>
+                  <img src={form.imageUrl} alt="Offer preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                  <button 
+                    type="button" 
+                    onClick={() => updateField('imageUrl', '')}
+                    style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
 
             <button type="submit" className="button" disabled={loading || saving || shops.length === 0}>

@@ -14,6 +14,7 @@ import {
   Lock,
   Pencil,
   LogOut,
+  X,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { unwrapApiData, unwrapPagedResponse } from '@/lib/api-response';
@@ -740,61 +741,86 @@ export default function SettingsPage() {
         </div>
 
         {isAdminModalOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-            <div className="glass-card" style={{ width: '100%', maxWidth: '760px', padding: '2rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem' }}>
-                {editingAdminId ? 'Edit Administrator' : 'Add New Administrator'}
-              </h2>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)' }} onClick={closeAdminModal} />
+            
+            <div className="glass-card" style={{ width: '100%', maxWidth: '760px', position: 'relative', zIndex: 1010, display: 'flex', flexDirection: 'column', maxHeight: '90vh', margin: 'auto', overflow: 'hidden' }}>
+              
+              <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid hsl(var(--border))', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
+                  {editingAdminId ? 'Edit Administrator' : 'Add New Administrator'}
+                </h2>
+              </div>
 
               {loadingAdminDetails ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>Loading administrator details...</div>
+                <div style={{ padding: '4rem', textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>Loading administrator details...</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <input placeholder="First Name" value={adminForm.firstName} onChange={(event) => setAdminForm({ ...adminForm, firstName: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
-                    <input placeholder="Last Name" value={adminForm.lastName} onChange={(event) => setAdminForm({ ...adminForm, lastName: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
+                <div style={{ padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>First Name</label>
+                      <input placeholder="First Name" value={adminForm.firstName} onChange={(event) => setAdminForm({ ...adminForm, firstName: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Last Name</label>
+                      <input placeholder="Last Name" value={adminForm.lastName} onChange={(event) => setAdminForm({ ...adminForm, lastName: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
+                    </div>
                   </div>
 
-                  <input placeholder="Email" value={adminForm.email} onChange={(event) => setAdminForm({ ...adminForm, email: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
-                  <input
-                    type="password"
-                    placeholder={editingAdminId ? "Password (leave blank to keep unchanged)" : "Password (optional, auto-generated if blank)"}
-                    value={adminForm.password || ''}
-                    onChange={(event) => setAdminForm({ ...adminForm, password: event.target.value })}
-                    style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }}
-                  />
-                  {!editingAdminId && !adminForm.password && (
-                    <p style={{ fontSize: '0.8125rem', color: 'hsl(var(--muted-foreground))' }}>
-                      A setup OTP will be emailed to the new administrator so they can complete their password creation flow securely.
-                    </p>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Email Address</label>
+                    <input placeholder="Email" value={adminForm.email} onChange={(event) => setAdminForm({ ...adminForm, email: event.target.value })} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }} />
+                  </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    {isEditingExistingSuperAdmin ? (
-                      <select value={adminForm.role} disabled style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white', opacity: 0.7 }}>
-                        <option value="super_admin">Super Admin</option>
-                      </select>
-                    ) : (
-                      <select value={adminForm.role} onChange={(event) => handleRoleChange(event.target.value)} disabled={isEditingOwnSuperAdmin} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white', opacity: isEditingOwnSuperAdmin ? 0.7 : 1 }}>
-                        <option value="admin">Admin</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="analyst">Analyst</option>
-                      </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</label>
+                    <input
+                      type="password"
+                      placeholder={editingAdminId ? "Leave blank to keep unchanged" : "Optional (auto-generated if blank)"}
+                      value={adminForm.password || ''}
+                      onChange={(event) => setAdminForm({ ...adminForm, password: event.target.value })}
+                      style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white' }}
+                    />
+                    {!editingAdminId && !adminForm.password && (
+                      <p style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.2rem' }}>
+                        A setup OTP will be emailed to the new administrator so they can complete their password creation flow securely.
+                      </p>
                     )}
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius)', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))' }}>
-                      <input type="checkbox" checked={adminForm.isActive} disabled={isEditingOwnSuperAdmin} onChange={(event) => setAdminForm({ ...adminForm, isActive: event.target.checked })} />
-                      Active Account
-                    </label>
                   </div>
 
-                  <div style={{ padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.02)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', fontWeight: 600 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Role</label>
+                      {isEditingExistingSuperAdmin ? (
+                        <select value={adminForm.role} disabled style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white', opacity: 0.7 }}>
+                          <option value="super_admin">Super Admin</option>
+                        </select>
+                      ) : (
+                        <select value={adminForm.role} onChange={(event) => handleRoleChange(event.target.value)} disabled={isEditingOwnSuperAdmin} style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', color: 'white', opacity: isEditingOwnSuperAdmin ? 0.7 : 1 }}>
+                          <option value="admin">Admin</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="analyst">Analyst</option>
+                        </select>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Status</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius)', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', flex: 1, cursor: isEditingOwnSuperAdmin ? 'not-allowed' : 'pointer' }}>
+                        <input type="checkbox" checked={adminForm.isActive} disabled={isEditingOwnSuperAdmin} onChange={(event) => setAdminForm({ ...adminForm, isActive: event.target.checked })} />
+                        <span style={{ fontWeight: 600 }}>Active Account</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.02)', marginTop: '0.5rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', fontWeight: 600, cursor: isEditingOwnSuperAdmin ? 'not-allowed' : 'pointer' }}>
                       <input type="checkbox" checked={useRoleDefaults || isEditingOwnSuperAdmin} disabled={isEditingOwnSuperAdmin} onChange={(event) => handleUseRoleDefaultsChange(event.target.checked)} />
                       Use role default permissions
                     </label>
 
-                    <p style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginBottom: useRoleDefaults ? 0 : '0.75rem' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginBottom: useRoleDefaults ? 0 : '1rem' }}>
                       {isEditingOwnSuperAdmin
                         ? 'Your own super admin account always keeps the full default permission set.'
                         : useRoleDefaults
@@ -803,9 +829,9 @@ export default function SettingsPage() {
                     </p>
 
                     {!useRoleDefaults && !isEditingOwnSuperAdmin && canManageSelectedSuperAdmin && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', maxHeight: '260px', overflowY: 'auto' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
                         {allPermissions.map((permission) => (
-                          <label key={permission} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))' }}>
+                          <label key={permission} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={adminForm.permissions.includes(permission)}
@@ -817,20 +843,23 @@ export default function SettingsPage() {
                       </div>
                     )}
                   </div>
-
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                    <button onClick={closeAdminModal} style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'none', color: 'white' }}>
-                      Cancel
-                    </button>
-                    <button onClick={() => void handleCreateOrUpdateAdmin()} className="premium-gradient" style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius)', border: 'none', color: 'white', fontWeight: 600, opacity: saving ? 0.7 : 1 }} disabled={saving}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                        {editingAdminId ? <Pencil size={16} /> : <Lock size={16} />}
-                        {editingAdminId ? 'Update Admin' : 'Create & Send Invite'}
-                      </span>
-                    </button>
-                  </div>
                 </div>
               )}
+              
+              {!loadingAdminDetails && (
+                <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid hsl(var(--border))', background: 'rgba(0,0,0,0.2)', flexShrink: 0, display: 'flex', gap: '1rem' }}>
+                  <button onClick={closeAdminModal} style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'transparent', color: 'white', fontWeight: 600 }}>
+                    Cancel
+                  </button>
+                  <button onClick={() => void handleCreateOrUpdateAdmin()} className="premium-gradient" style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius)', border: 'none', color: 'white', fontWeight: 600, opacity: saving ? 0.7 : 1 }} disabled={saving}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {editingAdminId ? <Pencil size={16} /> : <Lock size={16} />}
+                      {editingAdminId ? 'Update Admin' : 'Create & Send Invite'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
         )}

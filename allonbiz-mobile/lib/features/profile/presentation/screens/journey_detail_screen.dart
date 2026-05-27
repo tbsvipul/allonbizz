@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/app_bar_provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/models/journey_model.dart';
@@ -17,7 +18,7 @@ final journeyDetailProvider = FutureProvider.family<JourneyModel, String>((
   return ref.watch(journeysRepositoryProvider).getJourneyDetail(journeyId);
 });
 
-class JourneyDetailScreen extends ConsumerWidget {
+class JourneyDetailScreen extends ConsumerStatefulWidget {
   const JourneyDetailScreen({
     super.key,
     required this.journeyId,
@@ -28,20 +29,52 @@ class JourneyDetailScreen extends ConsumerWidget {
   final JourneyModel? initialJourney;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final journeyAsync = ref.watch(journeyDetailProvider(journeyId));
+  ConsumerState<JourneyDetailScreen> createState() => _JourneyDetailScreenState();
+}
+
+class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
+  late final AppBarNotifier _appBarNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _appBarNotifier = ref.read(appBarProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.pushConfig(
+            AppBarConfig(
+              title: const Text('Journey Details'),
+              centerTitle: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          );
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.popConfig();
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final journeyAsync = ref.watch(journeyDetailProvider(widget.journeyId));
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? AppColors.surfaceDark
           : AppColors.grey50,
-      appBar: AppBar(title: const Text('Journey Details'), centerTitle: true),
       body: journeyAsync.when(
         data: (journey) => _JourneyDetailContent(journey: journey),
         loading: () {
-          if (initialJourney != null) {
+          if (widget.initialJourney != null) {
             return _JourneyDetailContent(
-              journey: initialJourney!,
+              journey: widget.initialJourney!,
               isRefreshing: true,
             );
           }
@@ -49,9 +82,9 @@ class JourneyDetailScreen extends ConsumerWidget {
           return const Center(child: AppLoader.inline());
         },
         error: (error, stackTrace) {
-          if (initialJourney != null) {
+          if (widget.initialJourney != null) {
             return _JourneyDetailContent(
-              journey: initialJourney!,
+              journey: widget.initialJourney!,
               errorMessage:
                   'Showing saved summary. Full detail could not be loaded.',
             );

@@ -28,7 +28,7 @@ import '../../../../app/routes/app_routes.dart';
 final homeRecentJourneysProvider = FutureProvider<List<JourneyModel>>((ref) {
   return ref
       .watch(journeysRepositoryProvider)
-      .getRecentJourneys(limit: 1, completedOnly: true);
+      .getRecentJourneys(limit: 3, completedOnly: true);
 });
 
 /// Home screen - Tab 1.
@@ -114,54 +114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppDimensions.xl),
-            child: Consumer(
-              builder: (context, ref, child) {
-                return ref
-                    .watch(categoriesProvider)
-                    .when(
-                      data: (categories) {
-                        if (categories.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
 
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimensions.lg,
-                          ),
-                          child: Row(
-                            children: [
-                              for (
-                                var index = 0;
-                                index < categories.length;
-                                index++
-                              ) ...[
-                                QuickActionWidget(
-                                  icon: categories[index].icon,
-                                  label: categories[index].label,
-                                  color: categories[index].color,
-                                  onTap: () {},
-                                ),
-                                if (index < categories.length - 1)
-                                  const SizedBox(width: AppDimensions.lg),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
-                      loading: () => const SizedBox(
-                        height: 85,
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                      error: (_, _) => const SizedBox.shrink(),
-                    );
-              },
-            ),
-          ),
-        ),
 
         SliverToBoxAdapter(
           child: Consumer(
@@ -194,7 +147,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return journeysAsync.when(
                 data: (journeys) {
                   if (journeys.isEmpty) {
-                    return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: AppDimensions.xl),
+                      child: Column(
+                        children: [
+                          const AppSectionHeader(
+                            title: 'Recent Journeys',
+                            icon: Icons.route_rounded,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppDimensions.lg,
+                            ),
+                          ),
+                          const SizedBox(height: AppDimensions.sm),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.lg),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(AppDimensions.lg),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(AppDimensions.md),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'No journeys yet',
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppDimensions.xs),
+                                  Text(
+                                    'Your recent journeys will appear here after you start navigating.',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   }
 
                   return Padding(
@@ -202,7 +198,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: Column(
                       children: [
                         const AppSectionHeader(
-                          title: 'Latest Journey',
+                          title: 'Recent Journeys',
                           icon: Icons.route_rounded,
                           padding: EdgeInsets.symmetric(
                             horizontal: AppDimensions.lg,
@@ -214,20 +210,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             horizontal: AppDimensions.lg,
                           ),
                           child: Column(
-                            children: journeys
-                                .map(
-                                  (journey) => JourneyCard(
-                                    journey: journey,
-                                    compact: true,
-                                    onTap: journey.id == null
-                                        ? null
-                                        : () => context.push(
-                                            AppRoutes.journeyDetail.replaceFirst(':id', journey.id!),
-                                            extra: journey,
-                                          ),
-                                  ),
-                                )
-                                .toList(growable: false),
+                            children: [
+                              for (var i = 0; i < journeys.length; i++) ...[
+                                JourneyCard(
+                                  journey: journeys[i],
+                                  compact: true,
+                                  onTap: journeys[i].id == null
+                                      ? null
+                                      : () => context.push(
+                                          AppRoutes.journeyDetail.replaceFirst(':id', journeys[i].id!),
+                                          extra: journeys[i],
+                                        ),
+                                ),
+                                if (i < journeys.length - 1)
+                                  const SizedBox(height: AppDimensions.sm),
+                              ]
+                            ],
                           ),
                         ),
                       ],

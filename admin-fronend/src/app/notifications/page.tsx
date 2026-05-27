@@ -6,13 +6,14 @@ import { useAuth } from '@/context/AuthContext';
 import { 
   Bell, Send, History, Users, UserCheck, Smartphone, 
   CheckCircle2, AlertCircle, RefreshCw, Clock, 
-  Trash2, X, Eye, FileText, Check, Save
+  Trash2, X, Eye, FileText, Check, Save, Store
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { unwrapPagedResponse } from '@/lib/api-response';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 
 interface NotificationSummary {
   notificationId: string;
@@ -175,26 +176,30 @@ export default function NotificationsPage() {
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'hsl(var(--foreground))' }}>Audience Segment</label>
-                  <select 
-                    value={formData.targetAudience} onChange={e => setFormData({...formData, targetAudience: e.target.value})}
-                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))', outline: 'none', transition: '0.2s' }}
-                  >
-                    <option value="all">Everyone</option>
-                    <option value="customers">Customers</option>
-                    <option value="keepers">Keepers</option>
-                  </select>
+                  <CustomSelect
+                    value={formData.targetAudience} 
+                    onChange={val => setFormData({...formData, targetAudience: val})}
+                    options={[
+                      { value: 'all', label: 'Everyone', icon: <Users size={16} /> },
+                      { value: 'customers', label: 'Customers', icon: <Smartphone size={16} /> },
+                      { value: 'keepers', label: 'Keepers', icon: <Store size={16} /> },
+                    ]}
+                    style={{ width: '100%' }}
+                  />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'hsl(var(--foreground))' }}>Priority Layer</label>
-                  <select 
-                    value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}
-                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))', outline: 'none', transition: '0.2s' }}
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Normal">Normal</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
+                  <CustomSelect
+                    value={formData.priority} 
+                    onChange={val => setFormData({...formData, priority: val})}
+                    options={[
+                      { value: 'Low', label: 'Low', icon: <AlertCircle size={16} />, color: '#64748b' },
+                      { value: 'Normal', label: 'Normal', icon: <AlertCircle size={16} />, color: '#3b82f6' },
+                      { value: 'High', label: 'High', icon: <AlertCircle size={16} />, color: '#f59e0b' },
+                      { value: 'Critical', label: 'Critical', icon: <AlertCircle size={16} />, color: '#ef4444' },
+                    ]}
+                    style={{ width: '100%' }}
+                  />
                 </div>
               </div>
 

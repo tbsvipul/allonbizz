@@ -21,6 +21,7 @@ import api from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { unwrapApiData } from '@/lib/api-response';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 
 interface Category {
   categoryId: string;
@@ -352,14 +353,21 @@ export default function CategoriesPage() {
 
                   <div>
                     <label style={{ fontSize: '0.875rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Parent Category</label>
-                    <select value={formData.parentCategoryId || ''} onChange={(e) => setFormData({ ...formData, parentCategoryId: e.target.value || null })} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', outline: 'none' }}>
-                      <option value="">Top-level category</option>
-                      {flatCategories.filter((category) => category.categoryId !== currentCat?.categoryId).map((category) => (
-                        <option key={category.categoryId} value={category.categoryId}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      value={formData.parentCategoryId || ''}
+                      onChange={(val) => setFormData({ ...formData, parentCategoryId: val || null })}
+                      options={[
+                        { value: '', label: 'Top-level category', icon: <FolderTree size={16} /> },
+                        ...flatCategories
+                          .filter((category) => category.categoryId !== currentCat?.categoryId)
+                          .map((category) => ({
+                            value: category.categoryId,
+                            label: category.name,
+                            icon: <FolderTree size={16} />
+                          }))
+                      ]}
+                      style={{ width: '100%' }}
+                    />
                   </div>
 
                   <div>

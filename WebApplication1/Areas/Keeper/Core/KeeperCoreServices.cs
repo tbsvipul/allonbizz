@@ -303,6 +303,8 @@ public class KeeperProfileService : IKeeperProfileService
             Category = s.Category != null ? s.Category.Name : "Uncategorized",
             Status = s.IsActive ? "Active" : "Inactive",
             IsVerified = s.IsVerified,
+            VerifyStatus = s.VerifyStatus,
+            IsOpen = s.IsOpen,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
@@ -435,6 +437,7 @@ public class KeeperOfferService : IKeeperOfferService
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
             TermsAndConditions = dto.TermsAndConditions,
+            ImageData = ImageConversionHelper.ParseBase64Image(dto.ImageUrl),
             Status = OfferStatus.Active,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -489,6 +492,7 @@ public class KeeperOfferService : IKeeperOfferService
         offer.StartDate = dto.StartDate;
         offer.EndDate = dto.EndDate;
         offer.TermsAndConditions = dto.TermsAndConditions;
+        offer.ImageData = ImageConversionHelper.ParseBase64Image(dto.ImageUrl);
         offer.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _firestore.SyncOfferAsync(offer);
@@ -692,6 +696,7 @@ public class KeeperOfferService : IKeeperOfferService
             StartDate = offer.StartDate,
             EndDate = offer.EndDate,
             TermsAndConditions = offer.TermsAndConditions,
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(offer.ImageData),
             Status = offer.Status,
             RedemptionCount = offer.CurrentRedemptions,
             CreatedAt = offer.CreatedAt

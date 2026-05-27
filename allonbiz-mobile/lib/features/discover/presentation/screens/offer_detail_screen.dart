@@ -39,9 +39,12 @@ class OfferDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
+  late final AppBarNotifier _appBarNotifier;
+
   @override
   void initState() {
     super.initState();
+    _appBarNotifier = ref.read(appBarProvider.notifier);
     if (!widget.isSheet) {
       _updateAppBar();
     }
@@ -49,9 +52,8 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
 
   void _updateAppBar() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(appBarProvider.notifier)
-          .setConfig(
+      _appBarNotifier
+          .pushConfig(
             AppBarConfig(
               title: Text(widget.initialOffer?.title ?? 'Offer Details'),
               centerTitle: true,
@@ -62,6 +64,16 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
             ),
           );
     });
+  }
+
+  @override
+  void dispose() {
+    if (!widget.isSheet) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _appBarNotifier.popConfig();
+      });
+    }
+    super.dispose();
   }
 
   void _showReviewSheet(BuildContext context, String offerId) {

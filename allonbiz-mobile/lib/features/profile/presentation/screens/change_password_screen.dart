@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/data/repositories/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/utils/auth_error_mapper.dart';
+import '../../../../core/providers/app_bar_provider.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -20,6 +21,7 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
+  late final AppBarNotifier _appBarNotifier;
   final _formKey = GlobalKey<FormState>();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -29,7 +31,28 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    _appBarNotifier = ref.read(appBarProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.pushConfig(
+        AppBarConfig(
+          title: const Text('Change Password'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      );
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.popConfig();
+    });
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -141,7 +164,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     return PopScope(
       canPop: !_isLoading,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Change Password'), centerTitle: true),
         body: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: AbsorbPointer(

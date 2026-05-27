@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import {
   Navigation, Compass, CheckCircle, TrendingUp,
   Search, RefreshCw, Calendar, MapPin,
   Clock, ChevronLeft, ChevronRight, X, Tag, Store, Award,
-  Eye, Heart, Trash2, BarChart3, Activity
+  Eye, Heart, Trash2, BarChart3, Activity, XCircle, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { unwrapApiData, unwrapPagedResponse } from '@/lib/api-response';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, PieChart, Pie, Cell,
@@ -118,6 +120,9 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 
 /* ═════════════════════ PAGE ═════════════════════ */
 export default function JourneysPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const { hasPermission } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,6 +138,40 @@ export default function JourneysPage() {
   const [tableLoading, setTableLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
+  const [shopNames, setShopNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (selectedJourney?.shopsEncountered?.length) {
+      const fetchShopNames = async () => {
+        const names: Record<string, string> = { ...shopNames };
+        let updated = false;
+        
+        await Promise.all(selectedJourney.shopsEncountered!.map(async (id) => {
+          if (!names[id] && id.length > 20) {
+            try {
+              const res = await api.get(`/admin/shops/${id}`);
+              const shop = unwrapApiData<any>(res);
+              if (shop?.name) {
+                names[id] = shop.name;
+                updated = true;
+              }
+            } catch {
+              names[id] = 'Unknown Shop';
+              updated = true;
+            }
+          } else if (!names[id] && id.length <= 20) {
+            names[id] = id;
+            updated = true;
+          }
+        }));
+
+        if (updated) {
+          setShopNames(names);
+        }
+      };
+      fetchShopNames();
+    }
+  }, [selectedJourney]);
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -239,12 +278,16 @@ export default function JourneysPage() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.1rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', fontWeight: 600, fontSize: '0.875rem' }}>
               <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh
             </button>
-            <select value={timeRange} onChange={e => setTimeRange(e.target.value)}
-              style={{ padding: '0.6rem 1.1rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', fontWeight: 600, background: 'hsl(var(--secondary))', outline: 'none', fontSize: '0.875rem' }}>
-              <option value="week">Past 7 Days</option>
-              <option value="month">Past 30 Days</option>
-              <option value="year">Past Year</option>
-            </select>
+            <CustomSelect 
+              value={timeRange} 
+              onChange={val => setTimeRange(val)}
+              options={[
+                { value: 'week', label: 'Past 7 Days', icon: <Calendar size={16} /> },
+                { value: 'month', label: 'Past 30 Days', icon: <Calendar size={16} /> },
+                { value: 'year', label: 'Past Year', icon: <Calendar size={16} /> },
+              ]}
+              style={{ minWidth: '160px' }}
+            />
           </div>
         </div>
 
@@ -294,7 +337,7 @@ export default function JourneysPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={v => v.slice(5)} stroke="hsl(var(--muted-foreground))" />
                     <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(124, 58, 237, 0.2)', strokeWidth: 2 }} />
                     <Area type="monotone" dataKey="count" name="Journeys" stroke="#7c3aed" strokeWidth={2.5} fill="url(#areaGrad)" dot={false} activeDot={{ r: 5, fill: '#7c3aed' }} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -354,7 +397,7 @@ export default function JourneysPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                     <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(124, 58, 237, 0.1)' }} />
                     <Bar dataKey="journeyCount" name="Journeys" fill="#7c3aed" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -400,13 +443,17 @@ export default function JourneysPage() {
                 <input placeholder="Search user, route…" value={search} onChange={e => { setSearch(e.target.value); setTablePage(1); }}
                   style={{ width: '100%', padding: '0.5rem 1rem 0.5rem 2.25rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', outline: 'none', fontSize: '0.85rem' }} />
               </div>
-              <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setTablePage(1); }}
-                style={{ padding: '0.5rem 0.75rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', background: 'hsl(var(--secondary))', outline: 'none', fontSize: '0.85rem', fontWeight: 500 }}>
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="abandoned">Abandoned</option>
-              </select>
+              <CustomSelect 
+                value={statusFilter} 
+                onChange={val => { setStatusFilter(val); setTablePage(1); }}
+                options={[
+                  { value: '', label: 'All Status', icon: <Filter size={16} /> },
+                  { value: 'active', label: 'Active', icon: <Compass size={16} />, color: '#10b981' },
+                  { value: 'completed', label: 'Completed', icon: <CheckCircle size={16} />, color: '#6366f1' },
+                  { value: 'abandoned', label: 'Abandoned', icon: <XCircle size={16} />, color: '#ef4444' },
+                ]}
+                style={{ minWidth: '150px' }}
+              />
             </div>
           </div>
 
@@ -500,167 +547,186 @@ export default function JourneysPage() {
           )}
         </motion.div>
 
-        {/* ─── Detail Drawer ─── */}
-        <AnimatePresence>
-          {selectedJourney && (
-            <>
-              {/* Backdrop */}
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                onClick={() => setSelectedJourney(null)}
-                style={{ 
-                  position: 'fixed', 
-                  inset: 0, 
-                  background: 'rgba(0, 0, 0, 0.7)', 
-                  backdropFilter: 'blur(8px)', 
-                  zIndex: 1000 
-                }} 
-              />
-              
-              {/* Modal Content */}
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9, x: '-50%', y: '-45%' }}
-                animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
-                exit={{ opacity: 0, scale: 0.9, x: '-50%', y: '-45%' }}
-                style={{
-                  position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  width: '90%',
-                  maxWidth: '700px',
-                  maxHeight: '90vh',
-                  zIndex: 1001,
-                  background: 'rgba(23, 23, 33, 0.95)',
-                  backdropFilter: 'blur(25px)',
-                  borderRadius: '28px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
-                  overflowY: 'auto',
-                  padding: '2.5rem',
-                  color: 'white'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                  <h2 style={{ fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.02em' }}>Journey Detail</h2>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    {hasPermission(PERMISSIONS.journeysDelete) && (
-                      <button onClick={() => deleteJourney(selectedJourney.journeyId)}
-                        title="Delete Journey"
-                        style={{ padding: '0.6rem', borderRadius: '12px', border: '1px solid hsl(var(--destructive))', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', transition: '0.2s', cursor: 'pointer' }}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                    <button onClick={() => setSelectedJourney(null)}
-                      title="Close"
-                      style={{ padding: '0.6rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255, 255, 255, 0.05)', transition: '0.2s', cursor: 'pointer', color: 'white' }}
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                {detailLoading ? (
-                  <div style={{ textAlign: 'center', padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                    <RefreshCw size={32} className="spin" color="#7c3aed" />
-                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Fetching latest telemetry data…</p>
-                  </div>
-                ) : (
-                  <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {/* Status + Type */}
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <StatusBadge status={selectedJourney.status} />
-                      <span style={{ padding: '0.35rem 1rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, background: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(168,85,247,0.1))', color: '#a855f7', border: '1px solid rgba(124,58,237,0.2)' }}>
-                        {selectedJourney.type === 'freeRoam' ? 'Free Roam' : 'Destination Nav'}
-                      </span>
+        {/* ─── Detail Drawer (Right Side) ─── */}
+        {mounted && createPortal(
+          <AnimatePresence>
+            {selectedJourney && (
+              <>
+                {/* Backdrop */}
+                <motion.div 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
+                  onClick={() => setSelectedJourney(null)}
+                  style={{ 
+                    position: 'fixed', 
+                    inset: 0, 
+                    background: 'rgba(0, 0, 0, 0.5)', 
+                    backdropFilter: 'blur(4px)', 
+                    zIndex: 99998 
+                  }} 
+                />
+                
+                {/* Right Side Panel */}
+                <motion.div 
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    right: 0,
+                    width: '100%',
+                    maxWidth: '460px',
+                    height: '100vh',
+                    zIndex: 99999,
+                    background: 'hsl(var(--background))',
+                    borderLeft: '1px solid hsl(var(--border))',
+                    boxShadow: '-10px 0 50px -12px rgba(0, 0, 0, 0.5)',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  {/* Header */}
+                  <div style={{ 
+                    padding: '1.5rem 2rem', 
+                    borderBottom: '1px solid hsl(var(--border))',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    background: 'hsl(var(--background))',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10
+                  }}>
+                    <div>
+                      <h2 style={{ fontWeight: 800, fontSize: '1.25rem', marginBottom: '0.25rem' }}>Journey Details</h2>
+                      <p style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>ID: {selectedJourney.journeyId.substring(0, 8)}...</p>
                     </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {hasPermission(PERMISSIONS.journeysDelete) && (
+                        <button onClick={() => deleteJourney(selectedJourney.journeyId)}
+                          title="Delete Journey"
+                          style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid hsl(var(--destructive))', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', transition: '0.2s', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      <button onClick={() => setSelectedJourney(null)}
+                        title="Close"
+                        style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', transition: '0.2s', cursor: 'pointer', color: 'hsl(var(--foreground))' }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
 
-                    {/* Info Sections */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-                      {/* Route */}
-                      <div style={{ padding: '1.5rem', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255, 255, 255, 0.4)', marginBottom: '0.75rem' }}>Primary Route</p>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                          <div style={{ marginTop: '0.25rem' }}>
-                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#7c3aed', marginBottom: 4 }} />
-                            <div style={{ width: 2, height: 20, background: 'rgba(124, 58, 237, 0.2)', marginLeft: 4, marginBottom: 4 }} />
-                            <div style={{ width: 10, height: 10, borderRadius: '2px', background: '#10b981' }} />
-                          </div>
-                          <div>
-                            <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem' }}>{selectedJourney.startName || 'Origin Point'}</p>
-                            {selectedJourney.endName && <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.5)' }}>{selectedJourney.endName}</p>}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* User */}
-                      <div style={{ padding: '1.25rem', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ width: 48, height: 48, borderRadius: '16px', background: '#7c3aed', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.2rem' }}>
+                  {detailLoading ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                      <RefreshCw size={28} className="spin" color="#7c3aed" />
+                      <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.9rem' }}>Loading journey data...</p>
+                    </div>
+                  ) : (
+                    <div className="animate-fade-in" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                      
+                      {/* User Profile Summary */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ width: 56, height: 56, borderRadius: '16px', background: 'linear-gradient(135deg, #7c3aed, #c084fc)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.5rem', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)' }}>
                           {selectedJourney.userName?.charAt(0) || 'U'}
                         </div>
                         <div>
-                          <p style={{ fontWeight: 700, fontSize: '1rem' }}>{selectedJourney.userName}</p>
-                          <p style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.5)' }}>{selectedJourney.userEmail}</p>
+                          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: 'hsl(var(--foreground))' }}>{selectedJourney.userName || 'Unknown User'}</h3>
+                          <p style={{ fontSize: '0.85rem', color: 'hsl(var(--muted-foreground))' }}>{selectedJourney.userEmail || 'No email provided'}</p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Performance Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                      {[
-                        { label: 'Distance', value: fmtDist(selectedJourney.distance), icon: MapPin, color: '#6366f1' },
-                        { label: 'Duration', value: fmtDur(selectedJourney.duration / 60), icon: Clock, color: '#f59e0b' },
-                        { label: 'Offers', value: selectedJourney.offersRedeemed?.toString() || '0', icon: Award, color: '#10b981' },
-                      ].map((m, i) => (
-                        <div key={i} style={{ padding: '1rem 0.5rem', textAlign: 'center', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px' }}>
-                          <m.icon size={16} color={m.color} style={{ marginBottom: '0.5rem' }} />
-                          <p style={{ fontWeight: 800, fontSize: '1rem' }}>{m.value}</p>
-                          <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>{m.label}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Social Metrics */}
-                    {(selectedJourney.likesCount !== undefined || selectedJourney.viewsCount !== undefined) && (
-                      <div style={{ display: 'flex', gap: '2rem', padding: '1rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <Heart size={16} color="#ec4899" fill="rgba(236, 72, 153, 0.1)" />
-                          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{selectedJourney.likesCount || 0} Likes</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <Eye size={16} color="#6366f1" />
-                          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{selectedJourney.viewsCount || 0} Views</span>
-                        </div>
+                      {/* Status & Type */}
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <StatusBadge status={selectedJourney.status} />
+                        <span style={{ padding: '0.35rem 1rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(124, 58, 237, 0.1)', color: '#a855f7', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+                          {selectedJourney.type === 'freeRoam' ? 'Free Roam' : 'Destination Nav'}
+                        </span>
                       </div>
-                    )}
 
-                    {/* Shops Footer */}
-                    {selectedJourney.shopsEncountered && selectedJourney.shopsEncountered.length > 0 && (
-                      <div>
-                        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.4)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Shops Encountered</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          {selectedJourney.shopsEncountered.map((s, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', background: 'rgba(124, 58, 237, 0.1)', border: '1px solid rgba(124, 58, 237, 0.2)', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
-                              <Store size={14} color="#a855f7" /> {s}
+                      {/* Route Info */}
+                      <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))' }}>
+                        <h4 style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(var(--muted-foreground))', marginBottom: '1rem', letterSpacing: '0.05em' }}>Route Information</h4>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
+                            <div style={{ width: 12, height: 12, borderRadius: '50%', border: '3px solid #7c3aed', background: 'transparent' }} />
+                            <div style={{ width: 2, height: 30, background: 'linear-gradient(to bottom, #7c3aed, #10b981)', margin: '4px 0' }} />
+                            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', border: '3px solid rgba(16, 185, 129, 0.3)', backgroundClip: 'padding-box' }} />
+                          </div>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div>
+                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Origin</p>
+                              <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'hsl(var(--foreground))' }}>{selectedJourney.startName || 'Unknown Origin'}</p>
                             </div>
-                          ))}
+                            <div>
+                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Destination</p>
+                              <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'hsl(var(--foreground))' }}>{selectedJourney.endName || 'No specific destination'}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
 
-                    {/* Timeline */}
-                    <div style={{ marginTop: '0.5rem', paddingTop: '1.25rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.4)' }}>
-                      <span>Session Start: <b>{new Date(selectedJourney.startTime).toLocaleString()}</b></span>
-                      {selectedJourney.endTime && <span>Sync End: <b>{new Date(selectedJourney.endTime).toLocaleString()}</b></span>}
+                      {/* Quick Stats Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                        {[
+                          { label: 'Total Distance', value: fmtDist(selectedJourney.distance), icon: MapPin, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)' },
+                          { label: 'Duration', value: fmtDur(selectedJourney.duration / 60), icon: Clock, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+                          { label: 'Offers Redeemed', value: selectedJourney.offersRedeemed?.toString() || '0', icon: Award, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+                          { label: 'Total Savings', value: `$${selectedJourney.totalSavings?.toFixed(2) || '0.00'}`, icon: Tag, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' },
+                        ].map((stat, i) => (
+                          <div key={i} style={{ padding: '1.25rem', borderRadius: '16px', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '8px', background: stat.bg, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <stat.icon size={16} />
+                            </div>
+                            <div>
+                              <p style={{ fontWeight: 800, fontSize: '1.1rem', color: 'hsl(var(--foreground))' }}>{stat.value}</p>
+                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>{stat.label}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Shops */}
+                      {selectedJourney.shopsEncountered && selectedJourney.shopsEncountered.length > 0 && (
+                        <div>
+                          <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '0.75rem' }}>Shops Encountered</h4>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {selectedJourney.shopsEncountered.map((s, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.8rem', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 500, color: 'hsl(var(--foreground))' }}>
+                                <Store size={14} color="#a855f7" /> {shopNames[s] || 'Loading...'}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Timeline */}
+                      <div style={{ marginTop: 'auto', paddingTop: '1.5rem', borderTop: '1px dashed hsl(var(--border))', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Session Start</span>
+                          <span style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>{new Date(selectedJourney.startTime).toLocaleString()}</span>
+                        </div>
+                        {selectedJourney.endTime && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Session End</span>
+                            <span style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>{new Date(selectedJourney.endTime).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                  )}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </div>
 
       {/* Spin animation for refresh icon */}

@@ -174,6 +174,7 @@ export interface OfferDetail {
   termsAndConditions?: string | null;
   status: string;
   redemptionCount: number;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -229,4 +230,27 @@ export interface BulkOfferUploadResult {
   importedCount: number;
   failedRowCount: number;
   failedRows: BulkOfferUploadRowError[];
+}
+
+export interface KeeperNotification {
+  notificationId: string;
+  title: string;
+  message: string;
+  imageUrl?: string | null;
+  type: string;
+  status: string;
+  isActive: boolean;
+  offerId?: string | null;
+  offerTitle?: string | null;
+  recipientCount: number;
+  createdAt: string;
+  scheduledAt?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface KeeperSendNotificationPayload {
+  title: string;
+  message: string;
+  offerId?: string | null;
+  imageUrl?: string | null;
 }

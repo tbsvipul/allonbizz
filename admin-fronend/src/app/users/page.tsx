@@ -16,12 +16,21 @@ import {
   ChevronRight,
   Mail,
   Calendar,
+  Users,
+  User,
+  Store,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Filter,
+  Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { unwrapPagedResponse } from '@/lib/api-response';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 
 interface User {
   userId: string;
@@ -221,47 +230,34 @@ export default function UsersPage() {
                 }}
               />
             </div>
-            <select
+            <CustomSelect
               value={roleFilter}
-              onChange={(event) => {
-                setRoleFilter(event.target.value);
+              onChange={(val) => {
+                setRoleFilter(val);
                 setPage(1);
               }}
-              style={{
-                background: 'hsl(var(--secondary))',
-                border: '1px solid hsl(var(--border))',
-                padding: '0.75rem 1.25rem',
-                borderRadius: 'var(--radius)',
-                fontWeight: 500,
-                outline: 'none',
-              }}
-            >
-              <option value="">All Roles</option>
-              <option value="customer">Customer</option>
-              <option value="keeper">Keeper</option>
-              <option value="admin">Admin</option>
-            </select>
-            <select
+              options={[
+                { value: '', label: 'All Roles', icon: <Users size={16} /> },
+                { value: 'customer', label: 'Customer', icon: <User size={16} /> },
+                { value: 'keeper', label: 'Keeper', icon: <Store size={16} /> },
+              ]}
+              style={{ minWidth: '160px' }}
+            />
+            <CustomSelect
               value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value);
+              onChange={(val) => {
+                setStatusFilter(val);
                 setPage(1);
               }}
-              style={{
-                background: 'hsl(var(--secondary))',
-                border: '1px solid hsl(var(--border))',
-                padding: '0.75rem 1.25rem',
-                borderRadius: 'var(--radius)',
-                fontWeight: 500,
-                outline: 'none',
-              }}
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
-              <option value="banned">Banned</option>
-            </select>
+              options={[
+                { value: '', label: 'All Status', icon: <Filter size={16} /> },
+                { value: 'active', label: 'Active', icon: <CheckCircle2 size={16} />, color: '#10b981' },
+                { value: 'inactive', label: 'Inactive', icon: <XCircle size={16} />, color: '#ef4444' },
+                { value: 'suspended', label: 'Suspended', icon: <Clock size={16} />, color: '#f59e0b' },
+                { value: 'banned', label: 'Banned', icon: <Ban size={16} />, color: '#dc2626' },
+              ]}
+              style={{ minWidth: '160px' }}
+            />
           </div>
 
           <div style={{ overflowX: 'auto' }}>

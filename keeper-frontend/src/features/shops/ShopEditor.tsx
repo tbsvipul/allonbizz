@@ -13,6 +13,7 @@ import { Store, MapPin, Image as ImageIcon, Tag, Settings, AlertCircle, Info, Se
 import { InlineNotice } from '@/components/InlineNotice';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusPill } from '@/components/StatusPill';
+import CustomSelect from '@/components/CustomSelect';
 
 interface CategoryOption {
   id: string;
@@ -768,15 +769,19 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                       Primary Category
                     </label>
                     <div style={{ position: 'relative' }}>
-                      <select value={form.categoryId} onChange={(event) => updateField('categoryId', event.target.value)} disabled={loading || saving} className="keeper-input" style={{ appearance: 'none', paddingRight: '2rem' }}>
-                        <option value="">Select a category</option>
-                        {categoryOptions.map((category) => (
-                          <option key={category.id} value={category.id}>{category.label}</option>
-                        ))}
-                      </select>
-                      <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'hsl(var(--muted-foreground))' }}>
-                        ▼
-                      </div>
+                      <CustomSelect
+                        value={form.categoryId}
+                        onChange={(val) => updateField('categoryId', val)}
+                        options={[
+                          { value: '', label: 'Select a category', icon: <Tag size={16} /> },
+                          ...categoryOptions.map(category => ({
+                            value: category.id,
+                            label: category.label,
+                            icon: <Tag size={16} />
+                          }))
+                        ]}
+                        style={{ width: '100%' }}
+                      />
                     </div>
                   </div>
                 </div>

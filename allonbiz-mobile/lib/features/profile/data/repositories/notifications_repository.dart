@@ -27,10 +27,6 @@ class NotificationsRepository {
       return await _apiClient.getPage<UserNotification>(
         '/user/notifications?pageNumber=$page&pageSize=$pageSize',
         parser: UserNotification.fromJson,
-        options: ApiReadOptions(
-          cacheKey: 'notifications:page=$page:size=$pageSize',
-          ttl: const Duration(minutes: 5),
-        ),
       );
     } on ServerFailure catch (e) {
       throw DatabaseFailure(e.message);
@@ -60,6 +56,7 @@ class UserNotification {
   final String id;
   final String title;
   final String message;
+  final String? imageUrl;
   final String type;
   final DateTime sentAt;
   final bool isRead;
@@ -71,6 +68,7 @@ class UserNotification {
     required this.id,
     required this.title,
     required this.message,
+    this.imageUrl,
     required this.type,
     required this.sentAt,
     this.isRead = false,
@@ -87,6 +85,7 @@ class UserNotification {
           '',
       title: (json['title'] ?? json['Title'] ?? '').toString(),
       message: (json['message'] ?? json['Message'] ?? '').toString(),
+      imageUrl: (json['imageUrl'] ?? json['ImageUrl'])?.toString(),
       type: (json['type'] ?? json['Type'] ?? '').toString(),
       sentAt:
           DateTime.tryParse(

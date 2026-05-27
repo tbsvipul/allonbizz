@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, X, Check, XCircle, Hash, Upload } from 'lucide-react';
+import { Plus, X, Check, XCircle, Hash, Upload, Tag as TagIcon, Store, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { unwrapApiData } from '@/lib/api-response';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 
 interface Tag {
   tagId: string;
@@ -289,12 +290,17 @@ export default function TagsPage() {
 
                   <div>
                     <label style={{ fontSize: '0.875rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Tag Type</label>
-                    <select value={formData.type} onChange={(event) => setFormData({ ...formData, type: event.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', outline: 'none' }}>
-                      <option value="General">General</option>
-                      <option value="Offer">Offer Specific</option>
-                      <option value="Shop">Shop Specific</option>
-                      <option value="System">System</option>
-                    </select>
+                    <CustomSelect
+                      value={formData.type}
+                      onChange={(val) => setFormData({ ...formData, type: val })}
+                      options={[
+                        { value: 'General', label: 'General', icon: <Hash size={16} /> },
+                        { value: 'Offer', label: 'Offer Specific', icon: <TagIcon size={16} /> },
+                        { value: 'Shop', label: 'Shop Specific', icon: <Store size={16} /> },
+                        { value: 'System', label: 'System', icon: <Settings size={16} /> },
+                      ]}
+                      style={{ width: '100%' }}
+                    />
                   </div>
 
                   <div>

@@ -129,7 +129,7 @@ public class UserProfileService : IUserProfileService
             Address = o.Shop.Address,
             Latitude = o.Shop.Latitude,
             Longitude = o.Shop.Longitude,
-            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
             DiscountPercentage = o.DiscountPercentage,
             EndDate = o.EndDate,
             Tags = o.Tags,
@@ -148,46 +148,99 @@ public class UserProfileService : IUserProfileService
                 var shopsInRange = await _db.Shops
                     .Where(s => s.IsActive && s.IsVerified && s.Latitude.HasValue && s.Longitude.HasValue && s.NotificationRadius.HasValue)
                     .ToListAsync();
-                    
+
+                var now = DateTime.UtcNow;
+                var cutoff = now.AddHours(-24);
+
                 foreach (var s in shopsInRange) 
                 {
                     var dist = GeoHelper.CalculateDistanceKm(lat.Value, lng.Value, s.Latitude!.Value, s.Longitude!.Value);
                     if (dist <= s.NotificationRadius!.Value)
                     {
-                        var recentNotification = await _db.UserNotifications
-                            .AnyAsync(un => un.UserId == userId && 
-                                            un.Notification!.Type == NotificationType.SystemMessage &&
-                                            un.Notification.ShopId == s.ShopId &&
-                                            un.Notification.CreatedAt > DateTime.UtcNow.AddHours(-24));
-                        
-                        if (!recentNotification)
+                        // Get all active offers for this shop
+                        var activeOffers = await _db.Offers
+                            .AsNoTracking()
+                            .Where(o => o.ShopId == s.ShopId 
+                                     && o.IsActive 
+                                     && o.Status == OfferStatus.Active
+                                     && o.StartDate <= now 
+                                     && o.EndDate >= now)
+                            .ToListAsync();
+
+                        foreach (var offer in activeOffers)
                         {
-                            var newNotif = new Notification
+                            // Check if we already sent a notification for this offer to this user in the last 24 hours
+                            var alreadySent = await _db.UserNotifications
+                                .AnyAsync(un => un.UserId == userId 
+                                             && un.Notification!.OfferId == offer.OfferId
+                                             && un.Notification.Type == NotificationType.OfferAlert
+                                             && un.Notification.CreatedAt > cutoff);
+
+                            if (!alreadySent)
                             {
-                                NotificationId = Guid.NewGuid(),
-                                Title = "Shop nearby!",
-                                Message = $"{s.Name} is nearby and active!",
-                                Type = NotificationType.SystemMessage,
-                                Priority = NotificationPriority.Normal,
-                                TargetAudience = "customers",
-                                Status = NotificationStatus.Sent,
-                                ScheduledAt = DateTime.UtcNow,
-                                SentAt = DateTime.UtcNow,
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow,
-                                ShopId = s.ShopId,
-                                SenderType = "System"
-                            };
-                            _db.Notifications.Add(newNotif);
-                            _db.UserNotifications.Add(new UserNotification
+                                var discountText = offer.DiscountPercentage.HasValue && offer.DiscountPercentage > 0
+                                    ? $" — {offer.DiscountPercentage}% off"
+                                    : "";
+
+                                var newNotif = new Notification
+                                {
+                                    NotificationId = Guid.NewGuid(),
+                                    Title = $"🔥 {offer.Title}",
+                                    Message = $"{s.Name} has an active offer nearby{discountText}! Check it out.",
+                                    Type = NotificationType.OfferAlert,
+                                    Priority = NotificationPriority.Normal,
+                                    TargetAudience = "customers",
+                                    Status = NotificationStatus.Sent,
+                                    ScheduledAt = now,
+                                    SentAt = now,
+                                    CreatedAt = now,
+                                    UpdatedAt = now,
+                                    ShopId = s.ShopId,
+                                    OfferId = offer.OfferId,
+                                    ImageUrl = ImageConversionHelper.ToBase64DataUrl(offer.ImageData),
+                                    SenderType = "System"
+                                };
+                                _db.Notifications.Add(newNotif);
+                                _db.UserNotifications.Add(new UserNotification
+                                {
+                                    UserId = userId,
+                                    NotificationId = newNotif.NotificationId,
+                                    IsRead = false,
+                                    IsDeleted = false,
+                                    DeliveryStatus = "Delivered",
+                                    SentAt = now
+                                });
+                            }
+                        }
+
+                        // Check for active persistent Keeper notifications
+                        var activeNotifications = await _db.Notifications
+                            .Where(n => n.SenderType == "Keeper"
+                                     && n.ShopId == s.ShopId
+                                     && n.IsActive
+                                     && (n.ScheduledAt == null || n.ScheduledAt <= now)
+                                     && (n.ExpiresAt == null || n.ExpiresAt >= now))
+                            .ToListAsync();
+
+                        foreach (var notif in activeNotifications)
+                        {
+                            var alreadySentNotif = await _db.UserNotifications
+                                .AnyAsync(un => un.UserId == userId && un.NotificationId == notif.NotificationId);
+
+                            if (!alreadySentNotif)
                             {
-                                UserId = userId,
-                                NotificationId = newNotif.NotificationId,
-                                IsRead = false,
-                                IsDeleted = false,
-                                DeliveryStatus = "Delivered",
-                                SentAt = DateTime.UtcNow
-                            });
+                                _db.UserNotifications.Add(new UserNotification
+                                {
+                                    UserId = userId,
+                                    NotificationId = notif.NotificationId,
+                                    IsRead = false,
+                                    IsDeleted = false,
+                                    DeliveryStatus = "Delivered",
+                                    SentAt = now
+                                });
+                                notif.RecipientCount++;
+                                _db.Notifications.Update(notif);
+                            }
                         }
                     }
                 }
@@ -332,7 +385,7 @@ public class RouteService : IRouteService
             Address = o.Shop.Address,
             Latitude = o.Shop.Latitude,
             Longitude = o.Shop.Longitude,
-            ImageUrl = o.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
             DiscountPercentage = o.DiscountPercentage,
             EndDate = o.EndDate,
         }).ToList();
@@ -465,7 +518,7 @@ public class UserOfferService : IOfferService
                 Address = candidate.Shop.Address,
                 Latitude = candidate.Shop.Latitude,
                 Longitude = candidate.Shop.Longitude,
-                ImageUrl = candidate.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl ?? candidate.Shop.ShopImages.FirstOrDefault()),
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(candidate.Offer.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl ?? candidate.Shop.ShopImages.FirstOrDefault()),
                 DiscountPercentage = candidate.Offer.DiscountPercentage,
                 EndDate = candidate.Offer.EndDate,
                 Tags = candidate.Offer.Tags
@@ -497,7 +550,7 @@ public class UserOfferService : IOfferService
             ShopAddress = offer.Shop?.Address,
             Latitude = offer.Shop?.Latitude,
             Longitude = offer.Shop?.Longitude,
-            ImageUrl = offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl ?? offer.Shop?.ShopImages.FirstOrDefault()),
+            ImageUrl = ImageConversionHelper.ToBase64DataUrl(offer.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl ?? offer.Shop?.ShopImages.FirstOrDefault()),
             TermsAndConditions = offer.TermsAndConditions,
             DiscountPercentage = offer.DiscountPercentage,
             MinOrderValue = offer.MinOrderValue,
@@ -698,7 +751,7 @@ public class FavouriteService : IFavouriteService
                     Address = shop?.Address,
                     Latitude = shop?.Latitude,
                     Longitude = shop?.Longitude,
-                    ImageUrl = favourite.Offer.ImageUrl ?? ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl ?? shop?.ShopImages.FirstOrDefault()),
+                    ImageUrl = ImageConversionHelper.ToBase64DataUrl(favourite.Offer.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl ?? shop?.ShopImages.FirstOrDefault()),
                     DiscountPercentage = favourite.Offer.DiscountPercentage,
                     EndDate = favourite.Offer.EndDate,
                     IsVerified = shop?.IsVerified ?? false,

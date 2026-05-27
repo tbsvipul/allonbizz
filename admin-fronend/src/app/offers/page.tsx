@@ -12,13 +12,16 @@ import {
   CheckCircle2,
   XCircle,
   MoreVertical,
-  ArrowUpRight
+  ArrowUpRight,
+  Filter,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { unwrapPagedResponse } from '@/lib/api-response';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 
 interface Offer {
   id: string;
@@ -101,7 +104,9 @@ export default function OffersPage() {
       <div className="animate-fade-in">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>Global Offers Overview</h1>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+              <span className="text-gradient">Global Offers Overview</span>
+            </h1>
             <p style={{ color: 'hsl(var(--muted-foreground))' }}>Monitor and moderate all active promotions across the platform.</p>
           </div>
         </div>
@@ -129,15 +134,17 @@ export default function OffersPage() {
                 }} 
               />
             </div>
-            <select 
+            <CustomSelect 
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)', fontWeight: 500, outline: 'none' }}
-            >
-              <option value="">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Expired">Expired</option>
-          </select>
+              onChange={(val) => { setStatusFilter(val); setPage(1); }}
+              options={[
+                { value: '', label: 'All Status', icon: <Filter size={16} /> },
+                { value: 'Active', label: 'Active', icon: <CheckCircle2 size={16} />, color: '#10b981' },
+                { value: 'Expired', label: 'Expired', icon: <Clock size={16} />, color: '#f59e0b' }
+              ]}
+              style={{ minWidth: '160px' }}
+            />
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
@@ -207,48 +214,39 @@ export default function OffersPage() {
                       <CheckCircle2 size={16} /> Activate
                     </button>
                   ))}
-                   <div style={{ position: 'relative' }}>
-                    <button 
-                      onClick={() => {
-                        const menu = document.getElementById(`menu-${offer.id}`);
-                        if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                      }}
-                      style={{ 
-                        padding: '0.5rem', borderRadius: 'var(--radius)', 
-                        background: 'hsl(var(--secondary))', border: 'none', color: 'hsl(var(--foreground))',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                    <div 
-                      id={`menu-${offer.id}`}
-                      style={{ 
-                        display: 'none', position: 'absolute', bottom: '100%', right: 0, 
-                        background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', 
-                        borderRadius: 'var(--radius)', minWidth: '120px', zIndex: 10, boxShadow: 'var(--shadow-lg)',
-                        marginBottom: '0.5rem'
-                      }}
-                    >
+                  {hasPermission(PERMISSIONS.offersDelete) && (
+                    <div style={{ position: 'relative' }}>
                       <button 
                         onClick={() => {
-                          alert('Analytics view implementation in progress');
-                          document.getElementById(`menu-${offer.id}`)!.style.display = 'none';
+                          const menu = document.getElementById(`menu-${offer.id}`);
+                          if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
                         }}
-                        style={{ width: '100%', padding: '0.6rem 1rem', textAlign: 'left', background: 'none', border: 'none', color: 'inherit', fontSize: '0.8rem', cursor: 'pointer', borderBottom: '1px solid hsl(var(--border))' }}
+                        style={{ 
+                          padding: '0.5rem', borderRadius: 'var(--radius)', 
+                          background: 'hsl(var(--secondary))', border: 'none', color: 'hsl(var(--foreground))',
+                          cursor: 'pointer'
+                        }}
                       >
-                        Analytics
+                        <MoreVertical size={16} />
                       </button>
-                      {hasPermission(PERMISSIONS.offersDelete) && (
+                      <div 
+                        id={`menu-${offer.id}`}
+                        style={{ 
+                          display: 'none', position: 'absolute', bottom: '100%', right: 0, 
+                          background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', 
+                          borderRadius: 'var(--radius)', minWidth: '120px', zIndex: 10, boxShadow: 'var(--shadow-lg)',
+                          marginBottom: '0.5rem'
+                        }}
+                      >
                         <button 
                           onClick={() => handleDelete(offer.id)}
                           style={{ width: '100%', padding: '0.6rem 1rem', textAlign: 'left', background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer' }}
                         >
                           Delete
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </motion.div>
               ))}
@@ -257,7 +255,7 @@ export default function OffersPage() {
 
           {/* Pagination */}
           {!loading && offers.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', padding: '1rem', borderTop: '1px solid hsl(var(--border))' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', padding: '1rem' }}>
               <p style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>
                 Showing {offers.length} of {totalOffers} offers
               </p>
@@ -284,7 +282,6 @@ export default function OffersPage() {
               </div>
             </div>
           )}
-        </div>
       </div>
     </DashboardLayout>
   );

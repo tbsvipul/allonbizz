@@ -307,81 +307,84 @@ function ImagePreviewModal({ image, onClose }: { image: ImagePreview; onClose: (
         style={{
           position: 'fixed',
           inset: 0,
-          zIndex: 200,
-          background: 'rgba(2, 6, 23, 0.86)',
-          padding: '2rem',
+          zIndex: 9999,
+          background: 'rgba(0, 0, 0, 0.95)',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <motion.div
-          initial={{ scale: 0.96, y: 16 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.96, y: 16 }}
-          onClick={(event) => event.stopPropagation()}
-          style={{
-            width: 'min(1120px, 100%)',
-            maxHeight: '92vh',
-            display: 'grid',
-            gridTemplateRows: 'auto minmax(0, 1fr)',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            background: 'hsl(var(--card))',
-            boxShadow: '0 28px 80px rgba(0,0,0,0.4)',
-          }}
-        >
-          <div
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          padding: '1.5rem 2rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+          zIndex: 10000,
+          pointerEvents: 'none',
+        }}>
+          <div style={{ pointerEvents: 'auto' }}>
+            <p style={{ fontWeight: 800, color: 'white', fontSize: '1.25rem', overflowWrap: 'anywhere' }}>{image.title}</p>
+            {image.subtitle && (
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginTop: '0.2rem', overflowWrap: 'anywhere' }}>
+                {image.subtitle}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
             style={{
-              padding: '1rem 1.25rem',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              background: 'rgba(255,255,255,0.15)',
+              color: 'white',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              borderBottom: '1px solid hsl(var(--border))',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              pointerEvents: 'auto',
+              backdropFilter: 'blur(4px)',
             }}
+            aria-label="Close full image"
           >
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontWeight: 800, overflowWrap: 'anywhere' }}>{image.title}</p>
-              {image.subtitle && (
-                <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.82rem', marginTop: '0.2rem', overflowWrap: 'anywhere' }}>
-                  {image.subtitle}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '999px',
-                border: '1px solid hsl(var(--border))',
-                background: 'hsl(var(--secondary))',
-                color: 'hsl(var(--foreground))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flex: '0 0 auto',
-              }}
-              aria-label="Close full image"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div style={{ minHeight: 0, background: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-            <img
-              src={image.src}
-              alt={image.title}
-              style={{
-                display: 'block',
-                width: '100%',
-                height: '100%',
-                maxHeight: '78vh',
-                objectFit: 'contain',
-              }}
-            />
-          </div>
+            <X size={22} />
+          </button>
+        </div>
+
+        <motion.div
+          initial={{ scale: 0.96 }}
+          animate={{ scale: 1 }}
+          exit={{ scale: 0.96 }}
+          onClick={(event) => event.stopPropagation()}
+          style={{
+            width: '100%',
+            height: '100%',
+            padding: '5rem 2rem 2rem 2rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <img
+            src={image.src}
+            alt={image.title}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              borderRadius: '8px',
+              boxShadow: '0 28px 80px rgba(0,0,0,0.5)',
+            }}
+          />
         </motion.div>
       </motion.div>
     </AnimatePresence>

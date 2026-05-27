@@ -15,7 +15,6 @@ public class Offer
     public decimal? MinOrderValue { get; set; }
     public string? CouponCode { get; set; }
     public byte[]? ImageData { get; set; }
-    public string? ImageUrl { get; set; }
 
     /// <summary>
     /// Comma-separated tags for the offer.

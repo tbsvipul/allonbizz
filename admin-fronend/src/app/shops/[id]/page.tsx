@@ -1170,47 +1170,53 @@ export default function ShopDetailsPage() {
               onClick={() => setActiveLightboxImage(null)}
               style={{
                 position: 'fixed', inset: 0, 
-                zIndex: 2000, background: 'rgba(2, 6, 23, 0.95)', 
-                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'zoom-out', padding: '2rem'
+                zIndex: 9999, background: 'rgba(0, 0, 0, 0.95)', 
+                display: 'flex', flexDirection: 'column', 
+                alignItems: 'center', justifyContent: 'center',
+                cursor: 'zoom-out'
               }}
             >
-              {/* Close Button overlay */}
-              <button 
-                onClick={(e) => { e.stopPropagation(); setActiveLightboxImage(null); }}
-                style={{
-                  position: 'absolute', top: '1.5rem', right: '1.5rem',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: '50%', padding: '0.6rem', color: 'white', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2010,
-                  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)', transition: 'all 0.2s'
-                }}
-                className="copy-btn"
-              >
-                <X size={22} />
-              </button>
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                padding: '1.5rem 2rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'flex-start',
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+                zIndex: 10000,
+                pointerEvents: 'none',
+              }}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveLightboxImage(null); }}
+                  style={{
+                    width: '44px', height: '44px',
+                    borderRadius: '50%', border: 'none',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: 'white', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                    pointerEvents: 'auto', backdropFilter: 'blur(4px)'
+                  }}
+                >
+                  <X size={22} />
+                </button>
+              </div>
               
-              {/* Image Preview Box - Centered and Properly Formated */}
               <motion.div 
-                initial={{ scale: 0.95, y: 15 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 15 }}
+                initial={{ scale: 0.96 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.96 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
                 style={{ 
-                  position: 'relative', 
-                  maxWidth: '90vw', 
-                  maxHeight: '85vh', 
-                  borderRadius: '16px', 
-                  overflow: 'hidden',
-                  boxShadow: '0 28px 80px rgba(0,0,0,0.6)', 
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: '#020617',
+                  width: '100%', 
+                  height: '100%', 
+                  padding: '5rem 2rem 2rem 2rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '0.5rem'
                 }}
               >
                 <img 
@@ -1218,10 +1224,11 @@ export default function ShopDetailsPage() {
                   alt="Shop Preview Panel" 
                   style={{ 
                     maxWidth: '100%', 
-                    maxHeight: '80vh', 
+                    maxHeight: '100%', 
                     objectFit: 'contain', 
                     display: 'block',
-                    borderRadius: '12px'
+                    borderRadius: '8px',
+                    boxShadow: '0 28px 80px rgba(0,0,0,0.5)',
                   }} 
                 />
               </motion.div>

@@ -20,6 +20,9 @@ type GoogleMapsWindow = Window & {
 
 const GOOGLE_MAP_SCRIPT_ID = 'navideals-google-maps-script';
 const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const GEOLOCATION_PERMISSION_DENIED = 1;
+const GEOLOCATION_POSITION_UNAVAILABLE = 2;
+const GEOLOCATION_TIMEOUT = 3;
 
 function loadGoogleMapsApi(apiKey: string) {
   const win = window as GoogleMapsWindow;
@@ -69,6 +72,23 @@ function hasValidCoordinates(latitude?: number | null, longitude?: number | null
   );
 }
 
+function getGeolocationErrorMessage(error?: GeolocationPositionError | null) {
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return `Current location only works on HTTPS or localhost. This page is running on ${window.location.origin}.`;
+  }
+
+  switch (error?.code) {
+    case GEOLOCATION_PERMISSION_DENIED:
+      return 'Location access was blocked. Allow location permission for this site and try again.';
+    case GEOLOCATION_POSITION_UNAVAILABLE:
+      return "Your browser couldn't determine the current location. Check GPS or network access and try again.";
+    case GEOLOCATION_TIMEOUT:
+      return 'Getting the current location timed out. Please try again.';
+    default:
+      return error?.message || 'Unable to get the current location right now.';
+  }
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -82,6 +102,9 @@ function buildInfoWindowContent(shop: ShopSummary) {
   const statusIsActive = shop.status.toLowerCase() === 'active';
   const statusBg = statusIsActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
   const statusColor = statusIsActive ? '#059669' : '#dc2626';
+  const openBg = shop.isOpen ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)';
+  const openColor = shop.isOpen ? '#059669' : '#d97706';
+  const openLabel = shop.isOpen ? 'Open' : 'Closed';
   const latitude = typeof shop.latitude === 'number' ? shop.latitude.toFixed(4) : 'N/A';
   const longitude = typeof shop.longitude === 'number' ? shop.longitude.toFixed(4) : 'N/A';
   
@@ -110,6 +133,9 @@ function buildInfoWindowContent(shop: ShopSummary) {
           <span style="padding: 4px 8px; border-radius: 6px; background: ${statusBg}; color: ${statusColor}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
             ${escapeHtml(shop.status)}
           </span>
+          <span style="padding: 4px 8px; border-radius: 6px; background: ${openBg}; color: ${openColor}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+            ${openLabel}
+          </span>
           <span style="padding: 4px 8px; border-radius: 6px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 600;">
             <span style="opacity: 0.6; margin-right: 2px;">GPS:</span> ${latitude}, ${longitude}
           </span>
@@ -131,8 +157,10 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
   const markersRef = useRef<Array<{ shopId: string; marker: any }>>([]);
   const currentLocationMarkerRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [hasCurrentLocation, setHasCurrentLocation] = useState(false);
 
   const mappableShops = useMemo(
     () => shops.filter((shop) => hasValidCoordinates(shop.latitude, shop.longitude)),
@@ -286,28 +314,46 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
       }
 
       locationButton.addEventListener('click', () => {
-        if (navigator.geolocation) {
-          locationIcon.style.backgroundPosition = '-18px 0px';
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              locationIcon.style.backgroundPosition = '0px 0px';
-              const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
-              mapRef.current.panTo(pos);
-              mapRef.current.setZoom(15);
-
-              if (currentLocationMarkerRef.current) {
-                currentLocationMarkerRef.current.updatePosition(pos);
-              } else {
-                currentLocationMarkerRef.current = new CurrentLocationOverlay(pos);
-                currentLocationMarkerRef.current.setMap(mapRef.current);
-              }
-            },
-            () => {
-              locationIcon.style.backgroundPosition = '0px 0px';
-              console.warn('Geolocation failed or was denied.');
-            }
-          );
+        if (!navigator.geolocation) {
+          setLocationError('Current location is not supported in this browser.');
+          return;
         }
+
+        setLocationError(null);
+        locationIcon.style.backgroundPosition = '-18px 0px';
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            locationIcon.style.backgroundPosition = '0px 0px';
+            setLocationError(null);
+            const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+            setHasCurrentLocation(true);
+            mapRef.current.panTo(pos);
+            mapRef.current.setZoom(15);
+
+            if (currentLocationMarkerRef.current) {
+              currentLocationMarkerRef.current.updatePosition(pos);
+            } else {
+              currentLocationMarkerRef.current = new CurrentLocationOverlay(pos);
+              currentLocationMarkerRef.current.setMap(mapRef.current);
+            }
+          },
+          (geoError) => {
+            locationIcon.style.backgroundPosition = '0px 0px';
+            const message = getGeolocationErrorMessage(geoError);
+            setLocationError(message);
+            console.warn('Geolocation request failed.', {
+              code: geoError.code,
+              message: geoError.message,
+              secureContext: window.isSecureContext,
+              origin: window.location.origin,
+            });
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000,
+          }
+        );
       });
 
       mapRef.current.addListener('click', () => {
@@ -357,7 +403,7 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
           this.onClick();
         };
 
-        const pinColor = this.shop.isOpen ? '#10b981' : '#ef4444';
+        const pinColor = this.shop.isOpen ? '#10b981' : '#f59e0b';
         const size = this.isSelected ? 54 : 46;
         const innerSize = this.isSelected ? 44 : 38;
         const iconSize = this.isSelected ? 24 : 20;
@@ -487,13 +533,19 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981' }}>{openCount} open</span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>{closedCount} closed</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b' }}>{closedCount} closed</span>
         </div>
       </div>
 
       {error && (
         <div style={{ marginBottom: '1rem', padding: '0.875rem 1rem', borderRadius: 'var(--radius)', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', fontSize: '0.875rem', fontWeight: 600 }}>
           {error}
+        </div>
+      )}
+
+      {locationError && (
+        <div style={{ marginBottom: '1rem', padding: '0.875rem 1rem', borderRadius: 'var(--radius)', background: 'rgba(245, 158, 11, 0.14)', color: '#d97706', fontSize: '0.875rem', fontWeight: 600 }}>
+          {locationError}
         </div>
       )}
 
@@ -506,9 +558,28 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
           </div>
         )}
 
-        {isMapReady && mappableShops.length === 0 && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--muted-foreground))', fontWeight: 600, background: 'rgba(10, 15, 28, 0.45)', textAlign: 'center', padding: '1.5rem', zIndex: 10, pointerEvents: 'none' }}>
-            Shop markers appear here when shops have saved latitude and longitude values.
+        {isMapReady && mappableShops.length === 0 && !hasCurrentLocation && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '1rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              maxWidth: 'min(420px, calc(100% - 2rem))',
+              padding: '0.875rem 1rem',
+              borderRadius: '14px',
+              background: 'rgba(10, 15, 28, 0.78)',
+              border: '1px solid rgba(148, 163, 184, 0.25)',
+              boxShadow: '0 12px 40px rgba(15, 23, 42, 0.22)',
+              color: '#e2e8f0',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              textAlign: 'center',
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          >
+            Shop markers appear here when shops have saved latitude and longitude values. You can still use the current location button.
           </div>
         )}
       </div>

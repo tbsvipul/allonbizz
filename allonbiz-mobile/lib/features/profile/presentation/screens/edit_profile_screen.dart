@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/profile_controller.dart';
+import '../../../../core/providers/app_bar_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -13,6 +14,7 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+  late final AppBarNotifier _appBarNotifier;
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
@@ -29,10 +31,52 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       text: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
     );
     _phoneController = TextEditingController(text: user?.phone ?? '');
+    _appBarNotifier = ref.read(appBarProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.pushConfig(_buildAppBarConfig(false));
+    });
+  }
+
+  AppBarConfig _buildAppBarConfig(bool isLoading) {
+    return AppBarConfig(
+      title: const Text('Edit Profile'),
+      centerTitle: true,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        if (isLoading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else
+          TextButton(
+            onPressed: _save,
+            child: const Text(
+              'Save',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appBarNotifier.popConfig();
+    });
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
@@ -54,32 +98,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(profileControllerProvider, (previous, next) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _appBarNotifier.setConfig(_buildAppBarConfig(next.isLoading));
+      });
+    });
+
     final state = ref.watch(profileControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-        actions: [
-          if (state.isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: _save,
-              child: const Text(
-                'Save',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppDimensions.xl),
         child: Column(

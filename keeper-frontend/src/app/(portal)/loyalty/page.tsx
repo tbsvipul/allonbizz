@@ -11,6 +11,8 @@ import { formatDateTime } from '@/lib/format';
 import { LoyaltyProgram, ShopSummary } from '@/lib/types';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
 import { useAuth } from '@/context/AuthContext';
+import { Store } from 'lucide-react';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function LoyaltyPage() {
   const { user } = useAuth();
@@ -141,14 +143,17 @@ export default function LoyaltyPage() {
         <SectionCard title="Shop loyalty program" description="Choose the shop, set point rules, and define the customer reward.">
           <div className="field-stack">
             <div className="field" style={{ maxWidth: '320px' }}>
-              <label htmlFor="loyaltyShop">Shop</label>
-              <select id="loyaltyShop" value={selectedShopId} onChange={(event) => setSelectedShopId(event.target.value)}>
-                {shops.map((shop) => (
-                  <option key={shop.id} value={shop.id}>
-                    {shop.name}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="loyaltyShop" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block', color: 'hsl(var(--muted-foreground))' }}>Shop</label>
+              <CustomSelect
+                value={selectedShopId}
+                onChange={(val) => setSelectedShopId(val)}
+                options={shops.map(shop => ({
+                  value: shop.id,
+                  label: shop.name,
+                  icon: <Store size={16} />
+                }))}
+                style={{ width: '100%' }}
+              />
             </div>
 
             {program?.updatedAt ? (

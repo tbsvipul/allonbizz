@@ -32,6 +32,7 @@ import api from '@/lib/api';
 import { unwrapPagedResponse } from '@/lib/api-response';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/lib/permissions';
+import CustomSelect from '@/components/CustomSelect';
 
 interface Shop {
   id: string;
@@ -42,6 +43,7 @@ interface Shop {
   status: string;
   isVerified: boolean;
   verifyStatus: string;
+  isOpen?: boolean;
   imageUrl?: string | null;
   rejectionReason?: string | null;
   deactivateReason?: string | null;
@@ -727,33 +729,21 @@ export default function ShopsPage() {
               />
             </div>
 
-            <div style={{ position: 'relative' }}>
-              <Filter size={17} style={{ position: 'absolute', left: '0.95rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--muted-foreground))' }} />
-              <select
+              <CustomSelect
                 value={verifyFilter}
-                onChange={(event) => {
-                  setVerifyFilter(event.target.value as VerifyFilter);
+                onChange={(val) => {
+                  setVerifyFilter(val as VerifyFilter);
                   setPage(1);
                 }}
-                style={{
-                  width: '100%',
-                  padding: '0.85rem 1rem 0.85rem 2.65rem',
-                  borderRadius: '16px',
-                  border: '1px solid hsl(var(--border))',
-                  background: 'hsl(var(--secondary))',
-                  color: 'hsl(var(--foreground))',
-                  outline: 'none',
-                  fontWeight: 600,
-                  appearance: 'none',
-                }}
-              >
-                {verifyOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                options={[
+                  { value: 'all', label: 'All Verification States', icon: <Filter size={16} /> },
+                  { value: 'Pending', label: 'Pending Review', icon: <Clock size={16} />, color: '#f59e0b' },
+                  { value: 'Verified', label: 'Verified', icon: <ShieldCheck size={16} />, color: '#10b981' },
+                  { value: 'Rejected', label: 'Rejected', icon: <XCircle size={16} />, color: '#ef4444' },
+                ]}
+                style={{ width: '100%', minWidth: '220px' }}
+                className="shops-verify-select"
+              />
 
             <button
               onClick={() => void fetchShops()}
@@ -1043,6 +1033,22 @@ export default function ShopsPage() {
                         <div className="shop-meta-chip" style={{ background: verificationTone.background, borderColor: verificationTone.border, color: verificationTone.color, justifyContent: 'center' }}>
                           {shop.verifyStatus.toLowerCase() === 'verified' ? <ShieldCheck size={13} /> : shop.verifyStatus.toLowerCase() === 'rejected' ? <XCircle size={13} /> : <Clock size={13} />}
                           <span>{shop.verifyStatus}</span>
+                        </div>
+                        {/* Open / Closed indicator */}
+                        <div
+                          className="shop-meta-chip"
+                          style={{
+                            background: shop.isOpen ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                            borderColor: shop.isOpen ? 'rgba(16,185,129,0.22)' : 'rgba(245,158,11,0.22)',
+                            color: shop.isOpen ? '#10b981' : '#f59e0b',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <span style={{ position: 'relative', display: 'inline-flex', height: '7px', width: '7px' }}>
+                            <span style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '50%', backgroundColor: shop.isOpen ? '#10b981' : '#f59e0b', opacity: 0.75 }} />
+                            <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', height: '7px', width: '7px', backgroundColor: shop.isOpen ? '#10b981' : '#f59e0b' }} />
+                          </span>
+                          <span>{shop.isOpen !== false ? 'Open' : 'Closed'}</span>
                         </div>
                       </div>
 
