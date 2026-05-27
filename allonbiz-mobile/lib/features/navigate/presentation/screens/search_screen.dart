@@ -13,7 +13,6 @@ import '../../../../core/services/current_location_provider.dart';
 import '../../../../core/services/discovery_service.dart';
 import '../../../../core/services/places_service.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../shared/widgets/app_snackbar.dart';
 import '../controllers/navigation_controller.dart';
 import '../widgets/search_input_fields.dart';
 import '../widgets/search_interest_tags.dart';

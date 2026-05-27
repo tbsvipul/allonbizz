@@ -299,7 +299,7 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${offer.rating?.toStringAsFixed(1) ?? "0.0"}',
+                      offer.rating?.toStringAsFixed(1) ?? "0.0",
                       style: AppTextStyles.bodyMedium.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

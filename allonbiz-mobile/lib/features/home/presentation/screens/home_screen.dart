@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/models/journey_model.dart';
 import '../../../../core/services/current_location_provider.dart';
-import '../../../../core/services/discovery_service.dart';
 import '../../../../core/services/geofence_service.dart';
 import '../../../../core/services/preference_providers.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -21,7 +20,6 @@ import '../../../trips/data/repositories/journeys_repository.dart';
 import '../../data/repositories/home_repository.dart';
 import '../widgets/deal_section_widget.dart';
 import '../widgets/navigate_card_widget.dart';
-import '../widgets/quick_action_widget.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 

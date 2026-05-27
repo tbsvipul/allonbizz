@@ -1041,20 +1041,41 @@ class NavigationController extends Notifier<NavigationState> {
     final encountered = <String>{};
 
     for (final offer in snapshot.offersOnRoute) {
-      final key = (offer.shopId ?? offer.shopName).trim();
+      final key = _preferredEncounteredShopLabel(
+        name: offer.shopName,
+        fallbackId: offer.shopId,
+      );
       if (key.isNotEmpty) {
         encountered.add(key);
       }
     }
 
     for (final shop in snapshot.nearbyShops) {
-      final key = (shop.id.isNotEmpty ? shop.id : shop.name).trim();
+      final key = _preferredEncounteredShopLabel(
+        name: shop.name,
+        fallbackId: shop.id,
+      );
       if (key.isNotEmpty) {
         encountered.add(key);
       }
     }
 
     return encountered.toList(growable: false);
+  }
+
+  String _preferredEncounteredShopLabel({
+    required String? name,
+    required String? fallbackId,
+  }) {
+    final normalizedName = name?.trim() ?? '';
+    if (normalizedName.isNotEmpty) {
+      final lowerName = normalizedName.toLowerCase();
+      if (lowerName != 'unknown shop' && lowerName != 'local shop') {
+        return normalizedName;
+      }
+    }
+
+    return fallbackId?.trim() ?? '';
   }
 
   _JourneyProgressSnapshot _nextJourneyProgress(LatLng position) {

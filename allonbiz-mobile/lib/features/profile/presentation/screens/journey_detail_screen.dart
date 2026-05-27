@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +9,7 @@ import '../../../../core/models/journey_model.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_loader.dart';
 import '../../../../shared/widgets/app_surface.dart';
+import '../../../discover/data/repositories/shops_repository.dart';
 import '../../../trips/data/repositories/journeys_repository.dart';
 import '../widgets/journey_card.dart';
 
@@ -17,6 +19,100 @@ final journeyDetailProvider = FutureProvider.family<JourneyModel, String>((
 ) {
   return ref.watch(journeysRepositoryProvider).getJourneyDetail(journeyId);
 });
+
+final encounteredShopLabelsProvider = FutureProvider.autoDispose
+    .family<List<String>, EncounteredShopLabelsArgs>((ref, args) async {
+      if (args.entries.isEmpty) {
+        return const <String>[];
+      }
+
+      final shopsRepository = ref.watch(shopsRepositoryProvider);
+      final resolvedLabels = <String>[];
+      final seenLabels = <String>{};
+
+      for (final entry in args.entries) {
+        final label = await _resolveEncounteredShopLabel(
+          shopsRepository,
+          entry,
+        );
+        if (label.isEmpty) {
+          continue;
+        }
+
+        final dedupeKey = label.toLowerCase();
+        if (seenLabels.add(dedupeKey)) {
+          resolvedLabels.add(label);
+        }
+      }
+
+      return resolvedLabels;
+    });
+
+@immutable
+class EncounteredShopLabelsArgs {
+  EncounteredShopLabelsArgs(List<String> entries)
+    : entries = List.unmodifiable(entries);
+
+  final List<String> entries;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is EncounteredShopLabelsArgs &&
+            listEquals(other.entries, entries);
+  }
+
+  @override
+  int get hashCode => Object.hashAll(entries);
+}
+
+Future<String> _resolveEncounteredShopLabel(
+  ShopsRepository shopsRepository,
+  String rawValue,
+) async {
+  final normalizedValue = rawValue.trim();
+  if (normalizedValue.isEmpty) {
+    return '';
+  }
+
+  if (!_looksLikeShopId(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  try {
+    final shop = await shopsRepository.getShopDetail(normalizedValue);
+    final shopName = shop.name.trim();
+    return shopName.isEmpty ? normalizedValue : shopName;
+  } catch (_) {
+    return normalizedValue;
+  }
+}
+
+bool _looksLikeShopId(String value) {
+  if (value.contains(RegExp(r'\s'))) {
+    return false;
+  }
+
+  if (value.toLowerCase().startsWith('shop-')) {
+    return true;
+  }
+
+  if (RegExp(r'^\d+$').hasMatch(value)) {
+    return true;
+  }
+
+  if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(value)) {
+    return true;
+  }
+
+  if (RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  ).hasMatch(value)) {
+    return true;
+  }
+
+  return value.length >= 16 && RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(value);
+}
 
 class JourneyDetailScreen extends ConsumerStatefulWidget {
   const JourneyDetailScreen({
@@ -29,7 +125,8 @@ class JourneyDetailScreen extends ConsumerStatefulWidget {
   final JourneyModel? initialJourney;
 
   @override
-  ConsumerState<JourneyDetailScreen> createState() => _JourneyDetailScreenState();
+  ConsumerState<JourneyDetailScreen> createState() =>
+      _JourneyDetailScreenState();
 }
 
 class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
@@ -41,15 +138,15 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
     _appBarNotifier = ref.read(appBarProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _appBarNotifier.pushConfig(
-            AppBarConfig(
-              title: const Text('Journey Details'),
-              centerTitle: true,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          );
+        AppBarConfig(
+          title: const Text('Journey Details'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      );
     });
   }
 
@@ -231,42 +328,9 @@ class _JourneyDetailContent extends StatelessWidget {
           ),
         _DetailSection(
           title: 'Shops Encountered',
-          child: journey.shopsEncountered.isEmpty
-              ? Text(
-                  'No shops were recorded on this journey.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.grey600,
-                  ),
-                )
-              : Column(
-                  children: journey.shopsEncountered
-                      .map(
-                        (shop) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AppDimensions.sm,
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.storefront_outlined,
-                                size: 18,
-                                color: AppColors.secondary,
-                              ),
-                              const SizedBox(width: AppDimensions.sm),
-                              Expanded(
-                                child: Text(
-                                  shop,
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
+          child: _EncounteredShopsList(
+            shopsEncountered: journey.shopsEncountered,
+          ),
         ),
         _DetailSection(
           title: 'Route Trace',
@@ -360,6 +424,64 @@ class _DetailSection extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+class _EncounteredShopsList extends ConsumerWidget {
+  const _EncounteredShopsList({required this.shopsEncountered});
+
+  final List<String> shopsEncountered;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (shopsEncountered.isEmpty) {
+      return Text(
+        'No shops were recorded on this journey.',
+        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey600),
+      );
+    }
+
+    final labelsAsync = ref.watch(
+      encounteredShopLabelsProvider(
+        EncounteredShopLabelsArgs(shopsEncountered),
+      ),
+    );
+
+    return labelsAsync.when(
+      data: _buildRows,
+      loading: () => const Center(child: AppLoader.inline(size: 24)),
+      error: (_, _) => _buildRows(shopsEncountered),
+    );
+  }
+
+  Widget _buildRows(List<String> labels) {
+    return Column(
+      children: labels
+          .map(
+            (shop) => Padding(
+              padding: const EdgeInsets.only(bottom: AppDimensions.sm),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.storefront_outlined,
+                    size: 18,
+                    color: AppColors.secondary,
+                  ),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: Text(
+                      shop,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(growable: false),
     );
   }
 }

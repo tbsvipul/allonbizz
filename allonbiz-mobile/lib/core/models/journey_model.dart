@@ -86,7 +86,7 @@ class JourneyModel {
       endTimeDate: _parseDate(json['endTimeDate'] ?? json['endTime']),
       distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
       duration: (json['duration'] as num?)?.toInt() ?? 0,
-      shopsEncountered: List<String>.from(json['shopsEncountered'] ?? const []),
+      shopsEncountered: _parseEncounteredShops(json['shopsEncountered']),
       tags: List<String>.from(json['tags'] ?? const []),
       pathPoints: (json['pathPoints'] as List<dynamic>? ?? const [])
           .whereType<Map>()
@@ -135,5 +135,37 @@ class JourneyModel {
     if (field is String) return DateTime.tryParse(field);
     if (field is int) return DateTime.fromMillisecondsSinceEpoch(field);
     return null;
+  }
+
+  static List<String> _parseEncounteredShops(dynamic field) {
+    if (field is! List) {
+      return const <String>[];
+    }
+
+    return field
+        .map((entry) {
+          if (entry is String) {
+            return entry.trim();
+          }
+
+          if (entry is Map) {
+            final data = Map<String, dynamic>.from(entry);
+            return (data['shopName'] ??
+                    data['name'] ??
+                    data['ShopName'] ??
+                    data['Name'] ??
+                    data['shopId'] ??
+                    data['ShopId'] ??
+                    data['id'] ??
+                    data['Id'] ??
+                    '')
+                .toString()
+                .trim();
+          }
+
+          return entry?.toString().trim() ?? '';
+        })
+        .where((entry) => entry.isNotEmpty)
+        .toList(growable: false);
   }
 }

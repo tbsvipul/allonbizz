@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/models/journey_model.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_section_header.dart';
-import '../../../../shared/widgets/app_surface.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../navigate/presentation/controllers/navigation_controller.dart';
 import 'package:go_router/go_router.dart';
@@ -17,8 +15,6 @@ import '../../../../core/services/locale_provider.dart';
 import '../widgets/profile_tile_widget.dart';
 import '../widgets/profile_switch_tile_widget.dart';
 import '../../../../core/services/preference_providers.dart';
-import '../../../trips/data/repositories/journeys_repository.dart';
-import '../widgets/journey_card.dart';
 
 /// User profile, statistics, and settings.
 class ProfileScreen extends ConsumerWidget {
