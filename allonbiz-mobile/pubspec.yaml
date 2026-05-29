@@ -60,7 +60,8 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-
+    - assets/images/location_marker/
+   
   fonts:
     - family: Poppins
       fonts:

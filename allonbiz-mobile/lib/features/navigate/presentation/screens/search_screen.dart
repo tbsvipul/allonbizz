@@ -88,67 +88,66 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final popupSearchController = TextEditingController();
     final popupFocusNode = FocusNode();
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final searchState = ref.watch(searchControllerProvider);
-          final theme = Theme.of(context);
-          final colorScheme = theme.colorScheme;
-          final textTheme = theme.textTheme;
-          final isDark = theme.brightness == Brightness.dark;
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Consumer(
+          builder: (context, ref, _) {
+            final searchState = ref.watch(searchControllerProvider);
+            final theme = Theme.of(context);
+            final textTheme = theme.textTheme;
+            final isDark = theme.brightness == Brightness.dark;
 
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(25),
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(25),
               ),
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colorScheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(2),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Add your interests',
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,fontSize: 20
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: SearchInterestTags(
+                      tags: allTags,
+                      selectedInterests: searchState.selectedInterests,
+                      interestSearchController: popupSearchController,
+                      interestFocus: popupFocusNode,
+                      isAddingTag: searchState.isAddingCustomInterest,
+                      onAddCustomInterest: _addCustomInterest,
+                      onToggleInterest: (name) => ref
+                          .read(searchControllerProvider.notifier)
+                          .toggleInterest(name),
+                      isDark: isDark,
+                      height: MediaQuery.of(context).size.height * 0.55,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'What are you looking for?',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Expanded(
-                  child: SearchInterestTags(
-                    tags: allTags,
-                    selectedInterests: searchState.selectedInterests,
-                    interestSearchController: popupSearchController,
-                    interestFocus: popupFocusNode,
-                    isAddingTag: searchState.isAddingCustomInterest,
-                    onAddCustomInterest: _addCustomInterest,
-                    onToggleInterest: (name) => ref
-                        .read(searchControllerProvider.notifier)
-                        .toggleInterest(name),
-                    isDark: isDark,
-                    height: MediaQuery.of(context).size.height * 0.55,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     ).then((_) {
       popupSearchController.dispose();
