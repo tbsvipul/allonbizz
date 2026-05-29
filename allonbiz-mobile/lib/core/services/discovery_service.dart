@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/discovery_model.dart';
 import '../network/api_client.dart';
 import '../network/api_parsers.dart';
+import '../utils/app_logger.dart';
 
 final discoveryServiceProvider = Provider((ref) {
   return DiscoveryService(apiClient: ref.watch(apiClientProvider));
@@ -28,7 +28,7 @@ class DiscoveryService {
         ),
       );
     } catch (error) {
-      debugPrint('API Categories Error: $error');
+      AppLogger.warning('API categories error', error: error);
       return const [];
     }
   }
@@ -57,7 +57,7 @@ class DiscoveryService {
         ),
       );
     } catch (error) {
-      debugPrint('API Tags Error: $error');
+      AppLogger.warning('API tags error', error: error);
       return const [];
     }
   }
@@ -86,7 +86,7 @@ class DiscoveryService {
         return parseTagJson(asJsonMap(data));
       }
     } catch (error) {
-      debugPrint('API Add Tag Error: $error');
+      AppLogger.warning('API add tag error', error: error);
     }
     return null;
   }

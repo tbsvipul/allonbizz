@@ -44,7 +44,7 @@ interface Shop {
   isVerified: boolean;
   verifyStatus: string;
   isOpen?: boolean;
-  imageUrl?: string | null;
+  shopProfileImage?: string | null;
   rejectionReason?: string | null;
   deactivateReason?: string | null;
 }
@@ -960,8 +960,8 @@ export default function ShopsPage() {
                     >
                       <div className="shop-primary">
                         <div className="shop-avatar">
-                          {shop.imageUrl ? (
-                            <img src={shop.imageUrl} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          {shop.shopProfileImage ? (
+                            <img src={shop.shopProfileImage} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                           ) : (
                             <Store size={24} />
                           )}

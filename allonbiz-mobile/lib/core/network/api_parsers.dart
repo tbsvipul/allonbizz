@@ -122,6 +122,23 @@ bool boolValue(JsonMap json, List<String> keys, {bool fallback = false}) {
   return fallback;
 }
 
+bool? nullableBoolValue(JsonMap json, List<String> keys) {
+  final value = firstPresent(json, keys);
+  if (value is bool) {
+    return value;
+  }
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'true') {
+      return true;
+    }
+    if (normalized == 'false') {
+      return false;
+    }
+  }
+  return null;
+}
+
 DateTime? nullableDateValue(JsonMap json, List<String> keys) {
   final value = firstPresent(json, keys);
   if (value == null) {
@@ -199,6 +216,11 @@ Offer parseOfferJson(JsonMap json) {
     latitude: doubleValue(json, ['latitude', 'lat', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'lng', 'lon', 'Longitude']),
     imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
+    shopProfileImage: nullableStringValue(json, [
+      'shopProfileImage',
+      'ShopProfileImage',
+    ]),
+    shopIsOpen: nullableBoolValue(json, ['shopIsOpen', 'ShopIsOpen']),
     expiresAt: nullableDateValue(json, ['expiresAt', 'EndDate', 'ExpiresAt']),
     terms: nullableStringValue(json, ['terms', 'TermsAndConditions', 'Terms']),
     keeperId: nullableStringValue(json, ['keeperId', 'KeeperId']),
@@ -242,7 +264,10 @@ Shop parseShopJson(JsonMap json) {
     address: nullableStringValue(json, ['address', 'Address']),
     phoneNumber: nullableStringValue(json, ['phoneNumber', 'PhoneNumber']),
     email: nullableStringValue(json, ['email', 'Email']),
-    imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
+    shopProfileImage: nullableStringValue(json, [
+      'shopProfileImage',
+      'ShopProfileImage',
+    ]),
     latitude: doubleValue(json, ['latitude', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'Longitude']),
     isOpen: boolValue(json, ['isOpen', 'IsOpen'], fallback: true),
@@ -257,6 +282,21 @@ Shop parseShopJson(JsonMap json) {
 
 Shop parseShopEnvelope(Object? response) {
   return parseShopJson(extractEnvelopeDataMap(response));
+}
+
+Shop parseJourneyNearbyShopJson(JsonMap json) {
+  return Shop(
+    id: stringValue(json, ['shopId', 'ShopId', 'id']),
+    name: stringValue(json, ['name', 'Name'], fallback: 'Unknown Shop'),
+    address: nullableStringValue(json, ['address', 'Address']),
+    shopProfileImage: nullableStringValue(json, [
+      'shopProfileImage',
+      'ShopProfileImage',
+    ]),
+    latitude: doubleValue(json, ['latitude', 'Latitude']),
+    longitude: doubleValue(json, ['longitude', 'Longitude']),
+    isOpen: boolValue(json, ['isOpen', 'IsOpen'], fallback: false),
+  );
 }
 
 CategoryModel parseCategoryJson(JsonMap json) {

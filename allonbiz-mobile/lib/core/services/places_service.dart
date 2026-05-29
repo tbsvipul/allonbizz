@@ -1,11 +1,13 @@
 import 'dart:convert';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter/foundation.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:logger/logger.dart';
-import '../network/base_api.dart';
+import 'package:latlong2/latlong.dart';
+
 import '../network/api_client.dart';
+import '../network/base_api.dart';
+import '../utils/app_logger.dart';
 import '../utils/background_executor.dart';
 
 class PlaceSuggestion {
@@ -130,16 +132,29 @@ class PlacesService {
       return _suggestionsCache[query]!;
     }
 
-    final apiSuggestions = await _fetchSuggestionsFromApis(query);
-    if (apiSuggestions.isNotEmpty) {
-      _suggestionsCache[query] = apiSuggestions;
-      return apiSuggestions;
+    // Fire network sources concurrently to minimize latency
+    final results = await Future.wait([
+      _fetchPhotonSuggestions(query),
+      _fetchSuggestionsFromApis(query),
+    ]);
+
+    final photonSuggestions = results[0];
+    final apiSuggestions = results[1];
+
+    final merged = <PlaceSuggestion>[];
+    final seen = <String>{};
+
+    // Mix results (API first, then Photon)
+    for (final s in [...apiSuggestions, ...photonSuggestions]) {
+      final key = _dedupeKey(s);
+      if (seen.add(key)) {
+        merged.add(s);
+      }
     }
 
-    final photonSuggestions = await _fetchPhotonSuggestions(query);
-    if (photonSuggestions.isNotEmpty) {
-      _suggestionsCache[query] = photonSuggestions;
-      return photonSuggestions;
+    if (merged.isNotEmpty) {
+      _suggestionsCache[query] = merged;
+      return merged;
     }
 
     final fallbacks = _localFallbackSuggestions(query);
@@ -150,6 +165,7 @@ class PlacesService {
   }
 
   Future<List<PlaceSuggestion>> _fetchSuggestionsFromApis(String query) async {
+    // PRESERVED: backend search endpoint order is intentionally layered.
     final seenKeys = <String>{};
     final mergedSuggestions = <PlaceSuggestion>[];
     final candidateBaseUrls = <String>{
@@ -184,19 +200,30 @@ class PlacesService {
       '/nav/search?query=${Uri.encodeComponent(query)}',
     ];
 
-    for (final endpoint in endpoints) {
+    // Fire all candidate endpoints concurrently for faster response
+    final futures = endpoints.map((endpoint) async {
       try {
         final response = await _rawGet(baseUrl, endpoint);
-        final suggestions = await _parseSuggestionsResponse(response);
-        if (suggestions.isNotEmpty) {
-          return suggestions;
-        }
+        return await _parseSuggestionsResponse(response);
       } catch (_) {
-        // Quietly continue to the next source. Search already has layered fallbacks.
+        return const <PlaceSuggestion>[];
+      }
+    });
+
+    final results = await Future.wait(futures);
+
+    // Merge all non-empty results
+    final merged = <PlaceSuggestion>[];
+    final seen = <String>{};
+    for (final suggestions in results) {
+      for (final s in suggestions) {
+        if (seen.add(_dedupeKey(s))) {
+          merged.add(s);
+        }
       }
     }
 
-    return const [];
+    return merged;
   }
 
   Future<dynamic> _rawGet(String baseUrl, String endpoint) async {
@@ -398,15 +425,17 @@ class PlacesService {
       }
     } catch (e) {
       if (kIsWeb && e is http.ClientException) {
-        debugPrint(
-          'Reverse geocoding is unavailable in this browser session. Falling back to a generic location label.',
+        AppLogger.warning(
+          'Reverse geocoding is unavailable in this browser session. Falling '
+          'back to a generic location label.',
         );
       } else if (e.toString().contains('SocketException')) {
-        Logger().e(
-          'Photon Reverse API Lookup Failed: Please check your internet connection or DNS settings. ($e)',
+        AppLogger.error(
+          'Photon reverse API lookup failed. Check internet or DNS settings.',
+          error: e,
         );
       } else {
-        Logger().e('Photon Reverse API error: $e');
+        AppLogger.error('Photon reverse API error', error: e);
       }
     }
     return null;

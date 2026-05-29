@@ -31,6 +31,8 @@ public class OfferDetailDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
+    public bool ShopIsOpen { get; set; }
     public decimal? DiscountPercentage { get; set; }
     public decimal? MinOrderValue { get; set; }
     public DateTime EndDate { get; set; }

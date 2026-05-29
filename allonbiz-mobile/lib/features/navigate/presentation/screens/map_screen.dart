@@ -6,6 +6,7 @@ import '../../../../shared/widgets/app_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -15,13 +16,44 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/network/base_api.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/models/offer.dart';
 import '../../../../shared/models/shop.dart';
+import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../discover/presentation/screens/offer_detail_screen.dart';
 import '../../../discover/presentation/screens/shop_detail_screen.dart';
 import '../controllers/navigation_controller.dart';
-import '../../../../shared/widgets/app_button.dart';
+
+enum _MapMarkerType { shop, offerGroup }
+
+class _MapMarkerEntry {
+  const _MapMarkerEntry.shop(this.shop)
+    : offers = const <Offer>[],
+      type = _MapMarkerType.shop;
+
+  const _MapMarkerEntry.offerGroup(this.offers, {this.shop})
+    : type = _MapMarkerType.offerGroup;
+
+  final _MapMarkerType type;
+  final Shop? shop;
+  final List<Offer> offers;
+}
+
+final mapMarkerEntriesProvider = Provider<List<_MapMarkerEntry>>((ref) {
+  final nearbyOffers = ref.watch(
+    navigationControllerProvider.select((state) => state.offersOnRoute),
+  );
+  final nearbyShops = ref.watch(
+    navigationControllerProvider.select((state) => state.nearbyShops),
+  );
+
+  return _buildMarkerEntries(
+    nearbyOffers: nearbyOffers,
+    nearbyShops: nearbyShops,
+  );
+});
 
 /// Navigate / Map Screen.
 class MapScreen extends ConsumerStatefulWidget {
@@ -40,6 +72,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
   static const _defaultZoom = 13.0;
 
   late final MapController _mapController;
+  ProviderSubscription<String?>? _errorSubscription;
+  ProviderSubscription<Position?>? _locationSubscription;
+  ProviderSubscription<int>? _recenterSubscription;
+  ProviderSubscription<Offer?>? _selectedOfferSubscription;
+  ProviderSubscription<Shop?>? _selectedShopSubscription;
   String? _lastCameraKey;
   bool _isOffersExpanded = false;
 
@@ -47,6 +84,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   void initState() {
     super.initState();
     _mapController = MapController();
+    _bindListeners();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -77,8 +115,70 @@ class _MapScreenState extends ConsumerState<MapScreen>
     });
   }
 
+  void _bindListeners() {
+    _errorSubscription = ref.listenManual(
+      navigationControllerProvider.select((state) => state.errorMessage),
+      (previous, next) {
+        if (next != null && mounted) {
+          AppSnackbar.show(context, message: next, type: AppSnackbarType.error);
+        }
+      },
+    );
+
+    _locationSubscription = ref.listenManual(
+      currentLocationProvider.select((state) => state.position),
+      (previous, next) {
+        final navigationState = ref.read(navigationControllerProvider);
+        if (next != null &&
+            !navigationState.isLoading &&
+            !navigationState.hasActiveJourney) {
+          ref
+              .read(navigationControllerProvider.notifier)
+              .updateNearbyOffers(LatLng(next.latitude, next.longitude));
+        }
+      },
+    );
+
+    _recenterSubscription = ref.listenManual(mapRecenterTriggerProvider, (
+      previous,
+      next,
+    ) {
+      final currentLocation = ref.read(currentLocationProvider).position;
+      if (next == previous || currentLocation == null) {
+        return;
+      }
+      _mapController.move(
+        LatLng(currentLocation.latitude, currentLocation.longitude),
+        15,
+      );
+    });
+
+    _selectedOfferSubscription = ref.listenManual(
+      navigationControllerProvider.select((state) => state.selectedOffer),
+      (previous, next) {
+        if (next != null) {
+          _showOfferDetail(next);
+        }
+      },
+    );
+
+    _selectedShopSubscription = ref.listenManual(
+      navigationControllerProvider.select((state) => state.selectedShop),
+      (previous, next) {
+        if (next != null) {
+          _showShopDetailSheet(next.id);
+        }
+      },
+    );
+  }
+
   @override
   void dispose() {
+    _errorSubscription?.close();
+    _locationSubscription?.close();
+    _recenterSubscription?.close();
+    _selectedOfferSubscription?.close();
+    _selectedShopSubscription?.close();
     _mapController.dispose();
     super.dispose();
   }
@@ -107,7 +207,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
           _mapController.move(focusPoint, 15);
         }
       } catch (error, stackTrace) {
-        debugPrint('Camera sync failed: $error\n$stackTrace');
+        AppLogger.warning(
+          'Camera sync failed',
+          error: error,
+          stackTrace: stackTrace,
+        );
       }
     });
   }
@@ -117,9 +221,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
     super.build(context);
     final route = ref.watch(
       navigationControllerProvider.select((state) => state.currentRoute),
-    );
-    final isLoading = ref.watch(
-      navigationControllerProvider.select((state) => state.isLoading),
     );
 
     final origin = ref.watch(
@@ -134,71 +235,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final isJourneyActive = ref.watch(
       navigationControllerProvider.select((state) => state.hasActiveJourney),
     );
-    final rawNearbyOffers = ref.watch(
+    final nearbyOffers = ref.watch(
       navigationControllerProvider.select((state) => state.offersOnRoute),
     );
-    final rawNearbyShops = ref.watch(
-      navigationControllerProvider.select((state) => state.nearbyShops),
-    );
-    final nearbyOffers = rawNearbyOffers;
-    final nearbyShops = rawNearbyShops;
+    final markerEntries = ref.watch(mapMarkerEntriesProvider);
     final currentLocation = ref.watch(
       currentLocationProvider.select((state) => state.position),
     );
 
-    ref.listen(
-      navigationControllerProvider.select((state) => state.errorMessage),
-      (previous, next) {
-        if (next != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      },
-    );
-
-    ref.listen(currentLocationProvider.select((state) => state.position), (
-      previous,
-      next,
-    ) {
-      if (next != null && !isLoading && !isJourneyActive) {
-        ref
-            .read(navigationControllerProvider.notifier)
-            .updateNearbyOffers(LatLng(next.latitude, next.longitude));
-      }
-    });
-
     final currentPoint = currentLocation != null
         ? LatLng(currentLocation.latitude, currentLocation.longitude)
         : null;
-
-    ref.listen(mapRecenterTriggerProvider, (prev, next) {
-      if (next != prev && currentPoint != null) {
-        _mapController.move(currentPoint, 15);
-      }
-    });
-
-    ref.listen(navigationControllerProvider.select((s) => s.selectedOffer), (
-      prev,
-      next,
-    ) {
-      if (next != null) {
-        _showOfferDetail(next);
-      }
-    });
-
-    ref.listen(navigationControllerProvider.select((s) => s.selectedShop), (
-      prev,
-      next,
-    ) {
-      if (next != null) {
-        _showShopDetailSheet(next.id);
-      }
-    });
 
     final mapFocus = origin ?? currentPoint ?? _defaultCenter;
     final hasActiveRoute = route.length >= 2 && destination != null;
@@ -218,6 +265,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
               initialZoom: _defaultZoom,
               maxZoom: 18.4,
               minZoom: 3.0,
+              cameraConstraint: CameraConstraint.contain(
+                bounds: LatLngBounds(
+                  const LatLng(-90, -180),
+                  const LatLng(90, 180),
+                ),
+              ),
               onTap: (tapPosition, point) => FocusScope.of(context).unfocus(),
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
@@ -252,15 +305,31 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 ),
               if (isJourneyActive)
                 MarkerLayer(
-                  markers: _buildStaticMarkers(
-                    origin: origin,
-                    destination: destination,
-                    isFreeRoam: isFreeRoam,
-                    hasActiveRoute: hasActiveRoute,
-                    nearbyOffers: nearbyOffers,
-                    nearbyShops: nearbyShops,
-                    ref: ref,
-                  ),
+                  markers: [
+                    ..._buildStaticMarkers(
+                      markerEntries: markerEntries,
+                      ref: ref,
+                    ),
+                    if (destination != null)
+                      Marker(
+                        point: destination,
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.topCenter,
+                        child: const Icon(
+                          Icons.location_on_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 48,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black38,
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.3),
+                      ),
+                  ],
                 ),
               UserLocationMarkerLayer(hasActiveRoute: hasActiveRoute),
               const RichAttributionWidget(
@@ -357,7 +426,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.2),
               ],
             ),
-            ),
+          ),
         ],
       ),
     );
@@ -581,7 +650,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          offer.rating != null ? offer.rating!.toStringAsFixed(1) : '0.0',
+                          offer.rating != null
+                              ? offer.rating!.toStringAsFixed(1)
+                              : '0.0',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
@@ -696,122 +767,61 @@ class _MapControlButton extends StatelessWidget {
 }
 
 List<Marker> _buildStaticMarkers({
-  required LatLng? origin,
-  required LatLng? destination,
-  required bool isFreeRoam,
-  required bool hasActiveRoute,
-  required List<Offer> nearbyOffers,
-  required List<Shop> nearbyShops,
+  required List<_MapMarkerEntry> markerEntries,
   required WidgetRef ref,
 }) {
   final markers = <Marker>[];
-
-
-
-  final Map<String, List<Offer>> shopGroups = {};
-  for (final offer in nearbyOffers) {
-    final key = offer.shopId ?? offer.shopName;
-    shopGroups.putIfAbsent(key, () => []).add(offer);
-  }
-
-  final shopMarkerIds = <String>{};
-  for (final shop in nearbyShops) {
-    final shopId = shop.id.trim();
-    if (shopId.isEmpty) {
-      continue;
-    }
-    if (shop.latitude == 0 && shop.longitude == 0) {
-      continue;
-    }
-
-    shopMarkerIds.add(shopId);
-
-    // Skip drawing the shop marker if there are offers for this shop
-    if (shopGroups.containsKey(shopId) && shopGroups[shopId]!.isNotEmpty) {
-      continue;
-    }
-
-    markers.add(
-      Marker(
-        point: LatLng(shop.latitude, shop.longitude),
-        width: 60,
-        height: 60,
-        child: GestureDetector(
-          onTap: () {
-            ref.read(navigationControllerProvider.notifier).selectShop(shop.id);
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.rotate(
-                angle: 3.1415926535897932 / 4,
-                child: Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(23),
-                      topRight: Radius.circular(23),
-                      bottomLeft: Radius.circular(23),
-                      bottomRight: Radius.circular(4),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(2, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
-                  shape: BoxShape.circle,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: (shop.shopImages.isNotEmpty ? shop.shopImages.first : shop.imageUrl) != null && (shop.shopImages.isNotEmpty ? shop.shopImages.first : shop.imageUrl)!.isNotEmpty
-                    ? AppImage.network(
-                        shop.shopImages.isNotEmpty ? shop.shopImages.first : shop.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorWidget: const Center(
-                          child: Icon(
-                            Icons.storefront_rounded,
-                            color: AppColors.accent,
-                            size: 20,
-                          ),
-                        ),
-                      )
-                    : const Center(
-                        child: Icon(
-                          Icons.storefront_rounded,
-                          color: AppColors.accent,
-                          size: 20,
-                        ),
-                      ),
-              ),
-            ],
+  for (final entry in markerEntries) {
+    if (entry.type == _MapMarkerType.shop) {
+      final shop = entry.shop!;
+      markers.add(
+        Marker(
+          point: LatLng(shop.latitude, shop.longitude),
+          width: 60,
+          height: 60,
+          child: _MapPin(
+            color: _shopMarkerColor(shop),
+            imageUrl: shop.primaryImageUrl,
+            fallbackIcon: Icons.storefront_rounded,
+            onTap: () {
+              ref
+                  .read(navigationControllerProvider.notifier)
+                  .selectShop(shop.id);
+            },
           ),
         ),
-      ),
-    );
-  }
+      );
+      continue;
+    }
 
-  for (final entry in shopGroups.entries) {
-    final groupedOffers = entry.value;
+    final groupedOffers = entry.offers;
     final firstOffer = groupedOffers.first;
+    final matchedShop = entry.shop;
+    final markerColor = matchedShop != null
+        ? _shopMarkerColor(matchedShop)
+        : _offerMarkerColor(firstOffer);
+    final markerImageUrl =
+        matchedShop?.primaryImageUrl ?? firstOffer.shopProfileImage;
+    final fallbackIcon = matchedShop != null
+        ? Icons.storefront_rounded
+        : Icons.local_offer_rounded;
 
     markers.add(
       Marker(
         point: LatLng(firstOffer.latitude, firstOffer.longitude),
         width: 60,
         height: 60,
-        child: GestureDetector(
+        child: _MapPin(
+          color: markerColor,
+          imageUrl: markerImageUrl,
+          fallbackIcon: fallbackIcon,
           onTap: () {
+            if (matchedShop != null) {
+              ref
+                  .read(navigationControllerProvider.notifier)
+                  .selectShop(matchedShop.id);
+              return;
+            }
             if (groupedOffers.length > 1) {
               ref
                   .read(navigationControllerProvider.notifier)
@@ -822,70 +832,135 @@ List<Marker> _buildStaticMarkers({
                   .selectOffer(firstOffer);
             }
           },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.rotate(
-                angle: 3.1415926535897932 / 4,
-                child: Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(23),
-                      topRight: Radius.circular(23),
-                      bottomLeft: Radius.circular(23),
-                      bottomRight: Radius.circular(4),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(2, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
-                  shape: BoxShape.circle,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child:
-                    firstOffer.imageUrl != null &&
-                        firstOffer.imageUrl!.isNotEmpty
-                    ? AppImage.network(
-                        firstOffer.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorWidget: const Center(
-                          child: Icon(
-                            Icons.local_offer_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                        ),
-                      )
-                    : const Center(
-                        child: Icon(
-                          Icons.local_offer_rounded,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
   return markers;
+}
+
+List<_MapMarkerEntry> _buildMarkerEntries({
+  required List<Offer> nearbyOffers,
+  required List<Shop> nearbyShops,
+}) {
+  final shopGroups = <String, List<Offer>>{};
+  for (final offer in nearbyOffers) {
+    final key = offer.shopId ?? offer.shopName;
+    shopGroups.putIfAbsent(key, () => <Offer>[]).add(offer);
+  }
+  final shopsById = <String, Shop>{
+    for (final shop in nearbyShops)
+      if (shop.id.trim().isNotEmpty) shop.id.trim(): shop,
+  };
+  final shopsByName = <String, Shop>{
+    for (final shop in nearbyShops)
+      if (shop.name.trim().isNotEmpty) shop.name.trim().toLowerCase(): shop,
+  };
+
+  final markers = <_MapMarkerEntry>[];
+  for (final shop in nearbyShops) {
+    final shopId = shop.id.trim();
+    if (shopId.isEmpty || (shop.latitude == 0 && shop.longitude == 0)) {
+      continue;
+    }
+    if (shopGroups.containsKey(shopId) && shopGroups[shopId]!.isNotEmpty) {
+      continue;
+    }
+    markers.add(_MapMarkerEntry.shop(shop));
+  }
+
+  for (final group in shopGroups.entries) {
+    final offers = group.value;
+    if (offers.isEmpty) {
+      continue;
+    }
+    final matchedShop =
+        shopsById[group.key] ??
+        shopsByName[offers.first.shopName.trim().toLowerCase()];
+    markers.add(_MapMarkerEntry.offerGroup(offers, shop: matchedShop));
+  }
+
+  return markers;
+}
+
+Color _shopMarkerColor(Shop shop) {
+  return shop.isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+}
+
+Color _offerMarkerColor(Offer offer) {
+  final isOpen = offer.shopIsOpen;
+  if (isOpen == null) {
+    return AppColors.accent;
+  }
+  return isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin({
+    required this.color,
+    required this.imageUrl,
+    required this.fallbackIcon,
+    required this.onTap,
+  });
+
+  final Color color;
+  final String? imageUrl;
+  final IconData fallbackIcon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.rotate(
+            angle: 3.1415926535897932 / 4,
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(23),
+                  topRight: Radius.circular(23),
+                  bottomLeft: Radius.circular(23),
+                  bottomRight: Radius.circular(4),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(2, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              shape: BoxShape.circle,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: imageUrl != null && imageUrl!.isNotEmpty
+                ? AppImage.network(
+                    imageUrl!,
+                    fit: BoxFit.cover,
+                    errorWidget: Center(
+                      child: Icon(fallbackIcon, color: color, size: 20),
+                    ),
+                  )
+                : Center(child: Icon(fallbackIcon, color: color, size: 20)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class UserLocationMarkerLayer extends ConsumerWidget {

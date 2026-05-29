@@ -130,6 +130,8 @@ public class UserProfileService : IUserProfileService
             Latitude = o.Shop.Latitude,
             Longitude = o.Shop.Longitude,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl),
+            ShopIsOpen = o.Shop.IsOpen,
             DiscountPercentage = o.DiscountPercentage,
             EndDate = o.EndDate,
             Tags = o.Tags,
@@ -331,7 +333,8 @@ public class UserProfileService : IUserProfileService
                 DistanceKm = lat.HasValue && lng.HasValue && s.Latitude.HasValue && s.Longitude.HasValue
                     ? Math.Round(GeoHelper.CalculateDistanceKm(lat.Value, lng.Value, s.Latitude.Value, s.Longitude.Value), 2)
                     : 0,
-                ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl ?? s.ShopImages.FirstOrDefault()),
+                ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+                IsOpen = s.IsOpen,
             }).ToList(),
             Categories = categories,
         };
@@ -386,6 +389,8 @@ public class RouteService : IRouteService
             Latitude = o.Shop.Latitude,
             Longitude = o.Shop.Longitude,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl ?? o.Shop.ShopImages.FirstOrDefault()),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(o.Shop.ImageUrl),
+            ShopIsOpen = o.Shop.IsOpen,
             DiscountPercentage = o.DiscountPercentage,
             EndDate = o.EndDate,
         }).ToList();
@@ -519,6 +524,8 @@ public class UserOfferService : IOfferService
                 Latitude = candidate.Shop.Latitude,
                 Longitude = candidate.Shop.Longitude,
                 ImageUrl = ImageConversionHelper.ToBase64DataUrl(candidate.Offer.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl ?? candidate.Shop.ShopImages.FirstOrDefault()),
+                ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(candidate.Shop.ImageUrl),
+                ShopIsOpen = candidate.Shop.IsOpen,
                 DiscountPercentage = candidate.Offer.DiscountPercentage,
                 EndDate = candidate.Offer.EndDate,
                 Tags = candidate.Offer.Tags
@@ -551,6 +558,8 @@ public class UserOfferService : IOfferService
             Latitude = offer.Shop?.Latitude,
             Longitude = offer.Shop?.Longitude,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(offer.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl ?? offer.Shop?.ShopImages.FirstOrDefault()),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(offer.Shop?.ImageUrl),
+            ShopIsOpen = offer.Shop?.IsOpen ?? false,
             TermsAndConditions = offer.TermsAndConditions,
             DiscountPercentage = offer.DiscountPercentage,
             MinOrderValue = offer.MinOrderValue,
@@ -752,6 +761,8 @@ public class FavouriteService : IFavouriteService
                     Latitude = shop?.Latitude,
                     Longitude = shop?.Longitude,
                     ImageUrl = ImageConversionHelper.ToBase64DataUrl(favourite.Offer.ImageData) ?? ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl ?? shop?.ShopImages.FirstOrDefault()),
+                    ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(shop?.ImageUrl),
+                    ShopIsOpen = shop?.IsOpen ?? false,
                     DiscountPercentage = favourite.Offer.DiscountPercentage,
                     EndDate = favourite.Offer.EndDate,
                     IsVerified = shop?.IsVerified ?? false,
@@ -770,7 +781,8 @@ public class FavouriteService : IFavouriteService
                 Address = shopOnly?.Address,
                 Latitude = shopOnly?.Latitude,
                 Longitude = shopOnly?.Longitude,
-                ImageUrl = ImageConversionHelper.ToBase64DataUrl(shopOnly?.ImageUrl ?? shopOnly?.ShopImages.FirstOrDefault()),
+                ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(shopOnly?.ImageUrl),
+                ShopIsOpen = shopOnly?.IsOpen ?? false,
                 IsVerified = shopOnly?.IsVerified ?? false,
                 SavedAt = favourite.CreatedAt
             };

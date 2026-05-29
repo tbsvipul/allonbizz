@@ -40,9 +40,12 @@ public class JourneyRecommendationResponse
     public Guid ShopId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    public string? Address { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Distance { get; set; }
+    public string? ShopProfileImage { get; set; }
+    public bool IsOpen { get; set; }
     public List<string> Tags { get; set; } = new();
 }
 

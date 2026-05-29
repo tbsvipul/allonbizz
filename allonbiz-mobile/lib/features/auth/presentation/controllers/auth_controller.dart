@@ -41,6 +41,9 @@ class AuthState {
 
 /// Auth controller managing sign-in states.
 class AuthController extends StateNotifier<AuthState> {
+  static const String _genericAuthError =
+      'Something went wrong. Please try again.';
+
   final AuthRepository _repo;
   StreamSubscription? _authSub;
   bool _isManualAuth = false;
@@ -100,10 +103,10 @@ class AuthController extends StateNotifier<AuthState> {
       }
     } on Failure catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _genericAuthError,
       );
     } finally {
       _isManualAuth = false;
@@ -134,10 +137,10 @@ class AuthController extends StateNotifier<AuthState> {
       }
     } on Failure catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _genericAuthError,
       );
     } finally {
       _isManualAuth = false;
@@ -155,10 +158,10 @@ class AuthController extends StateNotifier<AuthState> {
       );
     } on Failure catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _genericAuthError,
       );
     }
   }
@@ -188,7 +191,10 @@ class AuthController extends StateNotifier<AuthState> {
       }
     } catch (e) {
       if (e is! AuthFailure) {
-        state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: _genericAuthError,
+        );
       }
       // If refresh fails due to 401, _repo already updates state to null
     }

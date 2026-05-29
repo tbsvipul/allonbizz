@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logger/logger.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_parsers.dart';
 import '../../../../core/services/current_location_provider.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../shared/models/offer.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
@@ -56,7 +56,7 @@ class HomeRepository {
         ),
       );
     } catch (error) {
-      Logger().e('Failed to fetch home data: $error');
+      AppLogger.error('Failed to fetch home data', error: error);
       return {};
     }
   }

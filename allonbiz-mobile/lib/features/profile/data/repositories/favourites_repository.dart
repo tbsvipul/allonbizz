@@ -16,6 +16,8 @@ class SavedItem {
     this.shopId,
     this.address,
     this.imageUrl,
+    this.shopProfileImage,
+    this.shopIsOpen,
     this.discountPercentage,
     this.endDate,
     this.isVerified = false,
@@ -29,6 +31,8 @@ class SavedItem {
   final String? shopId;
   final String? address;
   final String? imageUrl;
+  final String? shopProfileImage;
+  final bool? shopIsOpen;
   final double? discountPercentage;
   final DateTime? endDate;
   final bool isVerified;
@@ -46,6 +50,9 @@ class SavedItem {
       shopId: json['shopId']?.toString() ?? json['ShopId']?.toString(),
       address: (json['address'] ?? json['Address'])?.toString(),
       imageUrl: (json['imageUrl'] ?? json['ImageUrl'])?.toString(),
+      shopProfileImage: (json['shopProfileImage'] ?? json['ShopProfileImage'])
+          ?.toString(),
+      shopIsOpen: json['shopIsOpen'] as bool? ?? json['ShopIsOpen'] as bool?,
       discountPercentage:
           (json['discountPercentage'] as num?)?.toDouble() ??
           (json['DiscountPercentage'] as num?)?.toDouble(),

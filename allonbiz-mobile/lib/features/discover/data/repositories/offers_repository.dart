@@ -46,6 +46,7 @@ class OffersRepository {
         options: ApiReadOptions(
           cacheKey: 'offer-detail:$offerId',
           ttl: _detailTtl,
+          decodeInBackground: true,
         ),
       );
     } on ServerFailure catch (error) {

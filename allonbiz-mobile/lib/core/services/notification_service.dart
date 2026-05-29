@@ -116,6 +116,8 @@ class NotificationService {
       return;
     }
 
+    // PRESERVED: active journey notifications and background service state must
+    // remain aligned with persisted navigation sessions.
     await init();
     await showActiveJourneyNotification(title: title, body: body);
     await initBackgroundService(title: title, body: body);

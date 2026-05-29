@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import '../../../../app/routes/app_routes.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/extensions/navigation_x.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../navigate/presentation/controllers/navigation_controller.dart';
@@ -20,7 +21,7 @@ class NavigateCardWidget extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: () => context.push(
+      onTap: () => context.pushTo(
         hasActiveJourney ? AppRoutes.navigate : AppRoutes.search,
       ),
       child: Container(
@@ -128,7 +129,7 @@ class NavigateCardWidget extends ConsumerWidget {
                 if (hasActiveJourney) {
                   ref.read(navigationControllerProvider.notifier).clearRoute();
                 } else {
-                  context.push(AppRoutes.search);
+                  context.pushTo(AppRoutes.search);
                 }
               },
               child: Container(

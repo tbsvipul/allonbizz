@@ -10,7 +10,8 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/data/repositories/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/utils/auth_error_mapper.dart';
-import '../../../../core/providers/app_bar_provider.dart';
+import '../../../../core/widgets/app_bar_binding.dart';
+import '../../../../shared/widgets/app_status_banner.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -21,7 +22,6 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
-  late final AppBarNotifier _appBarNotifier;
   final _formKey = GlobalKey<FormState>();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -33,26 +33,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   @override
   void initState() {
     super.initState();
-    _appBarNotifier = ref.read(appBarProvider.notifier);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.pushConfig(
-        AppBarConfig(
-          title: const Text('Change Password'),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      );
-    });
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.popConfig();
-    });
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -163,111 +147,100 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     return PopScope(
       canPop: !_isLoading,
-      child: Scaffold(
-        body: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: AbsorbPointer(
-            absorbing: _isLoading,
-            child: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Update your password',
-                            style: textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'For security, you will be signed out after changing your password.',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+      child: AppBarBinding(
+        config: AppBarConfig(
+          title: const Text('Change Password'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        child: Scaffold(
+          body: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: AbsorbPointer(
+              absorbing: _isLoading,
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Update your password',
+                              style: textTheme.headlineSmall,
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          if (_errorMessage != null) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.error.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
+                            const SizedBox(height: 8),
+                            Text(
+                              'For security, you will be signed out after changing your password.',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: colorScheme.error,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      AuthErrorMapper.getMessage(
-                                        _errorMessage,
-                                        l10n,
-                                      ),
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.error,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            const SizedBox(height: 24),
+                            if (_errorMessage != null) ...[
+                              AppStatusBanner(
+                                message: AuthErrorMapper.getMessage(
+                                  _errorMessage,
+                                  l10n,
+                                ),
+                                variant: AppStatusBannerVariant.error,
+                                textStyle: textTheme.bodyMedium,
                               ),
+                              const SizedBox(height: 16),
+                            ],
+                            AppTextField.password(
+                              controller: _currentPasswordController,
+                              label: 'Current Password',
+                              hint: 'Enter your current password',
+                              prefixIcon: Icon(
+                                Icons.lock_outline,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              validator: _validateCurrentPassword,
+                              onChanged: (_) => _clearError(),
                             ),
                             const SizedBox(height: 16),
+                            AppTextField.password(
+                              controller: _newPasswordController,
+                              label: 'New Password',
+                              hint: 'Enter your new password',
+                              prefixIcon: Icon(
+                                Icons.lock_reset_rounded,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              validator: _validateNewPassword,
+                              onChanged: (_) => _clearError(),
+                            ),
+                            const SizedBox(height: 16),
+                            AppTextField.password(
+                              controller: _confirmPasswordController,
+                              label: 'Confirm Password',
+                              hint: 'Re-enter your new password',
+                              prefixIcon: Icon(
+                                Icons.verified_user_outlined,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              validator: _validateConfirmPassword,
+                              onChanged: (_) => _clearError(),
+                              onSubmitted: (_) => _changePassword(),
+                            ),
+                            const SizedBox(height: 24),
+                            AppButton.primary(
+                              label: 'Change Password',
+                              isLoading: _isLoading,
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => _changePassword(),
+                            ),
                           ],
-                          AppTextField.password(
-                            controller: _currentPasswordController,
-                            label: 'Current Password',
-                            hint: 'Enter your current password',
-                            prefixIcon: Icon(
-                              Icons.lock_outline,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            validator: _validateCurrentPassword,
-                            onChanged: (_) => _clearError(),
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField.password(
-                            controller: _newPasswordController,
-                            label: 'New Password',
-                            hint: 'Enter your new password',
-                            prefixIcon: Icon(
-                              Icons.lock_reset_rounded,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            validator: _validateNewPassword,
-                            onChanged: (_) => _clearError(),
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField.password(
-                            controller: _confirmPasswordController,
-                            label: 'Confirm Password',
-                            hint: 'Re-enter your new password',
-                            prefixIcon: Icon(
-                              Icons.verified_user_outlined,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            validator: _validateConfirmPassword,
-                            onChanged: (_) => _clearError(),
-                            onSubmitted: (_) => _changePassword(),
-                          ),
-                          const SizedBox(height: 24),
-                          AppButton.primary(
-                            label: 'Change Password',
-                            isLoading: _isLoading,
-                            onPressed: _isLoading
-                                ? null
-                                : () => _changePassword(),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

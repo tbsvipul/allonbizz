@@ -12,6 +12,7 @@ class OfferCard extends StatelessWidget {
     required this.category,
     required this.discountPercent,
     required this.distance,
+    this.imageUrl,
     required this.onTap,
   });
 
@@ -20,6 +21,7 @@ class OfferCard extends StatelessWidget {
   final String category;
   final double discountPercent;
   final String distance;
+  final String? imageUrl;
   final VoidCallback onTap;
 
   @override
@@ -53,7 +55,19 @@ class OfferCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  const AppImage.network(''), // Dummy URL for now
+                  AppImage.network(
+                    imageUrl ?? '',
+                    fit: BoxFit.cover,
+                    errorWidget: Container(
+                      color: AppColors.grey200,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.local_offer_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 28,
+                      ),
+                    ),
+                  ),
                   Positioned(
                     top: AppDimensions.xs,
                     left: AppDimensions.xs,

@@ -14,6 +14,7 @@ import '../../../../core/services/discovery_service.dart';
 import '../../../../core/services/places_service.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../controllers/navigation_controller.dart';
+import '../controllers/search_controller.dart';
 import '../widgets/search_input_fields.dart';
 import '../widgets/search_interest_tags.dart';
 import '../widgets/search_suggestions_list.dart';
@@ -34,18 +35,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   late final FocusNode _searchFocus;
   late final FocusNode _interestFocus;
 
-  Timer? _debounce;
-  List<PlaceSuggestion> _suggestions = const [];
-  bool _isLoading = false;
-  bool _isStartingJourney = false;
-  final List<String> _selectedInterests = [];
-  final List<TagModel> _customInterests = [];
-
-  LatLng? _selectedOrigin;
-  String? _selectedOriginLabel;
-  LatLng? _selectedDestination;
-  String? _selectedDestinationName;
-
   @override
   void initState() {
     super.initState();
@@ -57,6 +46,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _interestFocus = FocusNode();
     _originFocus.addListener(_handleFocusChange);
     _searchFocus.addListener(_handleFocusChange);
+    _interestFocus.addListener(_handleFocusChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocus.requestFocus();
@@ -79,40 +69,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (mounted) {
       setState(() {});
     }
+    if (!_originFocus.hasFocus && !_searchFocus.hasFocus) {
+      ref.read(searchControllerProvider.notifier).clearSuggestions();
+    }
   }
 
-  Future<void> _addCustomInterest(String text) async {
-    if (text.trim().isEmpty) return;
-    final label = text.trim();
-    if (_selectedInterests.contains(label)) return;
-
-    // Optimistically add it locally first for instant user feedback
-    final tempTag = TagModel(
-      id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
-      name: label,
-      iconCode: TagModel.guessIcon(label).codePoint,
-    );
-
-    if (mounted) {
-      setState(() {
-        _selectedInterests.add(label);
-        _customInterests.add(tempTag);
-        _interestSearchController.clear();
-      });
+  Future<CustomInterestAddStatus> _addCustomInterest(String text) async {
+    final status = await ref
+        .read(searchControllerProvider.notifier)
+        .addCustomInterest(text);
+    if (status == CustomInterestAddStatus.added) {
+      _interestSearchController.clear();
     }
-
-    try {
-      final addedTag = await ref.read(discoveryServiceProvider).addTag(label);
-      if (addedTag != null && mounted) {
-        setState(() {
-          // Replace temp tag with real backend saved tag
-          _customInterests.removeWhere((t) => t.name == label);
-          _customInterests.add(addedTag);
-        });
-      }
-    } catch (e) {
-      debugPrint('Error adding custom interest: $e');
-    }
+    return status;
   }
 
   void _showAllTagsDialog(List<TagModel> allTags) {
@@ -123,8 +92,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final searchState = ref.watch(searchControllerProvider);
           final theme = Theme.of(context);
           final colorScheme = theme.colorScheme;
           final textTheme = theme.textTheme;
@@ -163,23 +133,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Expanded(
                   child: SearchInterestTags(
                     tags: allTags,
-                    selectedInterests: _selectedInterests,
+                    selectedInterests: searchState.selectedInterests,
                     interestSearchController: popupSearchController,
                     interestFocus: popupFocusNode,
-                    onAddCustomInterest: (name) async {
-                      await _addCustomInterest(name);
-                      setModalState(() {});
-                    },
-                    onToggleInterest: (name) {
-                      setState(() {
-                        if (_selectedInterests.contains(name)) {
-                          _selectedInterests.remove(name);
-                        } else {
-                          _selectedInterests.add(name);
-                        }
-                      });
-                      setModalState(() {});
-                    },
+                    isAddingTag: searchState.isAddingCustomInterest,
+                    onAddCustomInterest: _addCustomInterest,
+                    onToggleInterest: (name) => ref
+                        .read(searchControllerProvider.notifier)
+                        .toggleInterest(name),
                     isDark: isDark,
                     height: MediaQuery.of(context).size.height * 0.55,
                   ),
@@ -197,7 +158,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _originController.dispose();
     _searchController.dispose();
     _interestSearchController.dispose();
@@ -207,176 +167,46 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
-  void _handleOriginChanged(String value) {
-    if (_selectedOriginLabel != null && value != _selectedOriginLabel) {
-      setState(() {
-        _selectedOrigin = null;
-        _selectedOriginLabel = null;
-      });
-    }
-
-    _debounce?.cancel();
-    if (value.trim().length < 2) {
-      setState(() => _suggestions = const []);
-      return;
-    }
-
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        _runSearch(value.trim(), isOrigin: true);
-      }
-    });
-  }
-
-  void _handleSearchChanged(String value) {
-    final trimmed = value.trim();
-
-    if (_selectedDestinationName != null &&
-        trimmed != _selectedDestinationName) {
-      setState(() {
-        _selectedDestination = null;
-        _selectedDestinationName = null;
-      });
-    }
-
-    _debounce?.cancel();
-
-    if (trimmed.length < 2) {
-      setState(() {
-        _suggestions = const [];
-      });
-      return;
-    }
-
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        _runSearch(trimmed);
-      }
-    });
-  }
-
-  Future<void> _runSearch(
-    String query, {
-    bool autoSelectFirst = false,
-    bool isOrigin = false,
-  }) async {
-    if (!mounted || query.trim().isEmpty) return;
-
-    final activeQuery = query.trim();
-
-    if (mounted) {
-      setState(() => _isLoading = true);
-    }
-
-    try {
-      final suggestions = await ref
-          .read(placesServiceProvider)
-          .getAutocompleteSuggestions(query);
-
-      if (!mounted) return;
-
-      final currentText = isOrigin
-          ? _originController.text
-          : _searchController.text;
-      if (currentText.trim() != activeQuery) return;
-
-      if (autoSelectFirst && suggestions.isNotEmpty) {
-        _selectSuggestion(suggestions.first, isOrigin: isOrigin);
-        return;
-      }
-
-      if (mounted) {
-        setState(() {
-          _suggestions = suggestions;
-        });
-      }
-    } catch (_) {
-      // Quietly fail for autocomplete
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   Future<void> _handleSearchSubmitted(
     String value, {
-    bool isOrigin = false,
+    required SearchInputField field,
   }) async {
     if (value.trim().length < 2) return;
-    await _runSearch(value.trim(), autoSelectFirst: true, isOrigin: isOrigin);
+    await ref
+        .read(searchControllerProvider.notifier)
+        .searchImmediately(value.trim(), field: field, autoSelectFirst: true);
+    _syncSelectedTextFields();
   }
 
-  void _selectSuggestion(PlaceSuggestion suggestion, {bool isOrigin = false}) {
-    if (mounted) {
-      setState(() {
-        if (isOrigin) {
-          _selectedOrigin = LatLng(suggestion.lat, suggestion.lon);
-          _selectedOriginLabel = suggestion.name;
-          _originController.text = suggestion.name;
-          _searchFocus.requestFocus();
-        } else {
-          _selectedDestination = LatLng(suggestion.lat, suggestion.lon);
-          _selectedDestinationName = suggestion.name;
-          _searchController.text = suggestion.name;
-          _interestFocus.requestFocus();
-        }
-        _suggestions = const [];
-      });
+  void _selectSuggestion(
+    PlaceSuggestion suggestion, {
+    required SearchInputField field,
+  }) {
+    ref
+        .read(searchControllerProvider.notifier)
+        .selectSuggestion(suggestion, field: field);
+    _syncSelectedTextFields();
+    if (field == SearchInputField.origin) {
+      _searchFocus.requestFocus();
+    } else {
+      _interestFocus.requestFocus();
     }
   }
 
   Future<bool> _resolvePendingSelection({required bool isOrigin}) async {
     final controller = isOrigin ? _originController : _searchController;
-    final selectedLabel = isOrigin
-        ? _selectedOriginLabel
-        : _selectedDestinationName;
-    final selectedPoint = isOrigin ? _selectedOrigin : _selectedDestination;
-    final query = controller.text.trim();
-
-    if (query.isEmpty) {
-      return true;
+    final resolved = await ref
+        .read(searchControllerProvider.notifier)
+        .resolvePendingSelection(
+          controller.text,
+          field: isOrigin
+              ? SearchInputField.origin
+              : SearchInputField.destination,
+        );
+    if (resolved) {
+      _syncSelectedTextFields();
     }
-
-    if (selectedPoint != null && selectedLabel == query) {
-      return true;
-    }
-
-    final suggestions = await ref
-        .read(placesServiceProvider)
-        .getAutocompleteSuggestions(query);
-
-    if (!mounted || suggestions.isEmpty) {
-      return false;
-    }
-
-    _selectSuggestion(
-      _bestMatchingSuggestion(query, suggestions),
-      isOrigin: isOrigin,
-    );
-    return true;
-  }
-
-  PlaceSuggestion _bestMatchingSuggestion(
-    String query,
-    List<PlaceSuggestion> suggestions,
-  ) {
-    final normalized = query.trim().toLowerCase();
-    for (final suggestion in suggestions) {
-      if (suggestion.name.toLowerCase() == normalized) {
-        return suggestion;
-      }
-    }
-    for (final suggestion in suggestions) {
-      final haystack = '${suggestion.name} ${suggestion.description}'
-          .toLowerCase();
-      if (haystack.contains(normalized)) {
-        return suggestion;
-      }
-    }
-    return suggestions.first;
+    return resolved;
   }
 
   Future<void> _useCurrentLocationAsStartPoint() async {
@@ -421,33 +251,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     if (!mounted) return;
 
-    if (mounted) {
-      setState(() {
-        _selectedOrigin = LatLng(
-          locationState.position!.latitude,
-          locationState.position!.longitude,
+    ref
+        .read(searchControllerProvider.notifier)
+        .setOrigin(
+          LatLng(
+            locationState.position!.latitude,
+            locationState.position!.longitude,
+          ),
+          label,
         );
-        _selectedOriginLabel = label;
-        _originController.text = label;
-      });
-    }
+    _originController.text = label;
 
     // Move focus to destination
     _searchFocus.requestFocus();
   }
 
   Future<void> _startJourney() async {
-    if (_isStartingJourney) return;
+    final searchController = ref.read(searchControllerProvider.notifier);
+    final currentSearchState = ref.read(searchControllerProvider);
+    if (currentSearchState.isStartingJourney) return;
 
     final router = GoRouter.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    if (mounted) {
-      setState(() {
-        _isStartingJourney = true;
-      });
-    }
+    searchController.setJourneyStarting(true);
 
     try {
       await ref
@@ -464,7 +292,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Active Journey Detected'),
-            content: const Text('You currently have an active journey. Do you want to end it and start a new journey?'),
+            content: const Text(
+              'You currently have an active journey. Do you want to end it and start a new journey?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -479,11 +309,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         );
 
         if (shouldStartNew != true) {
-          if (mounted) {
-            setState(() {
-              _isStartingJourney = false;
-            });
-          }
+          searchController.setJourneyStarting(false);
           return;
         }
 
@@ -493,7 +319,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final locationNotifier = ref.read(currentLocationProvider.notifier);
       var locationState = ref.read(currentLocationProvider);
 
-      if (_originController.text.trim().isNotEmpty && _selectedOrigin == null) {
+      var searchState = ref.read(searchControllerProvider);
+
+      if (_originController.text.trim().isNotEmpty &&
+          searchState.selectedOrigin == null) {
         final resolvedOrigin = await _resolvePendingSelection(isOrigin: true);
         if (!resolvedOrigin && mounted) {
           scaffoldMessenger.showSnackBar(
@@ -506,10 +335,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           );
           return;
         }
+        searchState = ref.read(searchControllerProvider);
       }
 
       final wantsDestination = _searchController.text.trim().isNotEmpty;
-      if (wantsDestination && _selectedDestination == null) {
+      if (wantsDestination && searchState.selectedDestination == null) {
         final resolvedDestination = await _resolvePendingSelection(
           isOrigin: false,
         );
@@ -524,9 +354,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           );
           return;
         }
+        searchState = ref.read(searchControllerProvider);
       }
 
-      if (_selectedOrigin == null && locationState.position == null) {
+      if (searchState.selectedOrigin == null &&
+          locationState.position == null) {
         await locationNotifier.fetchCurrentLocation(
           requestPermission: true,
           resolvePlaceName: false,
@@ -535,7 +367,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       }
 
       final origin =
-          _selectedOrigin ??
+          searchState.selectedOrigin ??
           (locationState.position != null
               ? LatLng(
                   locationState.position!.latitude,
@@ -545,7 +377,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
       if (!mounted) return;
 
-      if (locationState.position == null && _selectedOrigin == null) {
+      if (locationState.position == null &&
+          searchState.selectedOrigin == null) {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text(
@@ -555,20 +388,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         );
       } else {
-        _selectedOriginLabel ??=
-            locationState.placeName ?? l10n.currentLocation;
+        if (searchState.selectedOriginLabel == null) {
+          searchController.setOrigin(
+            origin,
+            locationState.placeName ?? l10n.currentLocation,
+          );
+          searchState = ref.read(searchControllerProvider);
+          _syncSelectedTextFields();
+        }
       }
 
       final interestQuery = _interestSearchController.text.trim();
-      if (_selectedDestination != null && _selectedDestinationName != null) {
+      if (searchState.selectedDestination != null &&
+          searchState.selectedDestinationName != null) {
         final started = await ref
             .read(navigationControllerProvider.notifier)
             .setDestination(
               origin,
-              _selectedDestination!,
-              _selectedDestinationName!,
-              startName: _selectedOriginLabel,
-              interests: _selectedInterests,
+              searchState.selectedDestination!,
+              searchState.selectedDestinationName!,
+              startName: searchState.selectedOriginLabel,
+              interests: searchState.selectedInterests,
               interestQuery: interestQuery.isEmpty ? null : interestQuery,
             );
         if (!started) {
@@ -578,7 +418,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final started = await ref
             .read(navigationControllerProvider.notifier)
             .startFreeRoam(
-              interests: _selectedInterests,
+              interests: searchState.selectedInterests,
               query: interestQuery.isEmpty ? null : interestQuery,
               currentPosition: origin,
             );
@@ -590,16 +430,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (!mounted) return;
       router.go(AppRoutes.navigate);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isStartingJourney = false;
-        });
-      }
+      searchController.setJourneyStarting(false);
+    }
+  }
+
+  void _syncSelectedTextFields() {
+    final searchState = ref.read(searchControllerProvider);
+    final originLabel = searchState.selectedOriginLabel;
+    if (originLabel != null && _originController.text != originLabel) {
+      _originController.value = TextEditingValue(
+        text: originLabel,
+        selection: TextSelection.collapsed(offset: originLabel.length),
+      );
+    }
+
+    final destinationLabel = searchState.selectedDestinationName;
+    if (destinationLabel != null &&
+        _searchController.text != destinationLabel) {
+      _searchController.value = TextEditingValue(
+        text: destinationLabel,
+        selection: TextSelection.collapsed(offset: destinationLabel.length),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final searchState = ref.watch(searchControllerProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -642,24 +499,46 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       destinationController: _searchController,
                       originFocus: _originFocus,
                       destinationFocus: _searchFocus,
-                      onOriginChanged: _handleOriginChanged,
-                      onDestinationChanged: _handleSearchChanged,
-                      onOriginSubmitted: (v) =>
-                          _handleSearchSubmitted(v, isOrigin: true),
-                      onDestinationSubmitted: (v) => _handleSearchSubmitted(v),
+                      onOriginChanged: (value) {
+                        ref
+                            .read(searchControllerProvider.notifier)
+                            .handleQueryChanged(
+                              value,
+                              field: SearchInputField.origin,
+                            );
+                      },
+                      onDestinationChanged: (value) {
+                        ref
+                            .read(searchControllerProvider.notifier)
+                            .handleQueryChanged(
+                              value,
+                              field: SearchInputField.destination,
+                            );
+                      },
+                      onOriginSubmitted: (v) => _handleSearchSubmitted(
+                        v,
+                        field: SearchInputField.origin,
+                      ),
+                      onDestinationSubmitted: (v) => _handleSearchSubmitted(
+                        v,
+                        field: SearchInputField.destination,
+                      ),
                       onUseCurrentLocation: _useCurrentLocationAsStartPoint,
                       isDark: isDark,
                     ),
 
                     // Suggestions for active field
-                    if (_isLoading || _suggestions.isNotEmpty)
+                    if (searchState.isLoading ||
+                        searchState.suggestions.isNotEmpty)
                       SearchSuggestionsList(
-                        suggestions: _suggestions,
-                        isLoading: _isLoading,
+                        suggestions: searchState.suggestions,
+                        isLoading: searchState.isLoading,
                         isDark: isDark,
-                        onSelect: (s) => _selectSuggestion(
-                          s,
-                          isOrigin: _originFocus.hasFocus,
+                        onSelect: (suggestion) => _selectSuggestion(
+                          suggestion,
+                          field: _originFocus.hasFocus
+                              ? SearchInputField.origin
+                              : SearchInputField.destination,
                         ),
                       ),
 
@@ -670,25 +549,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         .watch(tagsProvider)
                         .when(
                           data: (tags) {
-                            final allTags = [...tags, ..._customInterests];
+                            final allTags = [
+                              ...tags,
+                              ...searchState.customInterests,
+                            ];
                             return SearchInterestTags(
                               tags: allTags,
-                              selectedInterests: _selectedInterests,
+                              selectedInterests: searchState.selectedInterests,
                               interestSearchController:
                                   _interestSearchController,
                               interestFocus: _interestFocus,
+                              isAddingTag: searchState.isAddingCustomInterest,
                               onAddCustomInterest: _addCustomInterest,
-                              onToggleInterest: (name) {
-                                if (mounted) {
-                                  setState(() {
-                                    if (_selectedInterests.contains(name)) {
-                                      _selectedInterests.remove(name);
-                                    } else {
-                                      _selectedInterests.add(name);
-                                    }
-                                  });
-                                }
-                              },
+                              onToggleInterest: (name) => ref
+                                  .read(searchControllerProvider.notifier)
+                                  .toggleInterest(name),
                               onShowAllTags: () => _showAllTagsDialog(allTags),
                               isDark: isDark,
                               isCompact: true,
@@ -720,7 +595,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _isStartingJourney ? null : _startJourney,
+                  onPressed: searchState.isStartingJourney
+                      ? null
+                      : _startJourney,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
@@ -734,7 +611,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       alpha: 0.5,
                     ),
                   ),
-                  child: _isStartingJourney
+                  child: searchState.isStartingJourney
                       ? SizedBox(
                           width: 20,
                           height: 20,

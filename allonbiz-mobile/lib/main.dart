@@ -7,18 +7,24 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'core/services/storage_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/utils/app_logger.dart';
 import 'app/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   FlutterError.onError = (details) {
-    debugPrint('Flutter Error: ${details.exception}');
+    AppLogger.error(
+      'Flutter framework error',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
   };
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Async Error: $error');
+    AppLogger.error('Unhandled async error', error: error, stackTrace: stack);
     return true;
   };
 

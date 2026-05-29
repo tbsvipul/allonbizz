@@ -15,7 +15,7 @@ public class ShopSummaryDto
     public bool IsOpen { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
     public string? RejectionReason { get; set; }
     public string? DeactivateReason { get; set; }
 }
@@ -41,7 +41,7 @@ public class ShopDetailDto
     public string VerifyStatus { get; set; } = "Pending";
     public bool IsOpen { get; set; }
     public double? NotificationRadius { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
     public List<string> ShopImages { get; set; } = new();
     public List<string> Tags { get; set; } = new();
     public List<string> Amenities { get; set; } = new();
@@ -71,7 +71,7 @@ public class CreateShopRequestDto
     public Guid? CategoryId { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
     public List<string> ShopImages { get; set; } = new();
     public bool IsOpen { get; set; } = true;
     public double? NotificationRadius { get; set; }
@@ -86,7 +86,7 @@ public class UpdateShopRequestDto
     public string? Address { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
     public List<string> ShopImages { get; set; } = new();
     public Guid? CategoryId { get; set; }
     public double? Latitude { get; set; }

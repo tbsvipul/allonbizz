@@ -8,8 +8,8 @@ import '../../../../shared/widgets/app_image.dart';
 import '../../data/repositories/notifications_repository.dart';
 import 'package:intl/intl.dart';
 
-final notificationsListProvider =
-    FutureProvider.autoDispose.family<List<UserNotification>, int>((ref, page) {
+final notificationsListProvider = FutureProvider.autoDispose
+    .family<List<UserNotification>, int>((ref, page) {
       return ref
           .watch(notificationsRepositoryProvider)
           .getNotifications(page: page)
@@ -60,15 +60,19 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       child: ListTile(
                         onTap: () async {
                           if (!n.isRead) {
-                            await ref.read(notificationsRepositoryProvider).markAsRead(n.id);
+                            await ref
+                                .read(notificationsRepositoryProvider)
+                                .markAsRead(n.id);
                             ref.invalidate(unreadNotificationCountProvider);
                             ref.invalidate(notificationsListProvider);
                           }
                           if (!context.mounted) return;
-                          
-                          if (n.actionOfferId != null && n.actionOfferId!.isNotEmpty) {
+
+                          if (n.actionOfferId != null &&
+                              n.actionOfferId!.isNotEmpty) {
                             context.push('/offer-detail/${n.actionOfferId}');
-                          } else if (n.actionShopId != null && n.actionShopId!.isNotEmpty) {
+                          } else if (n.actionShopId != null &&
+                              n.actionShopId!.isNotEmpty) {
                             context.push('/shop-detail/${n.actionShopId}');
                           }
                         },
@@ -83,7 +87,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
@@ -102,37 +108,69 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                           children: [
                             const SizedBox(height: 4),
                             Text(n.message),
-                            if (n.actionOfferId != null && n.actionOfferId!.isNotEmpty) ...[
+                            if (n.actionOfferId != null &&
+                                n.actionOfferId!.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.1),
+                                  color: AppColors.success.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.sell_rounded, size: 12, color: AppColors.success),
+                                    const Icon(
+                                      Icons.sell_rounded,
+                                      size: 12,
+                                      color: AppColors.success,
+                                    ),
                                     const SizedBox(width: 4),
-                                    Text('Tap to view offer', style: AppTextStyles.labelSmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'Tap to view offer',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.success,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                            ] else if (n.actionShopId != null && n.actionShopId!.isNotEmpty) ...[
+                            ] else if (n.actionShopId != null &&
+                                n.actionShopId!.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.storefront_rounded, size: 12, color: AppColors.primary),
+                                    const Icon(
+                                      Icons.storefront_rounded,
+                                      size: 12,
+                                      color: AppColors.primary,
+                                    ),
                                     const SizedBox(width: 4),
-                                    Text('Tap to view shop', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'Tap to view shop',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),

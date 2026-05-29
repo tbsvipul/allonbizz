@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../../app/routes/app_routes.dart';
+import '../../../../core/constants/app_durations.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -11,6 +13,7 @@ import '../../../navigate/presentation/controllers/navigation_controller.dart';
 
 import '../../../../core/services/discovery_service.dart';
 import '../../../../core/models/discovery_model.dart';
+import '../../../navigate/presentation/utils/interest_tag_utils.dart';
 
 class InterestsDialogWidget extends ConsumerStatefulWidget {
   const InterestsDialogWidget({super.key});
@@ -38,52 +41,15 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
 
     setState(() {
       _selectedTags.value = Set.from(_selectedTags.value)..add(label);
-      final newTag = TagModel(
-        id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
-        name: label,
-        iconCode: _getIconForInterest(label).codePoint,
-      );
-      _customTags.add(newTag);
+      _customTags.add(buildCustomInterestTag(label));
       _searchController.clear();
     });
-  }
-
-  IconData _getIconForInterest(String text) {
-    final lower = text.toLowerCase();
-    if (lower.contains('pizza')) return Icons.local_pizza_rounded;
-    if (lower.contains('burger') || lower.contains('food')) {
-      return Icons.restaurant_rounded;
-    }
-    if (lower.contains('coffee') || lower.contains('cafe')) {
-      return Icons.local_cafe_rounded;
-    }
-    if (lower.contains('drink') || lower.contains('bar')) {
-      return Icons.local_bar_rounded;
-    }
-    if (lower.contains('cloth') || lower.contains('fashion')) {
-      return Icons.checkroom_rounded;
-    }
-    if (lower.contains('tech') || lower.contains('electr')) {
-      return Icons.devices_other_rounded;
-    }
-    if (lower.contains('shop') || lower.contains('store')) {
-      return Icons.shopping_bag_rounded;
-    }
-    if (lower.contains('gas') || lower.contains('petrol')) {
-      return Icons.local_gas_station_rounded;
-    }
-    if (lower.contains('money') || lower.contains('bank')) {
-      return Icons.account_balance_rounded;
-    }
-    if (lower.contains('pharmacy') || lower.contains('med')) {
-      return Icons.local_pharmacy_rounded;
-    }
-    return Icons.label_rounded;
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _selectedTags.dispose();
     super.dispose();
   }
 
@@ -135,43 +101,42 @@ class _InterestsDialogWidgetState extends ConsumerState<InterestsDialogWidget> {
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _searchController,
               builder: (context, textValue, _) {
-                return ref.watch(tagsProvider).when(
-                  data: (tags) {
-                    final query = textValue.text.toLowerCase().trim();
-                    var allChips = [...tags, ..._customTags];
+                return ref
+                    .watch(tagsProvider)
+                    .when(
+                      data: (tags) {
+                        final query = textValue.text.toLowerCase().trim();
+                        final allChips = filterInterestTags([
+                          ...tags,
+                          ..._customTags,
+                        ], query);
 
-                    if (query.isNotEmpty) {
-                      allChips = allChips
-                          .where((t) => t.name.toLowerCase().contains(query))
-                          .toList();
-                    }
-
-                    return SizedBox(
-                      height: 160,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Wrap(
-                          direction: Axis.vertical,
-                          spacing: 8.0,
-                          runSpacing: 8.0,
-                          children: allChips.map((tag) {
-                            return _TagChipWidget(
-                              tag: tag,
-                              selectedTags: _selectedTags,
-                              onToggle: (_) {},
-                              colorScheme: colorScheme,
-                              textTheme: textTheme,
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                        return SizedBox(
+                          height: 160,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Wrap(
+                              direction: Axis.vertical,
+                              spacing: 8.0,
+                              runSpacing: 8.0,
+                              children: allChips.map((tag) {
+                                return _TagChipWidget(
+                                  tag: tag,
+                                  selectedTags: _selectedTags,
+                                  onToggle: (_) {},
+                                  colorScheme: colorScheme,
+                                  textTheme: textTheme,
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => Text('Error: $err'),
                     );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => Text('Error: $err'),
-                );
               },
             ),
             const SizedBox(height: AppDimensions.lg),
@@ -360,11 +325,8 @@ class _TagChipWidget extends StatelessWidget {
             onToggle(tag.name);
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 8,
-            ),
+            duration: AppDurations.fast,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected
                   ? colorScheme.primary

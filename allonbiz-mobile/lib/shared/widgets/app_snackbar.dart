@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_dimensions.dart';
+import '../../core/constants/app_durations.dart';
 import '../../core/theme/app_text_styles.dart';
 
 enum AppSnackbarType { success, error, info, warning }
@@ -10,7 +13,7 @@ abstract final class AppSnackbar {
     BuildContext context, {
     required String message,
     AppSnackbarType type = AppSnackbarType.info,
-    Duration duration = const Duration(seconds: 4),
+    Duration duration = AppDurations.snackbar,
   }) {
     // Cannot act reliably without an active Scaffold
     if (!context.mounted) return;
@@ -30,7 +33,7 @@ abstract final class AppSnackbar {
     ScaffoldMessengerState scaffoldMessenger, {
     required String message,
     AppSnackbarType type = AppSnackbarType.info,
-    Duration duration = const Duration(seconds: 4),
+    Duration duration = AppDurations.snackbar,
   }) {
     scaffoldMessenger.hideCurrentSnackBar();
     scaffoldMessenger.showSnackBar(
@@ -38,7 +41,7 @@ abstract final class AppSnackbar {
         content: Row(
           children: [
             Icon(_getIcon(type), color: AppColors.white),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppDimensions.sm),
             Expanded(
               child: Text(
                 message,
@@ -53,8 +56,13 @@ abstract final class AppSnackbar {
         ),
         backgroundColor: _getColor(type),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        ),
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.lg,
+          vertical: AppDimensions.xl,
+        ),
         elevation: 6,
         duration: duration,
       ),

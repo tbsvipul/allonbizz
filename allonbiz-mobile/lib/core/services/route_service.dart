@@ -1,10 +1,12 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
+
 import '../../shared/models/offer.dart';
 import '../network/base_api.dart';
+import '../utils/app_logger.dart';
 import '../utils/background_executor.dart';
 
 /// Request payload for isolate computation to avoid passing separate params
@@ -37,6 +39,7 @@ class RouteService {
     LatLng destination,
   ) async {
     try {
+      // PRESERVED: keep OSRM route contract and fallback behavior unchanged.
       // OSRM format: /route/v1/driving/lng,lat;lng,lat
       final url = Uri.parse(
         '${BaseApi.osrmBaseUrl}/route/v1/driving/'
@@ -79,7 +82,7 @@ class RouteService {
         duration: '--- min',
       );
     } catch (e) {
-      debugPrint('RouteService Error: $e');
+      AppLogger.warning('RouteService error', error: e);
       return RouteResult(
         points: getFallbackPath(origin, destination),
         distance: '--- km',

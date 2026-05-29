@@ -120,7 +120,7 @@ interface ShopSummary {
   isVerified: boolean;
   latitude?: number | null;
   longitude?: number | null;
-  imageUrl?: string | null;
+  shopProfileImage?: string | null;
 }
 
 interface OfferSummary {

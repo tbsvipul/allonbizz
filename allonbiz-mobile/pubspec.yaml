@@ -15,10 +15,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   cached_network_image: ^3.4.1
   flutter_spinkit: ^5.2.1
-  lottie: ^3.3.1
-  shimmer: ^3.0.0
-  flutter_svg: ^2.0.17
-  qr_flutter: ^4.1.0
   smooth_page_indicator: ^1.2.0+3
 
   # Core architecture
@@ -26,7 +22,6 @@ dependencies:
   go_router: ^14.8.1
   equatable: ^2.0.7
   logger: ^2.5.0
-  fpdart: ^1.1.1 # Clean error handling
 
 
 
@@ -34,7 +29,6 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   geolocator: ^13.0.2
-  geocoding: ^3.0.0
   permission_handler: ^11.3.1
 
   # Local Storage
@@ -48,8 +42,6 @@ dependencies:
   # Networking & Utils
   http: ^1.6.0
   intl: ^0.20.2
-  url_launcher: ^6.3.1
-  share_plus: ^10.1.4
   flutter_animate: ^4.5.2
   flutter_dotenv: ^6.0.0
   flutter_background_service: ^5.1.0
@@ -67,9 +59,6 @@ flutter:
   generate: true
   uses-material-design: true
   assets:
-    - assets/lottie/
-    - assets/images/
-    - assets/icons/
     - .env
 
   fonts:

@@ -54,13 +54,21 @@ class MainLayout extends ConsumerWidget {
                         ...appBarConfig.actions!,
                       Consumer(
                         builder: (context, ref, child) {
-                          final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
+                          final unreadCountAsync = ref.watch(
+                            unreadNotificationCountProvider,
+                          );
                           return IconButton(
                             icon: Badge(
-                              isLabelVisible: unreadCountAsync.valueOrNull != null && unreadCountAsync.valueOrNull! > 0,
-                              label: Text('${unreadCountAsync.valueOrNull ?? 0}'),
+                              isLabelVisible:
+                                  unreadCountAsync.valueOrNull != null &&
+                                  unreadCountAsync.valueOrNull! > 0,
+                              label: Text(
+                                '${unreadCountAsync.valueOrNull ?? 0}',
+                              ),
                               backgroundColor: AppColors.error,
-                              child: const Icon(Icons.notifications_none_rounded),
+                              child: const Icon(
+                                Icons.notifications_none_rounded,
+                              ),
                             ),
                             onPressed: () {
                               context.push(AppRoutes.notifications).then((_) {
@@ -93,7 +101,7 @@ class MainLayout extends ConsumerWidget {
     String title;
     switch (index) {
       case 0:
-        title = l10n.navHome;
+        title = l10n.appName;
         break;
       case 1:
         title = l10n.navNavigate;

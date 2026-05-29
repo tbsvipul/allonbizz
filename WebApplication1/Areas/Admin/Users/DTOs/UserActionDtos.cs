@@ -33,6 +33,8 @@ public class SavedItemDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
+    public bool ShopIsOpen { get; set; }
     public decimal? DiscountPercentage { get; set; }
     public DateTime? EndDate { get; set; }
     public bool IsVerified { get; set; }

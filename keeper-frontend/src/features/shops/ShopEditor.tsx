@@ -26,7 +26,7 @@ interface ShopFormState {
   address: string;
   phoneNumber: string;
   email: string;
-  imageUrl: string;
+  shopProfileImage: string;
   shopImages: string[];
   categoryId: string;
   latitude: string;
@@ -54,7 +54,7 @@ function toFormState(shop: ShopDetail | null): ShopFormState {
     address: shop?.address || '',
     phoneNumber: shop?.phoneNumber || '',
     email: shop?.email || '',
-    imageUrl: shop?.imageUrl || '',
+    shopProfileImage: shop?.shopProfileImage || '',
     shopImages: shop?.shopImages || [],
     categoryId: shop?.categoryId || '',
     latitude: shop?.latitude != null ? String(shop.latitude) : '',
@@ -386,7 +386,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
 
     try {
       const [coverImage] = await readFilesAsDataUrls([files[0]]);
-      updateField('imageUrl', coverImage || '');
+      updateField('shopProfileImage', coverImage || '');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to read the selected cover image.'));
     } finally {
@@ -428,7 +428,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
   }
 
   function clearCoverImage() {
-    updateField('imageUrl', '');
+    updateField('shopProfileImage', '');
   }
 
   function openImagePreview(image: string) {
@@ -472,7 +472,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
         address: form.address.trim() || null,
         phoneNumber: form.phoneNumber.trim() || null,
         email: form.email.trim() || null,
-        imageUrl: form.imageUrl || null,
+        shopProfileImage: form.shopProfileImage || null,
         shopImages: form.shopImages,
         categoryId: form.categoryId || null,
         latitude: toNumberOrNull(form.latitude),
@@ -691,8 +691,8 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
                     border: '4px solid hsl(var(--card))', boxShadow: '0 12px 28px rgba(0, 0, 0, 0.16)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0
                   }}>
-                    {form.imageUrl ? (
-                      <img src={resolveMediaSource(form.imageUrl)} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {form.shopProfileImage ? (
+                      <img src={resolveMediaSource(form.shopProfileImage)} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Store size={54} color="hsl(var(--primary))" />
                     )}

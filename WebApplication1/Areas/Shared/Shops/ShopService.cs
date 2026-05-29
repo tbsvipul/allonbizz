@@ -74,7 +74,7 @@ public class ShopService : IShopService
             IsOpen = s.IsOpen,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
-            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
             RejectionReason = s.RejectionReason,
             DeactivateReason = s.DeactivateReason
         }).ToList();
@@ -128,7 +128,7 @@ public class ShopService : IShopService
             DeactivateReason = s.DeactivateReason,
             IsOpen = s.IsOpen,
             NotificationRadius = s.NotificationRadius,
-            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
             ShopImages = s.ShopImages?
                 .Select(img => ImageConversionHelper.ToBase64DataUrl(img))
                 .OfType<string>()
@@ -174,7 +174,7 @@ public class ShopService : IShopService
             CategoryId = dto.CategoryId,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
-            ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ImageUrl),
+            ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ShopProfileImage),
             ShopImages = dto.ShopImages?
                 .Select(ImageConversionHelper.ParseBase64Image)
                 .OfType<byte[]>()
@@ -208,7 +208,7 @@ public class ShopService : IShopService
         shop.Address = NormalizeOptional(dto.Address);
         shop.PhoneNumber = NormalizeOptional(dto.PhoneNumber);
         shop.Email = NormalizeOptional(dto.Email);
-        shop.ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ImageUrl);
+        shop.ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ShopProfileImage);
         shop.ShopImages = dto.ShopImages?
             .Select(ImageConversionHelper.ParseBase64Image)
             .OfType<byte[]>()
@@ -395,7 +395,7 @@ public class ShopService : IShopService
             IsOpen = s.IsOpen,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
-            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
             RejectionReason = s.RejectionReason,
             DeactivateReason = s.DeactivateReason
         }).ToList();
@@ -449,7 +449,7 @@ public class ShopService : IShopService
             DeactivateReason = shop.DeactivateReason,
             IsOpen = shop.IsOpen,
             NotificationRadius = shop.NotificationRadius,
-            ImageUrl = ImageConversionHelper.ToBase64DataUrl(shop.ImageUrl),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(shop.ImageUrl),
             ShopImages = shop.ShopImages?
                 .Select(img => ImageConversionHelper.ToBase64DataUrl(img))
                 .OfType<string>()

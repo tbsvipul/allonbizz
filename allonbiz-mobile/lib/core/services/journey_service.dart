@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/journey_model.dart';
 import '../network/api_client.dart';
 import '../network/api_parsers.dart';
+import '../utils/app_logger.dart';
 import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../shared/models/shop.dart';
 
@@ -36,6 +37,7 @@ class JourneyService {
     List<String> tags = const [],
   }) async {
     try {
+      // PRESERVED: backend journey start payload keys must remain unchanged.
       final res = await _apiClient.post(
         '/user/journeys/start',
         body: {
@@ -55,7 +57,7 @@ class JourneyService {
         return res['data']['journeyId']?.toString();
       }
     } catch (e) {
-      debugPrint('Start journey failed: $e');
+      AppLogger.warning('Start journey failed', error: e);
     }
     return null;
   }
@@ -80,7 +82,7 @@ class JourneyService {
         },
       );
     } catch (e) {
-      debugPrint('Journey progress update failed: $e');
+      AppLogger.warning('Journey progress update failed', error: e);
     }
   }
 
@@ -108,7 +110,7 @@ class JourneyService {
       await _apiClient.invalidateCacheByPrefix('journeys:');
       return true;
     } catch (e) {
-      debugPrint('End journey failed: $e');
+      AppLogger.warning('End journey failed', error: e);
       return false;
     }
   }
@@ -123,7 +125,7 @@ class JourneyService {
       return _apiClient.getParsed<List<Shop>>(
         '/user/journeys/$journeyId/near?lat=$lat&lng=$lng&radius=$radiusKm',
         parser: (response) => extractEnvelopeDataList(response)
-            .map(parseShopJson)
+            .map(parseJourneyNearbyShopJson)
             .where((shop) => shop.id.trim().isNotEmpty)
             .toList(growable: false),
         options: ApiReadOptions(
@@ -134,7 +136,7 @@ class JourneyService {
         ),
       );
     } catch (e) {
-      debugPrint('Fetch nearby shops failed: $e');
+      AppLogger.warning('Fetch nearby shops failed', error: e);
       return const <Shop>[];
     }
   }

@@ -47,7 +47,8 @@ public class NearbyShopDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public double DistanceKm { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
+    public bool IsOpen { get; set; }
 }
 
 public class OfferSummaryDto
@@ -62,6 +63,8 @@ public class OfferSummaryDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
+    public bool ShopIsOpen { get; set; }
     public decimal? DiscountPercentage { get; set; }
     public DateTime EndDate { get; set; }
     public List<string> Tags { get; set; } = new();

@@ -1,8 +1,11 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+
 import '../../core/constants/app_colors.dart';
+import '../../core/network/base_api.dart';
 
 enum AppImageVariant { network, asset, avatar }
 
@@ -55,14 +58,18 @@ class AppImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget imageWidget;
+    final normalizedUrl = _normalizeUrl(url);
 
     switch (variant) {
       case AppImageVariant.network:
-        if (url == null || url!.isEmpty) {
+        if (normalizedUrl == null || normalizedUrl.isEmpty) {
           imageWidget = _buildFallback();
-        } else if (url!.startsWith('data:image') || (!url!.startsWith('http') && url!.length > 100)) {
+        } else if (normalizedUrl.startsWith('data:image') ||
+            (!normalizedUrl.startsWith('http') && normalizedUrl.length > 100)) {
           try {
-            final base64String = url!.startsWith('data:image') ? url!.split(',').last : url!;
+            final base64String = (normalizedUrl.startsWith('data:image')
+                ? normalizedUrl.split(',').last
+                : normalizedUrl).replaceAll(RegExp(r'\s+'), '');
             final bytes = base64Decode(base64String);
             imageWidget = Image.memory(
               bytes,
@@ -78,7 +85,7 @@ class AppImage extends StatelessWidget {
           }
         } else {
           imageWidget = CachedNetworkImage(
-            imageUrl: url!,
+            imageUrl: normalizedUrl,
             width: width,
             height: height,
             fit: fit,
@@ -126,31 +133,37 @@ class AppImage extends StatelessWidget {
                   size: (width ?? 40) * 0.6,
                   color: AppColors.grey500,
                 )
-              : url!.startsWith('data:image') || (!url!.startsWith('http') && url!.length > 100)
-                  ? Image.memory(
-                      base64Decode(url!.startsWith('data:image') ? url!.split(',').last : url!),
-                      width: width,
-                      height: height,
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.person_rounded,
-                        size: (width ?? 40) * 0.6,
-                        color: AppColors.grey500,
-                      ),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: url!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: SpinKitPulse(color: AppColors.primary, size: 20),
-                      ),
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.person_rounded,
-                        size: (width ?? 40) * 0.6,
-                        color: AppColors.grey500,
-                      ),
-                    ),
+              : normalizedUrl!.startsWith('data:image') ||
+                    (!normalizedUrl.startsWith('http') &&
+                        normalizedUrl.length > 100)
+              ? Image.memory(
+                  base64Decode(
+                    (normalizedUrl.startsWith('data:image')
+                        ? normalizedUrl.split(',').last
+                        : normalizedUrl).replaceAll(RegExp(r'\s+'), ''),
+                  ),
+                  width: width,
+                  height: height,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.person_rounded,
+                    size: (width ?? 40) * 0.6,
+                    color: AppColors.grey500,
+                  ),
+                )
+              : CachedNetworkImage(
+                  imageUrl: normalizedUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => const Center(
+                    child: SpinKitPulse(color: AppColors.primary, size: 20),
+                  ),
+                  errorWidget: (context, url, error) => Icon(
+                    Icons.person_rounded,
+                    size: (width ?? 40) * 0.6,
+                    color: AppColors.grey500,
+                  ),
+                ),
         );
         return imageWidget; // Avatar is intrinsically rounded
     }
@@ -159,6 +172,61 @@ class AppImage extends StatelessWidget {
       return ClipRRect(borderRadius: borderRadius!, child: imageWidget);
     }
     return imageWidget;
+  }
+
+  String? _normalizeUrl(String? rawUrl) {
+    final trimmed = rawUrl?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+
+    if (trimmed.startsWith('data:image')) {
+      return trimmed;
+    }
+
+    if (!trimmed.startsWith('http') && !trimmed.startsWith('/') && trimmed.length > 200) {
+      // Very likely a raw base64 string
+      return trimmed;
+    }
+
+    final sanitized = trimmed.replaceAll('\\', '/');
+    final parsed = Uri.tryParse(sanitized);
+    if (parsed?.hasScheme == true) {
+      return sanitized;
+    }
+
+    final backendUri = Uri.tryParse(BaseApi.backendBaseUrl);
+    if (backendUri == null || backendUri.host.isEmpty) {
+      return sanitized;
+    }
+
+    if (sanitized.startsWith('//')) {
+      return '${backendUri.scheme}:$sanitized';
+    }
+
+    final originUri = Uri(
+      scheme: backendUri.scheme,
+      host: backendUri.host,
+      port: backendUri.hasPort ? backendUri.port : null,
+      path: '/',
+    );
+
+    if (sanitized.startsWith('/') || _looksLikeRootHostedAsset(sanitized)) {
+      return originUri.resolve(sanitized).toString();
+    }
+
+    final backendBaseUri = backendUri.path.endsWith('/')
+        ? backendUri
+        : backendUri.replace(path: '${backendUri.path}/');
+    return backendBaseUri.resolve(sanitized).toString();
+  }
+
+  bool _looksLikeRootHostedAsset(String rawUrl) {
+    final normalized = rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl;
+    return normalized.startsWith('uploads/') ||
+        normalized.startsWith('images/') ||
+        normalized.startsWith('media/') ||
+        normalized.startsWith('files/');
   }
 
   Widget _buildFallback() {

@@ -4,7 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/profile_controller.dart';
-import '../../../../core/providers/app_bar_provider.dart';
+import '../../../../core/widgets/app_bar_binding.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -14,7 +14,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  late final AppBarNotifier _appBarNotifier;
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
@@ -31,10 +30,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       text: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
     );
     _phoneController = TextEditingController(text: user?.phone ?? '');
-    _appBarNotifier = ref.read(appBarProvider.notifier);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.pushConfig(_buildAppBarConfig(false));
-    });
   }
 
   AppBarConfig _buildAppBarConfig(bool isLoading) {
@@ -74,9 +69,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.popConfig();
-    });
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
@@ -98,43 +90,40 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(profileControllerProvider, (previous, next) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _appBarNotifier.setConfig(_buildAppBarConfig(next.isLoading));
-      });
-    });
-
     final state = ref.watch(profileControllerProvider);
 
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppDimensions.xl),
-        child: Column(
-          children: [
-            TextField(
-              controller: _firstNameController,
-              decoration: const InputDecoration(labelText: 'First Name'),
-            ),
-            const SizedBox(height: AppDimensions.md),
-            TextField(
-              controller: _lastNameController,
-              decoration: const InputDecoration(labelText: 'Last Name'),
-            ),
-            const SizedBox(height: AppDimensions.md),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Phone Number'),
-              keyboardType: TextInputType.phone,
-            ),
-            if (state.error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  state.error!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+    return AppBarBinding(
+      config: _buildAppBarConfig(state.isLoading),
+      child: Scaffold(
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppDimensions.xl),
+          child: Column(
+            children: [
+              TextField(
+                controller: _firstNameController,
+                decoration: const InputDecoration(labelText: 'First Name'),
               ),
-          ],
+              const SizedBox(height: AppDimensions.md),
+              TextField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(labelText: 'Last Name'),
+              ),
+              const SizedBox(height: AppDimensions.md),
+              TextField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Phone Number'),
+                keyboardType: TextInputType.phone,
+              ),
+              if (state.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    state.error!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../shared/models/offer.dart';
 import 'location_service.dart';
 import 'notification_service.dart';
 import 'storage_service.dart';
+import '../utils/app_logger.dart';
 
 /// Monitoring service to trigger notifications when user is near a deal / geofence.
 class GeofenceService {
@@ -45,10 +47,10 @@ class GeofenceService {
         .listen(
           (pos) async {
             try {
-              // Move heavy calculation to an isolate to avoid blocking main thread
+              // PERF: moved distance checks off the main thread.
               await _checkNearbyDealsIsolate(pos, activeOffers);
             } catch (e) {
-              debugPrint('Geofence error: $e');
+              AppLogger.warning('Geofence monitoring error', error: e);
             }
           },
           onError: (e) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_dimensions.dart';
+
 enum AppButtonVariant { primary, secondary, outlined, text, danger, icon }
 
 /// Universal App Button for standardized UI interactions.
@@ -110,7 +112,7 @@ class AppButton extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 20),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppDimensions.xs),
               ],
               if (label != null)
                 Flexible(child: Text(label!, overflow: TextOverflow.ellipsis)),
@@ -121,7 +123,7 @@ class AppButton extends StatelessWidget {
 
     return SizedBox(
       width: width ?? double.infinity,
-      height: 56,
+      height: AppDimensions.xxxl + AppDimensions.xs,
       child: variant == AppButtonVariant.outlined
           ? OutlinedButton(
               onPressed: (isDisabled || isLoading) ? null : onPressed,
@@ -156,8 +158,9 @@ class AppButton extends StatelessWidget {
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
           textStyle: textStyle,
+          minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
       case AppButtonVariant.secondary:
@@ -166,8 +169,9 @@ class AppButton extends StatelessWidget {
           foregroundColor: colorScheme.onSecondary,
           elevation: 0,
           textStyle: textStyle,
+          minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
       case AppButtonVariant.danger:
@@ -176,8 +180,9 @@ class AppButton extends StatelessWidget {
           foregroundColor: colorScheme.onError,
           elevation: 0,
           textStyle: textStyle,
+          minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
       case AppButtonVariant.outlined:
@@ -185,16 +190,18 @@ class AppButton extends StatelessWidget {
           foregroundColor: colorScheme.primary,
           side: BorderSide(color: colorScheme.primary, width: 1.5),
           textStyle: textStyle,
+          minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
       case AppButtonVariant.text:
         return TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
           textStyle: textStyle,
+          minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
       case AppButtonVariant.icon:

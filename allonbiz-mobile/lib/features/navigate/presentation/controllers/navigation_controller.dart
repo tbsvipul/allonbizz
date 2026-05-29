@@ -1,20 +1,22 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../../core/services/route_service.dart';
-import '../../../../shared/models/offer.dart';
-import '../../../discover/data/repositories/deals_repository.dart';
-import '../../../../core/services/journey_service.dart';
+
 import '../../../../core/models/journey_model.dart';
 import '../../../../core/services/current_location_provider.dart';
+import '../../../../core/services/journey_service.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/route_service.dart';
 import '../../../../core/services/storage_service.dart';
+import '../../../../core/services/places_service.dart';
 import '../../../../core/utils/background_executor.dart';
-import 'dart:async';
-import 'package:flutter/foundation.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../shared/models/shop.dart';
+import '../../../../shared/models/offer.dart';
 import '../../../discover/data/repositories/shops_repository.dart';
+import '../../../discover/data/repositories/deals_repository.dart';
 
 /// State of the navigation feature.
 class NavigationState {
@@ -202,6 +204,8 @@ class NavigationController extends Notifier<NavigationState> {
   }
 
   Future<void> restoreActiveJourneyState({bool forceSync = false}) async {
+    // PRESERVED: active-journey restore and notification resume must stay in sync
+    // with router redirects and persisted session state.
     if (!forceSync) {
       final storedSession = _storageService.activeJourneySession;
       if (storedSession != null) {
@@ -375,7 +379,11 @@ class NavigationController extends Notifier<NavigationState> {
       unawaited(updateNearbyOffers(snappedOrigin));
       return true;
     } catch (e, stackTrace) {
-      debugPrint('Start destination journey error: $e\n$stackTrace');
+      AppLogger.warning(
+        'Start destination journey error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       state = NavigationState(
         errorMessage:
             'Could not start this journey right now. Please try again.',
@@ -445,11 +453,25 @@ class NavigationController extends Notifier<NavigationState> {
 
     try {
       final startedAt = DateTime.now();
+      
+      String resolvedStartName = 'Free Roam Start';
+      try {
+        final suggestion = await ref.read(placesServiceProvider).reverseGeocode(
+          effectivePosition.latitude,
+          effectivePosition.longitude,
+        );
+        if (suggestion != null && suggestion.name.trim().isNotEmpty) {
+          resolvedStartName = suggestion.name.trim();
+        }
+      } catch (_) {
+        // Fallback to default
+      }
+
       final journeyId = await _journeyService.startJourney(
         type: JourneyType.freeRoam,
         startLat: effectivePosition.latitude,
         startLng: effectivePosition.longitude,
-        startName: 'Free Roam Start',
+        startName: resolvedStartName,
         tags: [...interests, if (query != null && query.isNotEmpty) query],
       );
 
@@ -478,7 +500,11 @@ class NavigationController extends Notifier<NavigationState> {
       await updateNearbyOffers(effectivePosition);
       return true;
     } catch (e, stackTrace) {
-      debugPrint('Start free roam error: $e\n$stackTrace');
+      AppLogger.warning(
+        'Start free roam error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       state = NavigationState(
         errorMessage: 'Unable to start exploration right now.',
       );
@@ -617,11 +643,12 @@ class NavigationController extends Notifier<NavigationState> {
     );
 
     if (journeyId != null) {
+      final endName = await _resolveJourneyEndName(navigationSnapshot, finalPosition);
       final ended = await _journeyService.endJourney(
         journeyId: journeyId,
         endLat: finalPosition.latitude,
         endLng: finalPosition.longitude,
-        endName: _resolveJourneyEndName(navigationSnapshot),
+        endName: endName,
         finalDistance: finalDistance,
         finalDuration: finalDuration,
         shopsEncountered: _collectEncounteredShops(navigationSnapshot),
@@ -686,11 +713,15 @@ class NavigationController extends Notifier<NavigationState> {
               }
             },
             onError: (Object error, StackTrace stackTrace) {
-              debugPrint('Live journey tracking failed: $error');
+              AppLogger.warning(
+                'Live journey tracking failed',
+                error: error,
+                stackTrace: stackTrace,
+              );
             },
           );
     } catch (error) {
-      debugPrint('Unable to start live journey tracking: $error');
+      AppLogger.warning('Unable to start live journey tracking', error: error);
     }
   }
 
@@ -1002,9 +1033,10 @@ class NavigationController extends Notifier<NavigationState> {
           id: shopId,
           name: offer.shopName,
           address: offer.shopAddress,
-          imageUrl: offer.imageUrl,
+          shopProfileImage: offer.shopProfileImage,
           latitude: offer.latitude,
           longitude: offer.longitude,
+          isOpen: offer.shopIsOpen ?? false,
         ),
       );
     }
@@ -1209,8 +1241,19 @@ class NavigationController extends Notifier<NavigationState> {
     return distanceMeters;
   }
 
-  String _resolveJourneyEndName(NavigationState snapshot) {
+  Future<String> _resolveJourneyEndName(NavigationState snapshot, LatLng finalPosition) async {
     if (snapshot.isFreeRoam) {
+      try {
+        final suggestion = await ref.read(placesServiceProvider).reverseGeocode(
+          finalPosition.latitude,
+          finalPosition.longitude,
+        );
+        if (suggestion != null && suggestion.name.trim().isNotEmpty) {
+          return suggestion.name.trim();
+        }
+      } catch (_) {
+        // Fallback
+      }
       return 'Free Roam End';
     }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_status_banner.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/auth_error_mapper.dart';
@@ -96,33 +97,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 32),
 
                       if (loginErrorMessage != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                        AppStatusBanner(
+                          message: AuthErrorMapper.getMessage(
+                            loginErrorMessage,
+                            l10n,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: colorScheme.error,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  AuthErrorMapper.getMessage(
-                                    loginErrorMessage,
-                                    l10n,
-                                  ),
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.error,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          variant: AppStatusBannerVariant.error,
+                          textStyle: textTheme.bodySmall,
                         ),
                         const SizedBox(height: 16),
                       ],

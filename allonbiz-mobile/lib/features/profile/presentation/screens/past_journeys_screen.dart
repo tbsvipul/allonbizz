@@ -70,7 +70,10 @@ class _PastJourneysScreenState extends ConsumerState<PastJourneysScreen> {
                       onTap: journey.id == null
                           ? null
                           : () => context.push(
-                              AppRoutes.journeyDetail.replaceFirst(':id', journey.id!),
+                              AppRoutes.journeyDetail.replaceFirst(
+                                ':id',
+                                journey.id!,
+                              ),
                               extra: journey,
                             ),
                     );

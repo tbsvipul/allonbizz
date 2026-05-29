@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 abstract final class AppRoutes {
   static const String splash = '/splash';
   static const String onboarding = '/onboarding';
@@ -22,11 +20,4 @@ abstract final class AppRoutes {
   static const String changePassword = '/profile/change-password';
   static const String editProfile = '/profile/edit';
   static const String journeyDetail = '/journey-detail/:id';
-}
-
-extension NavigationExtension on BuildContext {
-  /// Simple routing extension over GoRouter to eliminate string coupling in views
-  void flushBar() {
-    ScaffoldMessenger.of(this).hideCurrentSnackBar();
-  }
 }

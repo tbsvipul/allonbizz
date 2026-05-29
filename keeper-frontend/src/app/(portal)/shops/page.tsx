@@ -356,8 +356,8 @@ export default function ShopsPage() {
                   {/* Primary Info */}
                   <div className="shop-primary">
                     <div className="shop-avatar">
-                      {shop.imageUrl ? (
-                        <img src={resolveMediaSource(shop.imageUrl)} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {shop.shopProfileImage ? (
+                        <img src={resolveMediaSource(shop.shopProfileImage)} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <Store size={24} />
                       )}

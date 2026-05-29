@@ -36,7 +36,7 @@ interface ShopDetails {
   keeperUserId: string;
   latitude: number;
   longitude: number;
-  imageUrl: string;
+  shopProfileImage: string;
   shopImages: string[];
   tags: string[];
   amenities: string[];
@@ -588,8 +588,8 @@ export default function ShopDetailsPage() {
                     overflow: 'hidden',
                     flexShrink: 0
                   }}>
-                    {shop.imageUrl ? (
-                      <img src={shop.imageUrl} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {shop.shopProfileImage ? (
+                      <img src={shop.shopProfileImage} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Store size={54} color="hsl(var(--primary))" />
                     )}

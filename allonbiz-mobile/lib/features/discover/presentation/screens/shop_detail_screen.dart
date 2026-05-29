@@ -3,15 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_image.dart';
+import '../../../../core/widgets/app_bar_binding.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../data/repositories/shops_repository.dart';
-import '../../../../core/providers/app_bar_provider.dart';
-
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import '../../../../shared/models/shop.dart';
+import '../../../../shared/widgets/app_detail_media_header.dart';
 
 final shopDetailProvider = FutureProvider.family<Shop, String>((ref, id) {
   return ref.watch(shopsRepositoryProvider).getShopDetail(id);
@@ -27,57 +24,26 @@ class ShopDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
-  late final AppBarNotifier _appBarNotifier;
-
-  @override
-  void initState() {
-    super.initState();
-    _appBarNotifier = ref.read(appBarProvider.notifier);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.pushConfig(
-            AppBarConfig(
-              title: const Text('Shop Details'),
-              centerTitle: true,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          );
-    });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.popConfig();
-    });
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final shopAsync = ref.watch(shopDetailProvider(widget.shopId));
+    final title = shopAsync.valueOrNull?.name ?? 'Shop Details';
 
-    return Scaffold(
-      body: shopAsync.when(
-        data: (shop) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(appBarProvider.notifier).setConfig(
-                  AppBarConfig(
-                    title: Text(shop.name),
-                    centerTitle: true,
-                    leading: IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                );
-          });
-          return _buildContent(context, shop);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+    return AppBarBinding(
+      config: AppBarConfig(
+        title: Text(title),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      child: Scaffold(
+        body: shopAsync.when(
+          data: (shop) => _buildContent(context, shop),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+        ),
       ),
     );
   }
@@ -226,130 +192,27 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
   }
 }
 
-class _ShopImageHeader extends StatefulWidget {
+class _ShopImageHeader extends StatelessWidget {
   final Shop shop;
 
   const _ShopImageHeader({required this.shop});
 
   @override
-  State<_ShopImageHeader> createState() => _ShopImageHeaderState();
-}
-
-class _ShopImageHeaderState extends State<_ShopImageHeader> {
-  int _currentPage = 0;
-
-  @override
   Widget build(BuildContext context) {
-    List<String> images = [];
-    if (widget.shop.imageUrl != null && widget.shop.imageUrl!.isNotEmpty) {
-      images.add(widget.shop.imageUrl!);
+    final images = <String>[];
+    final primaryImageUrl = shop.primaryImageUrl;
+    if (primaryImageUrl != null && primaryImageUrl.isNotEmpty) {
+      images.add(primaryImageUrl);
     }
-    for (final img in widget.shop.shopImages) {
-      if (img.isNotEmpty) {
+    for (final img in shop.shopImages) {
+      if (img.isNotEmpty && !images.contains(img)) {
         images.add(img);
       }
     }
 
-    return SizedBox(
-      height: 240,
-      child: Stack(
-        children: [
-          // Background Carousel
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 200,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: images.isNotEmpty
-                  ? CarouselSlider(
-                      options: CarouselOptions(
-                        height: 200,
-                        viewportFraction: 1.0,
-                        autoPlay: images.length > 1,
-                        autoPlayInterval: const Duration(seconds: 3),
-                        onPageChanged: (index, reason) {
-                          setState(() {
-                            _currentPage = index;
-                          });
-                        },
-                      ),
-                      items: images.map((img) {
-                        return AppImage.network(
-                          img,
-                          fit: BoxFit.cover,
-                          height: 200,
-                          width: double.infinity,
-                        );
-                      }).toList(),
-                    )
-                  : Container(
-                      color: AppColors.grey200,
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported,
-                            size: 50, color: AppColors.grey400),
-                      ),
-                    ),
-            ),
-          ),
-          
-          // Page Indicator
-          if (images.length > 1)
-            Positioned(
-              bottom: 48,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: AnimatedSmoothIndicator(
-                    activeIndex: _currentPage,
-                    count: images.length,
-                    effect: ExpandingDotsEffect(
-                      dotHeight: 6,
-                      dotWidth: 6,
-                      activeDotColor: AppColors.primary,
-                      dotColor: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Circle Image
-          Positioned(
-            left: 16,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: AppImage.network(
-                  widget.shop.imageUrl ?? (widget.shop.shopImages.isNotEmpty ? widget.shop.shopImages.first : ''),
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppDetailMediaHeader(
+      images: images,
+      avatarImageUrl: primaryImageUrl,
     );
   }
 }

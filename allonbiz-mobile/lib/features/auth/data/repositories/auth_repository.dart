@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'
-    show debugPrint, kDebugMode, kProfileMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/models/app_user.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/base_api.dart';
 import '../../../../core/services/storage_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../profile/data/repositories/profile_repository.dart';
 
 /// Riverpod provider for AuthRepository.
@@ -59,6 +59,15 @@ class AuthRepository {
   bool get isInitialized => _isInitialized;
 
   Future<void> _init() async {
+    _apiClient.onAuthFailed.listen((_) {
+      if (_storageService.backendAccessToken != null) {
+        _logAuthFlow('global-auth-failed', details: {'action': 'clearing session'});
+        _storageService.backendAccessToken = null;
+        _storageService.backendRefreshToken = null;
+        _updateState(null);
+      }
+    });
+
     final token = _storageService.backendAccessToken;
     _logAuthFlow('init', details: {'hasStoredAccessToken': token != null});
     if (token != null) {
@@ -298,11 +307,11 @@ class AuthRepository {
     }
 
     if (details == null || details.isEmpty) {
-      debugPrint('[AuthFlow] $step');
+      AppLogger.debug('[AuthFlow] $step');
       return;
     }
 
-    debugPrint('[AuthFlow] $step $details');
+    AppLogger.debug('[AuthFlow] $step $details');
   }
 
   String _maskEmail(String email) {

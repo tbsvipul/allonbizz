@@ -68,9 +68,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: AppDimensions.xl),
-            child: AppSectionHeader(
-              title: l10n.categories,
-            ),
+            child: AppSectionHeader(title: l10n.categories),
           ),
         ),
         SliverToBoxAdapter(
@@ -78,10 +76,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             height: 110,
             child: categoriesAsync.when(
               data: (allCategories) {
-                final categories = _searchQuery.isEmpty 
-                    ? allCategories 
-                    : allCategories.where((c) => c.label.toLowerCase().contains(_searchQuery)).toList();
-                
+                final categories = _searchQuery.isEmpty
+                    ? allCategories
+                    : allCategories
+                          .where(
+                            (c) => c.label.toLowerCase().contains(_searchQuery),
+                          )
+                          .toList();
+
                 if (categories.isEmpty) {
                   return const Center(child: Text('No categories found'));
                 }
@@ -92,22 +94,22 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     horizontal: AppDimensions.lg,
                   ),
                   itemCount: categories.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(width: AppDimensions.lg),
-                itemBuilder: (context, index) {
-                  final cat = categories[index];
-                  return CatTileWidget(
-                    icon: cat.icon,
-                    label: cat.label,
-                    color: cat.color,
-                    onTap: () {
-                      // Navigate to category search
-                    },
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppDimensions.lg),
+                  itemBuilder: (context, index) {
+                    final cat = categories[index];
+                    return CatTileWidget(
+                      icon: cat.icon,
+                      label: cat.label,
+                      color: cat.color,
+                      onTap: () {
+                        // Navigate to category search
+                      },
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(child: Text('Error: $err')),
             ),
           ),
@@ -117,9 +119,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: AppDimensions.xl),
-            child: AppSectionHeader(
-              title: 'Popular Tags',
-            ),
+            child: AppSectionHeader(title: 'Popular Tags'),
           ),
         ),
         SliverToBoxAdapter(
@@ -127,10 +127,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             height: 40,
             child: tagsAsync.when(
               data: (allTags) {
-                final tags = _searchQuery.isEmpty 
-                    ? allTags 
-                    : allTags.where((t) => t.name.toLowerCase().contains(_searchQuery)).toList();
-                
+                final tags = _searchQuery.isEmpty
+                    ? allTags
+                    : allTags
+                          .where(
+                            (t) => t.name.toLowerCase().contains(_searchQuery),
+                          )
+                          .toList();
+
                 if (tags.isEmpty) return const SizedBox.shrink();
 
                 return ListView.separated(
@@ -139,34 +143,34 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     horizontal: AppDimensions.lg,
                   ),
                   itemCount: tags.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(width: AppDimensions.md),
-                itemBuilder: (context, index) {
-                  final tag = tags[index];
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: tag.displayColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: tag.displayColor.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        tag.name,
-                        style: TextStyle(
-                          color: tag.displayColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppDimensions.md),
+                  itemBuilder: (context, index) {
+                    final tag = tags[index];
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: tag.displayColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: tag.displayColor.withValues(alpha: 0.2),
                         ),
                       ),
-                    ),
-                  );
-                },
-              );
-            },
-            loading: () => const SizedBox.shrink(),
+                      child: Center(
+                        child: Text(
+                          tag.name,
+                          style: TextStyle(
+                            color: tag.displayColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const SizedBox.shrink(),
               error: (err, _) => const SizedBox.shrink(),
             ),
           ),
@@ -176,9 +180,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: AppDimensions.xl),
-            child: AppSectionHeader(
-              title: 'Featured Offers',
-            ),
+            child: AppSectionHeader(title: 'Featured Offers'),
           ),
         ),
 
@@ -226,8 +228,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                             fit: StackFit.expand,
                             children: [
                               AppImage.network(
-                                deal.imageUrl ??
-                                    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
+                                deal.imageUrl ?? '',
                                 fit: BoxFit.cover,
                               ),
                               Positioned(

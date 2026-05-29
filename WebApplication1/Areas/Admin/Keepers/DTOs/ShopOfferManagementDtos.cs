@@ -11,7 +11,7 @@ public class RegisterShopDto
     public string? Email { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ShopProfileImage { get; set; }
     public List<string> ShopImages { get; set; } = new();
     public Guid? CategoryId { get; set; }
     public bool IsOpen { get; set; } = true;
@@ -63,4 +63,3 @@ public class BulkOfferUploadRowErrorDto
     public int RowNumber { get; set; }
     public string Message { get; set; } = string.Empty;
 }
-

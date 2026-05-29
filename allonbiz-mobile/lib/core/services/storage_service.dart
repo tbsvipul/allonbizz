@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../constants/storage_keys.dart';
+
 class CachedResponseRecord {
   const CachedResponseRecord({required this.payload, required this.fetchedAt});
 
@@ -28,10 +30,6 @@ class CachedResponseRecord {
 
 /// Hive-based local storage service for offline data and preferences.
 class StorageService {
-  static const String _prefsBox = 'preferences';
-  static const String _responsesBox = 'cached_offers';
-  static const String _routesBox = 'cached_routes';
-
   final Box? _injectedPrefs;
   final Box? _injectedResponses;
   final Box? _injectedRoutes;
@@ -46,11 +44,16 @@ class StorageService {
     await Hive.initFlutter();
 
     const secureStorage = FlutterSecureStorage();
-    String? encryptionKeyString = await secureStorage.read(key: 'hive_key');
+    String? encryptionKeyString = await secureStorage.read(
+      key: StorageKeys.hiveKey,
+    );
 
     if (encryptionKeyString == null) {
       final key = Hive.generateSecureKey();
-      await secureStorage.write(key: 'hive_key', value: base64UrlEncode(key));
+      await secureStorage.write(
+        key: StorageKeys.hiveKey,
+        value: base64UrlEncode(key),
+      );
       encryptionKeyString = base64UrlEncode(key);
     }
 
@@ -58,90 +61,99 @@ class StorageService {
     final cipher = HiveAesCipher(key);
 
     try {
-      await Hive.openBox(_prefsBox, encryptionCipher: cipher);
-      await Hive.openBox(_responsesBox, encryptionCipher: cipher);
-      await Hive.openBox(_routesBox, encryptionCipher: cipher);
+      await Hive.openBox(StorageKeys.prefsBox, encryptionCipher: cipher);
+      await Hive.openBox(StorageKeys.responsesBox, encryptionCipher: cipher);
+      await Hive.openBox(StorageKeys.routesBox, encryptionCipher: cipher);
     } catch (_) {
       // If decryption fails (e.g. data is unencrypted), clear and reopen.
-      await Hive.deleteBoxFromDisk(_prefsBox);
-      await Hive.deleteBoxFromDisk(_responsesBox);
-      await Hive.deleteBoxFromDisk(_routesBox);
+      await Hive.deleteBoxFromDisk(StorageKeys.prefsBox);
+      await Hive.deleteBoxFromDisk(StorageKeys.responsesBox);
+      await Hive.deleteBoxFromDisk(StorageKeys.routesBox);
 
-      await Hive.openBox(_prefsBox, encryptionCipher: cipher);
-      await Hive.openBox(_responsesBox, encryptionCipher: cipher);
-      await Hive.openBox(_routesBox, encryptionCipher: cipher);
+      await Hive.openBox(StorageKeys.prefsBox, encryptionCipher: cipher);
+      await Hive.openBox(StorageKeys.responsesBox, encryptionCipher: cipher);
+      await Hive.openBox(StorageKeys.routesBox, encryptionCipher: cipher);
     }
   }
 
-  Box get _prefs => _injectedPrefs ?? Hive.box(_prefsBox);
-  Box get _responses => _injectedResponses ?? Hive.box(_responsesBox);
-  Box get _routes => _injectedRoutes ?? Hive.box(_routesBox);
+  Box get _prefs => _injectedPrefs ?? Hive.box(StorageKeys.prefsBox);
+  Box get _responses =>
+      _injectedResponses ?? Hive.box(StorageKeys.responsesBox);
+  Box get _routes => _injectedRoutes ?? Hive.box(StorageKeys.routesBox);
 
   /// Whether the user has completed onboarding.
   bool get hasSeenOnboarding =>
-      _prefs.get('hasSeenOnboarding', defaultValue: false);
-  set hasSeenOnboarding(bool value) => _prefs.put('hasSeenOnboarding', value);
+      _prefs.get(StorageKeys.hasSeenOnboarding, defaultValue: false);
+  set hasSeenOnboarding(bool value) =>
+      _prefs.put(StorageKeys.hasSeenOnboarding, value);
 
   /// Whether dark mode is enabled.
-  bool get isDarkMode => _prefs.get('isDarkMode', defaultValue: false);
-  set isDarkMode(bool value) => _prefs.put('isDarkMode', value);
+  bool get isDarkMode =>
+      _prefs.get(StorageKeys.isDarkMode, defaultValue: false);
+  set isDarkMode(bool value) => _prefs.put(StorageKeys.isDarkMode, value);
 
   /// Selected language code (e.g., 'en', 'hi').
-  String get languageCode => _prefs.get('languageCode', defaultValue: 'en');
-  set languageCode(String value) => _prefs.put('languageCode', value);
+  String get languageCode =>
+      _prefs.get(StorageKeys.languageCode, defaultValue: 'en');
+  set languageCode(String value) => _prefs.put(StorageKeys.languageCode, value);
 
   /// Whether safety mode is enabled.
-  bool get isSafetyMode => _prefs.get('isSafetyMode', defaultValue: false);
-  set isSafetyMode(bool value) => _prefs.put('isSafetyMode', value);
+  bool get isSafetyMode =>
+      _prefs.get(StorageKeys.isSafetyMode, defaultValue: false);
+  set isSafetyMode(bool value) => _prefs.put(StorageKeys.isSafetyMode, value);
 
   /// Whether notifications are enabled.
   bool get notificationsEnabled =>
-      _prefs.get('notificationsEnabled', defaultValue: true);
+      _prefs.get(StorageKeys.notificationsEnabled, defaultValue: true);
   set notificationsEnabled(bool value) =>
-      _prefs.put('notificationsEnabled', value);
+      _prefs.put(StorageKeys.notificationsEnabled, value);
 
   /// Whether background location tracking is enabled.
   bool get locationTrackingEnabled =>
-      _prefs.get('locationTrackingEnabled', defaultValue: true);
+      _prefs.get(StorageKeys.locationTrackingEnabled, defaultValue: true);
   set locationTrackingEnabled(bool value) =>
-      _prefs.put('locationTrackingEnabled', value);
+      _prefs.put(StorageKeys.locationTrackingEnabled, value);
 
   /// Last known latitude.
-  double? get lastLatitude => _prefs.get('lastLatitude');
-  set lastLatitude(double? value) => _prefs.put('lastLatitude', value);
+  double? get lastLatitude => _prefs.get(StorageKeys.lastLatitude);
+  set lastLatitude(double? value) =>
+      _prefs.put(StorageKeys.lastLatitude, value);
 
   /// Last known longitude.
-  double? get lastLongitude => _prefs.get('lastLongitude');
-  set lastLongitude(double? value) => _prefs.put('lastLongitude', value);
+  double? get lastLongitude => _prefs.get(StorageKeys.lastLongitude);
+  set lastLongitude(double? value) =>
+      _prefs.put(StorageKeys.lastLongitude, value);
 
   /// List of offer IDs already notified to user (to prevent spam).
-  List<String> get notifiedOfferIds =>
-      List<String>.from(_prefs.get('notifiedOfferIds', defaultValue: []));
+  List<String> get notifiedOfferIds => List<String>.from(
+    _prefs.get(StorageKeys.notifiedOfferIds, defaultValue: []),
+  );
   set notifiedOfferIds(List<String> value) =>
-      _prefs.put('notifiedOfferIds', value);
+      _prefs.put(StorageKeys.notifiedOfferIds, value);
 
   /// Backend API Access Token.
-  String? get backendAccessToken => _prefs.get('backendAccessToken');
+  String? get backendAccessToken => _prefs.get(StorageKeys.backendAccessToken);
   set backendAccessToken(String? value) {
     if (value == null) {
-      _prefs.delete('backendAccessToken');
+      _prefs.delete(StorageKeys.backendAccessToken);
     } else {
-      _prefs.put('backendAccessToken', value);
+      _prefs.put(StorageKeys.backendAccessToken, value);
     }
   }
 
   /// Backend API Refresh Token.
-  String? get backendRefreshToken => _prefs.get('backendRefreshToken');
+  String? get backendRefreshToken =>
+      _prefs.get(StorageKeys.backendRefreshToken);
   set backendRefreshToken(String? value) {
     if (value == null) {
-      _prefs.delete('backendRefreshToken');
+      _prefs.delete(StorageKeys.backendRefreshToken);
     } else {
-      _prefs.put('backendRefreshToken', value);
+      _prefs.put(StorageKeys.backendRefreshToken, value);
     }
   }
 
   Map<String, dynamic>? get activeJourneySession {
-    final raw = _prefs.get('activeJourneySession');
+    final raw = _prefs.get(StorageKeys.activeJourneySession);
     if (raw is! Map) {
       return null;
     }
@@ -150,11 +162,11 @@ class StorageService {
   }
 
   Future<void> saveActiveJourneySession(Map<String, dynamic> value) async {
-    await _prefs.put('activeJourneySession', value);
+    await _prefs.put(StorageKeys.activeJourneySession, value);
   }
 
   Future<void> clearActiveJourneySession() async {
-    await _prefs.delete('activeJourneySession');
+    await _prefs.delete(StorageKeys.activeJourneySession);
   }
 
   Future<void> putCachedResponse(

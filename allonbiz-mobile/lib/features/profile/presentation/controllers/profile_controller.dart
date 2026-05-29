@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../data/repositories/profile_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 
@@ -22,6 +23,9 @@ class ProfileState {
 }
 
 class ProfileController extends StateNotifier<ProfileState> {
+  static const String _genericProfileError =
+      'Unable to save your profile right now.';
+
   final ProfileRepository _profileRepository;
   final Ref _ref;
 
@@ -47,8 +51,8 @@ class ProfileController extends StateNotifier<ProfileState> {
       // Refresh user in auth state
       await _ref.read(authControllerProvider.notifier).refreshProfile();
       state = state.copyWith(isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+    } catch (_) {
+      state = state.copyWith(isLoading: false, error: _genericProfileError);
     }
   }
 
@@ -59,8 +63,8 @@ class ProfileController extends StateNotifier<ProfileState> {
       // Refresh user in auth state
       await _ref.read(authControllerProvider.notifier).refreshProfile();
       state = state.copyWith(isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+    } catch (_) {
+      state = state.copyWith(isLoading: false, error: _genericProfileError);
     }
   }
 }

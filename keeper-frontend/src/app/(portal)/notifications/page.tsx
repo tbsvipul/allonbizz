@@ -54,7 +54,7 @@ export default function NotificationsPage() {
 
   // We will collect available images from shops and offers to let user select
   const availableImages = Array.from(new Set([
-    ...shops.map(s => s.imageUrl).filter(Boolean),
+    ...shops.map(s => s.shopProfileImage).filter(Boolean),
     ...offers.map(o => o.imageUrl).filter(Boolean)
   ])) as string[];
 
@@ -739,7 +739,7 @@ export default function NotificationsPage() {
                     onClick={() => void toggleStatus(notif.notificationId, notif.isActive)}
                     title={notif.isActive ? "Deactivate" : "Activate"}
                     style={{
-                      background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px',
+                      border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px',
                       color: notif.isActive ? '#10b981' : 'hsl(var(--muted-foreground))',
                       background: notif.isActive ? 'rgba(16,185,129,0.1)' : 'rgba(148,163,184,0.1)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'

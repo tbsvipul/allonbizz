@@ -5,12 +5,10 @@ import '../../../../shared/models/offer.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_bar_binding.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
-import '../../../../core/providers/app_bar_provider.dart';
-import '../../../../shared/widgets/app_image.dart';
+import '../../../../shared/widgets/app_detail_media_header.dart';
 import '../../data/repositories/offers_repository.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'shop_detail_screen.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
@@ -39,47 +37,10 @@ class OfferDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
-  late final AppBarNotifier _appBarNotifier;
-
-  @override
-  void initState() {
-    super.initState();
-    _appBarNotifier = ref.read(appBarProvider.notifier);
-    if (!widget.isSheet) {
-      _updateAppBar();
-    }
-  }
-
-  void _updateAppBar() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier
-          .pushConfig(
-            AppBarConfig(
-              title: Text(widget.initialOffer?.title ?? 'Offer Details'),
-              centerTitle: true,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          );
-    });
-  }
-
-  @override
-  void dispose() {
-    if (!widget.isSheet) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _appBarNotifier.popConfig();
-      });
-    }
-    super.dispose();
-  }
-
   void _showReviewSheet(BuildContext context, String offerId) {
     int selectedRating = 0;
     final reviewController = TextEditingController();
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -104,7 +65,9 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                   children: [
                     Text(
                       'Write a Review',
-                      style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTextStyles.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: AppDimensions.lg),
                     Center(
@@ -154,10 +117,15 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                             return;
                           }
                           try {
-                            await ref.read(offersRepositoryProvider).rateOffer(
-                                offerId,
-                                selectedRating,
-                                reviewController.text.isNotEmpty ? reviewController.text : null);
+                            await ref
+                                .read(offersRepositoryProvider)
+                                .rateOffer(
+                                  offerId,
+                                  selectedRating,
+                                  reviewController.text.isNotEmpty
+                                      ? reviewController.text
+                                      : null,
+                                );
                             if (context.mounted) {
                               Navigator.pop(context);
                               AppSnackbar.show(
@@ -207,32 +175,30 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
     }
 
     final offerAsync = ref.watch(offerDetailProvider(offerId));
-
-    return offerAsync.when(
+    final offerTitle =
+        widget.initialOffer?.title ?? offerAsync.valueOrNull?.title;
+    final content = offerAsync.when(
       data: (offer) {
-        if (!widget.isSheet) {
-          // Update app bar with real title if we didn't have it
-          if (widget.initialOffer == null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref
-                  .read(appBarProvider.notifier)
-                  .setConfig(
-                    AppBarConfig(
-                      title: Text(offer.title),
-                      centerTitle: true,
-                      leading: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  );
-            });
-          }
-        }
         return _buildContent(context, offer, l10n);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Error: $err')),
+    );
+
+    if (widget.isSheet) {
+      return content;
+    }
+
+    return AppBarBinding(
+      config: AppBarConfig(
+        title: Text(offerTitle ?? 'Offer Details'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      child: content,
     );
   }
 
@@ -346,12 +312,21 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                         final locState = ref.read(currentLocationProvider);
                         if (locState.position == null) {
                           if (context.mounted) {
-                            AppSnackbar.show(context, message: 'Current location not available.', type: AppSnackbarType.error);
+                            AppSnackbar.show(
+                              context,
+                              message: 'Current location not available.',
+                              type: AppSnackbarType.error,
+                            );
                           }
                           return;
                         }
-                        final origin = LatLng(locState.position!.latitude, locState.position!.longitude);
-                        final notifier = ref.read(navigationControllerProvider.notifier);
+                        final origin = LatLng(
+                          locState.position!.latitude,
+                          locState.position!.longitude,
+                        );
+                        final notifier = ref.read(
+                          navigationControllerProvider.notifier,
+                        );
 
                         final navState = ref.read(navigationControllerProvider);
                         if (navState.hasActiveJourney) {
@@ -360,14 +335,18 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('Active Journey Detected'),
-                              content: const Text('You currently have an active journey. Do you want to end it and start a new journey?'),
+                              content: const Text(
+                                'You currently have an active journey. Do you want to end it and start a new journey?',
+                              ),
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.of(context).pop(false),
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
                                   child: const Text('Cancel'),
                                 ),
                                 FilledButton(
-                                  onPressed: () => Navigator.of(context).pop(true),
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
                                   child: const Text('New Journey'),
                                 ),
                               ],
@@ -375,7 +354,7 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                           );
 
                           if (shouldStartNew != true) return;
-                          
+
                           await notifier.clearRoute();
                         }
 
@@ -434,12 +413,17 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                   if (offer.keeperName != null && offer.keeperName!.isNotEmpty)
                     Text(
                       'Name: ${offer.keeperName}',
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey700),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.grey700,
+                      ),
                     ),
-                  if (offer.keeperPhone != null && offer.keeperPhone!.isNotEmpty)
+                  if (offer.keeperPhone != null &&
+                      offer.keeperPhone!.isNotEmpty)
                     Text(
                       'Phone: ${offer.keeperPhone}',
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey700),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.grey700,
+                      ),
                     ),
                 ],
 
@@ -453,17 +437,25 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, color: AppColors.secondary, size: 24),
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppColors.secondary,
+                      size: 24,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '${offer.rating?.toStringAsFixed(1) ?? "0.0"} out of 5',
-                      style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 Text(
                   'Based on ${offer.reviewCount ?? 0} reviews',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey500),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.grey500,
+                  ),
                 ),
 
                 const SizedBox(height: AppDimensions.xl),
@@ -522,153 +514,41 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
   }
 }
 
-class _OfferImageHeader extends ConsumerStatefulWidget {
+class _OfferImageHeader extends ConsumerWidget {
   final Offer offer;
 
   const _OfferImageHeader({required this.offer});
 
   @override
-  ConsumerState<_OfferImageHeader> createState() => _OfferImageHeaderState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final images = <String>[];
+    var circleImageUrl = offer.shopProfileImage;
 
-class _OfferImageHeaderState extends ConsumerState<_OfferImageHeader> {
-  int _currentPage = 0;
-  List<String> _images = [];
-
-  @override
-  Widget build(BuildContext context) {
-    // Determine images to show
-    List<String> images = [];
-    String? circleImageUrl = widget.offer.imageUrl;
-
-    if (widget.offer.imageUrl != null) {
-      images.add(widget.offer.imageUrl!);
+    if (offer.imageUrl != null) {
+      images.add(offer.imageUrl!);
     }
 
-    if (widget.offer.shopId != null && widget.offer.shopId!.isNotEmpty) {
-      final shopAsync = ref.watch(shopDetailProvider(widget.offer.shopId!));
+    if (offer.shopId != null && offer.shopId!.isNotEmpty) {
+      final shopAsync = ref.watch(shopDetailProvider(offer.shopId!));
       final shop = shopAsync.valueOrNull;
       if (shop != null) {
-        if (shop.imageUrl != null && !images.contains(shop.imageUrl!)) {
-          images.add(shop.imageUrl!);
+        final primaryImageUrl = shop.primaryImageUrl;
+        if (primaryImageUrl != null && !images.contains(primaryImageUrl)) {
+          images.add(primaryImageUrl);
         }
         if (shop.shopImages.isNotEmpty) {
           for (final img in shop.shopImages) {
-            images.add(img);
+            if (!images.contains(img)) {
+              images.add(img);
+            }
           }
         }
-        if (shop.imageUrl != null) {
-          circleImageUrl = shop.imageUrl;
+        if (primaryImageUrl != null) {
+          circleImageUrl = primaryImageUrl;
         }
       }
     }
 
-    if (images.length != _images.length) {
-      _images = images;
-    }
-
-    return SizedBox(
-      height: 240,
-      child: Stack(
-        children: [
-          // Background Carousel
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 200,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: images.isNotEmpty
-                  ? CarouselSlider(
-                      options: CarouselOptions(
-                        height: 200,
-                        viewportFraction: 1.0,
-                        autoPlay: images.length > 1,
-                        autoPlayInterval: const Duration(seconds: 3),
-                        onPageChanged: (index, reason) {
-                          if (mounted) {
-                            setState(() {
-                              _currentPage = index;
-                            });
-                          }
-                        },
-                      ),
-                      items: images.map((img) {
-                        return AppImage.network(
-                          img,
-                          fit: BoxFit.cover,
-                          height: 200,
-                          width: double.infinity,
-                        );
-                      }).toList(),
-                    )
-                  : Container(
-                      color: AppColors.grey200,
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported,
-                            size: 50, color: AppColors.grey400),
-                      ),
-                    ),
-            ),
-          ),
-          
-          // Page Indicator
-          if (images.length > 1)
-            Positioned(
-              bottom: 48,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: AnimatedSmoothIndicator(
-                    activeIndex: _currentPage,
-                    count: images.length,
-                    effect: ExpandingDotsEffect(
-                      dotHeight: 6,
-                      dotWidth: 6,
-                      activeDotColor: AppColors.primary,
-                      dotColor: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Circle Image
-          Positioned(
-            left: 16,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: AppImage.network(
-                  circleImageUrl ?? '',
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return AppDetailMediaHeader(images: images, avatarImageUrl: circleImageUrl);
   }
 }

@@ -120,7 +120,7 @@ export interface ShopSummary {
   isOpen?: boolean;
   latitude?: number | null;
   longitude?: number | null;
-  imageUrl?: string | null;
+  shopProfileImage?: string | null;
   rejectionReason?: string | null;
   deactivateReason?: string | null;
 }
@@ -151,7 +151,7 @@ export interface ShopDetail {
   verifyStatus?: string;
   isOpen: boolean;
   notificationRadius?: number | null;
-  imageUrl?: string | null;
+  shopProfileImage?: string | null;
   shopImages: string[];
   tags: string[];
   amenities: string[];

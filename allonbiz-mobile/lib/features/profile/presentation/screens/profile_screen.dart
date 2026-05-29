@@ -86,8 +86,6 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppDimensions.xl),
             child: Column(
               children: [
-
-
                 // ── Preferences ────────────────────────────────────
                 AppSectionHeader(
                   title: l10n.preferences,

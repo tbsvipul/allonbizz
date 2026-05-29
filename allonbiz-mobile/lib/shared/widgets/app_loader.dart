@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_dimensions.dart';
 
 enum AppLoaderVariant { fullScreen, inline, shimmer }
 
@@ -8,7 +10,7 @@ enum AppLoaderVariant { fullScreen, inline, shimmer }
 class AppLoader extends StatelessWidget {
   const AppLoader._({
     required this.variant,
-    this.size = 40.0,
+    this.size = AppDimensions.iconXl,
     this.color = AppColors.primary,
     this.message,
     this.width,
@@ -49,7 +51,10 @@ class AppLoader extends StatelessWidget {
                 const SizedBox(height: 20),
                 Text(
                   message!,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w500),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ],
@@ -64,7 +69,7 @@ class AppLoader extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             color: AppColors.grey200,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
     }
@@ -73,15 +78,17 @@ class AppLoader extends StatelessWidget {
 
 class _AppLoaderFullScreen extends AppLoader {
   const _AppLoaderFullScreen({
-    super.size = 60.0,
+    super.size = AppDimensions.xxxl,
     super.color = AppColors.primary,
     super.message,
   }) : super._(variant: AppLoaderVariant.fullScreen);
 }
 
 class _AppLoaderInline extends AppLoader {
-  const _AppLoaderInline({super.size = 30.0, super.color = AppColors.primary})
-    : super._(variant: AppLoaderVariant.inline);
+  const _AppLoaderInline({
+    super.size = AppDimensions.iconLg,
+    super.color = AppColors.primary,
+  }) : super._(variant: AppLoaderVariant.inline);
 }
 
 class _AppLoaderShimmer extends AppLoader {

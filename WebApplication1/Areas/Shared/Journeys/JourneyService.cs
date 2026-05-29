@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using allonbiz.AdminAPI.Data;
 using allonbiz.AdminAPI.DTOs.Users;
+using allonbiz.AdminAPI.Helpers;
 using allonbiz.AdminAPI.Models.Entities;
 using allonbiz.AdminAPI.Services.Interfaces;
 using System.Text.Json;
@@ -148,9 +149,12 @@ public class JourneyService : IJourneyService
                 ShopId = x.Shop.ShopId,
                 Name = x.Shop.Name,
                 Category = x.Shop.Category?.Name ?? "General",
+                Address = x.Shop.Address,
                 Latitude = x.Shop.Latitude!.Value,
                 Longitude = x.Shop.Longitude!.Value,
                 Distance = Math.Round(x.Distance, 2),
+                ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(x.Shop.ImageUrl),
+                IsOpen = x.Shop.IsOpen,
                 Tags = x.Tags
             })
             .ToList();

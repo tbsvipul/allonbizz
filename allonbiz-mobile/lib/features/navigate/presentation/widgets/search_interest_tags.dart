@@ -5,15 +5,18 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/models/discovery_model.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../controllers/search_controller.dart';
+import '../utils/interest_tag_utils.dart';
 
 class SearchInterestTags extends StatefulWidget {
   final List<TagModel> tags;
   final List<String> selectedInterests;
   final TextEditingController interestSearchController;
   final FocusNode interestFocus;
-  final Function(String) onAddCustomInterest;
-  final Function(String) onToggleInterest;
+  final Future<CustomInterestAddStatus> Function(String) onAddCustomInterest;
+  final ValueChanged<String> onToggleInterest;
   final VoidCallback? onShowAllTags;
+  final bool isAddingTag;
   final bool isDark;
   final double? height;
   final bool isCompact;
@@ -27,6 +30,7 @@ class SearchInterestTags extends StatefulWidget {
     required this.onAddCustomInterest,
     required this.onToggleInterest,
     this.onShowAllTags,
+    this.isAddingTag = false,
     required this.isDark,
     this.height,
     this.isCompact = false,
@@ -42,7 +46,6 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
   late final ScrollController _scrollController;
   late int _visibleCount;
   String _searchText = '';
-  bool _isAddingTag = false;
 
   @override
   void initState() {
@@ -95,50 +98,35 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
   }
 
   List<TagModel> _getFilteredTags() {
-    final allTags = widget.tags;
-    if (_searchText.trim().isEmpty) {
-      return allTags;
-    }
-    final query = _searchText.toLowerCase().trim();
-    return allTags.where((t) => t.name.toLowerCase().contains(query)).toList();
+    return filterInterestTags(widget.tags, _searchText);
   }
 
   Future<void> _handleAddNewTag() async {
     final text = widget.interestSearchController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || widget.isAddingTag) return;
 
-    setState(() {
-      _isAddingTag = true;
-    });
+    final status = await widget.onAddCustomInterest(text);
+    if (!mounted) {
+      return;
+    }
 
-    try {
-      await widget.onAddCustomInterest(text);
+    if (status == CustomInterestAddStatus.added) {
       widget.interestSearchController.clear();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Tag '$text' added successfully!"),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to add tag: $e"),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isAddingTag = false;
-        });
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Tag '$text' added successfully!"),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else if (status == CustomInterestAddStatus.failed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to add tag right now.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -156,9 +144,7 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
 
     // Check if we should show the add button
     final queryText = _searchText.trim();
-    final hasExactMatch = widget.tags.any(
-      (t) => t.name.toLowerCase() == queryText.toLowerCase(),
-    );
+    final hasExactMatch = hasExactInterestMatch(widget.tags, queryText);
     final showAddButton = queryText.isNotEmpty && !hasExactMatch;
 
     return Column(
@@ -212,7 +198,7 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     fillColor: Colors.transparent,
-                    suffixIcon: _isAddingTag
+                    suffixIcon: widget.isAddingTag
                         ? const SizedBox(
                             width: 20,
                             height: 20,

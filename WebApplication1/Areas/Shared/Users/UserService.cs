@@ -710,7 +710,7 @@ public class UserService : IUserService
             IsVerified = s.IsVerified,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
-            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
             RejectionReason = s.RejectionReason,
             DeactivateReason = s.DeactivateReason
         }).ToList();

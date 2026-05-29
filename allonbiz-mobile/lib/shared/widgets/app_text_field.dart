@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_dimensions.dart';
+
 enum AppTextFieldVariant { regular, password, search, multiline }
 
 /// Universal standard Text Field implementation.
@@ -109,7 +111,7 @@ class _AppTextFieldState extends State<AppTextField> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppDimensions.xs),
         ],
         TextFormField(
           controller: widget.controller,
@@ -155,11 +157,11 @@ class _AppTextFieldState extends State<AppTextField> {
                 ? colorScheme.surfaceContainerHighest
                 : colorScheme.surface,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+              horizontal: AppDimensions.md,
+              vertical: AppDimensions.md,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               borderSide: BorderSide(
                 color: isSearch
                     ? Colors.transparent
@@ -167,7 +169,7 @@ class _AppTextFieldState extends State<AppTextField> {
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               borderSide: BorderSide(
                 color: isSearch
                     ? Colors.transparent
@@ -175,11 +177,11 @@ class _AppTextFieldState extends State<AppTextField> {
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               borderSide: BorderSide(color: colorScheme.primary, width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               borderSide: BorderSide(color: colorScheme.error),
             ),
           ),

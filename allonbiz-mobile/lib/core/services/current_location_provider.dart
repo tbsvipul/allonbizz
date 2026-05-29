@@ -94,7 +94,9 @@ class CurrentLocationNotifier extends StateNotifier<CurrentLocationState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: requestPermission ? e.toString() : null,
+        errorMessage: requestPermission
+            ? 'Unable to fetch your current location right now.'
+            : null,
       );
     }
   }

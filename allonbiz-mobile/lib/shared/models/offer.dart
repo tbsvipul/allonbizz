@@ -15,6 +15,8 @@ final class Offer extends Equatable {
     this.shopName = 'Local Shop',
     this.shopAddress,
     this.imageUrl,
+    this.shopProfileImage,
+    this.shopIsOpen,
     this.expiresAt,
     this.terms,
     this.keeperId,
@@ -39,6 +41,8 @@ final class Offer extends Equatable {
   final double latitude;
   final double longitude;
   final String? imageUrl;
+  final String? shopProfileImage;
+  final bool? shopIsOpen;
   final DateTime? expiresAt;
   final String? terms;
   final String? keeperId;
@@ -65,6 +69,8 @@ final class Offer extends Equatable {
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
       imageUrl: data['imageUrl'] as String?,
+      shopProfileImage: data['shopProfileImage'] as String?,
+      shopIsOpen: _parseNullableBool(data['shopIsOpen']),
       expiresAt: _parseNullableTimestamp(data['expiresAt']),
       terms: data['terms'] as String?,
       keeperId: data['keeperId'] as String?,
@@ -133,6 +139,9 @@ final class Offer extends Equatable {
           (json['Longitude'] as num?)?.toDouble() ??
           0.0,
       imageUrl: (json['imageUrl'] ?? json['ImageUrl'])?.toString(),
+      shopProfileImage: (json['shopProfileImage'] ?? json['ShopProfileImage'])
+          ?.toString(),
+      shopIsOpen: _parseNullableBool(json['shopIsOpen'] ?? json['ShopIsOpen']),
       expiresAt: _parseDate(json['expiresAt'] ?? json['EndDate']),
       terms: (json['terms'] ?? json['TermsAndConditions'])?.toString(),
       keeperId: (json['keeperId'] ?? json['KeeperId'])?.toString(),
@@ -160,6 +169,8 @@ final class Offer extends Equatable {
     'latitude': latitude,
     'longitude': longitude,
     if (imageUrl != null) 'imageUrl': imageUrl,
+    if (shopProfileImage != null) 'shopProfileImage': shopProfileImage,
+    if (shopIsOpen != null) 'shopIsOpen': shopIsOpen,
     if (expiresAt != null) 'expiresAt': expiresAt!.toIso8601String(),
     if (terms != null) 'terms': terms,
     if (keeperId != null) 'keeperId': keeperId,
@@ -184,6 +195,8 @@ final class Offer extends Equatable {
     double? latitude,
     double? longitude,
     String? imageUrl,
+    String? shopProfileImage,
+    bool? shopIsOpen,
     DateTime? expiresAt,
     String? terms,
     String? keeperId,
@@ -206,6 +219,8 @@ final class Offer extends Equatable {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       imageUrl: imageUrl ?? this.imageUrl,
+      shopProfileImage: shopProfileImage ?? this.shopProfileImage,
+      shopIsOpen: shopIsOpen ?? this.shopIsOpen,
       expiresAt: expiresAt ?? this.expiresAt,
       terms: terms ?? this.terms,
       keeperId: keeperId ?? this.keeperId,
@@ -229,6 +244,22 @@ final class Offer extends Equatable {
   static DateTime _parseTimestamp(dynamic field) =>
       _parseDate(field) ?? DateTime.now();
   static DateTime? _parseNullableTimestamp(dynamic field) => _parseDate(field);
+
+  static bool? _parseNullableBool(dynamic field) {
+    if (field is bool) {
+      return field;
+    }
+    if (field is String) {
+      final normalized = field.trim().toLowerCase();
+      if (normalized == 'true') {
+        return true;
+      }
+      if (normalized == 'false') {
+        return false;
+      }
+    }
+    return null;
+  }
 
   static List<String> _parseTags(dynamic field) {
     if (field is List) {
@@ -259,6 +290,8 @@ final class Offer extends Equatable {
     latitude,
     longitude,
     imageUrl,
+    shopProfileImage,
+    shopIsOpen,
     expiresAt,
     terms,
     keeperId,

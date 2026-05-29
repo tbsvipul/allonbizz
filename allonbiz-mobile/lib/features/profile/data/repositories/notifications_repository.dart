@@ -45,9 +45,17 @@ class NotificationsRepository {
   Future<int> getUnreadCount() async {
     try {
       final response = await _apiClient.get('/user/notifications/unread-count');
-      return (response.data as Map<String, dynamic>)['data'] as int? ?? 0;
-    } on ServerFailure catch (e) {
-      throw DatabaseFailure(e.message);
+      if (response == null || response is! Map) {
+        return 0;
+      }
+      final map = response;
+      final data = map['data'] ?? map['Data'];
+      if (data is int) return data;
+      if (data is num) return data.toInt();
+      if (data is String) return int.tryParse(data) ?? 0;
+      return 0;
+    } catch (e) {
+      return 0;
     }
   }
 }
@@ -95,7 +103,8 @@ class UserNotification {
           DateTime.now(),
       isRead: json['isRead'] as bool? ?? json['IsRead'] as bool? ?? false,
       metadata: (json['metadataJson'] ?? json['MetadataJson'])?.toString(),
-      actionOfferId: (json['actionOfferId'] ?? json['ActionOfferId'])?.toString(),
+      actionOfferId: (json['actionOfferId'] ?? json['ActionOfferId'])
+          ?.toString(),
       actionShopId: (json['actionShopId'] ?? json['ActionShopId'])?.toString(),
     );
   }

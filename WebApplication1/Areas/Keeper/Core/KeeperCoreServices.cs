@@ -268,7 +268,7 @@ public class KeeperProfileService : IKeeperProfileService
             Email = NormalizeOptional(dto.Email),
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
-            ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ImageUrl),
+            ImageUrl = ImageConversionHelper.ParseBase64Image(dto.ShopProfileImage),
             ShopImages = dto.ShopImages?
                 .Select(ImageConversionHelper.ParseBase64Image)
                 .OfType<byte[]>()
@@ -307,7 +307,7 @@ public class KeeperProfileService : IKeeperProfileService
             IsOpen = s.IsOpen,
             Latitude = s.Latitude,
             Longitude = s.Longitude,
-            ImageUrl = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
+            ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(s.ImageUrl),
             RejectionReason = s.RejectionReason,
             DeactivateReason = s.DeactivateReason
         }).ToList();

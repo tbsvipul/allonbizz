@@ -2,13 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/providers/app_bar_provider.dart';
+import '../../../../core/widgets/app_bar_binding.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/models/journey_model.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_error_widget.dart';
 import '../../../../shared/widgets/app_loader.dart';
-import '../../../../shared/widgets/app_surface.dart';
+import '../../../../shared/widgets/app_card.dart';
 import '../../../discover/data/repositories/shops_repository.dart';
 import '../../../trips/data/repositories/journeys_repository.dart';
 import '../widgets/journey_card.dart';
@@ -27,14 +28,15 @@ final encounteredShopLabelsProvider = FutureProvider.autoDispose
       }
 
       final shopsRepository = ref.watch(shopsRepositoryProvider);
+      final resolvedEntries = await Future.wait(
+        args.entries.map(
+          (entry) => _resolveEncounteredShopLabel(shopsRepository, entry),
+        ),
+      );
       final resolvedLabels = <String>[];
       final seenLabels = <String>{};
 
-      for (final entry in args.entries) {
-        final label = await _resolveEncounteredShopLabel(
-          shopsRepository,
-          entry,
-        );
+      for (final label in resolvedEntries) {
         if (label.isEmpty) {
           continue;
         }
@@ -130,76 +132,52 @@ class JourneyDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
-  late final AppBarNotifier _appBarNotifier;
-
-  @override
-  void initState() {
-    super.initState();
-    _appBarNotifier = ref.read(appBarProvider.notifier);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.pushConfig(
-        AppBarConfig(
-          title: const Text('Journey Details'),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appBarNotifier.popConfig();
-    });
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final journeyAsync = ref.watch(journeyDetailProvider(widget.journeyId));
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.surfaceDark
-          : AppColors.grey50,
-      body: journeyAsync.when(
-        data: (journey) => _JourneyDetailContent(journey: journey),
-        loading: () {
-          if (widget.initialJourney != null) {
-            return _JourneyDetailContent(
-              journey: widget.initialJourney!,
-              isRefreshing: true,
-            );
-          }
+    return AppBarBinding(
+      config: AppBarConfig(
+        title: const Text('Journey Details'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surfaceDark
+            : AppColors.grey50,
+        body: journeyAsync.when(
+          data: (journey) => _JourneyDetailContent(journey: journey),
+          loading: () {
+            if (widget.initialJourney != null) {
+              return _JourneyDetailContent(
+                journey: widget.initialJourney!,
+                isRefreshing: true,
+              );
+            }
 
-          return const Center(child: AppLoader.inline());
-        },
-        error: (error, stackTrace) {
-          if (widget.initialJourney != null) {
-            return _JourneyDetailContent(
-              journey: widget.initialJourney!,
-              errorMessage:
-                  'Showing saved summary. Full detail could not be loaded.',
-            );
-          }
+            return const Center(child: AppLoader.inline());
+          },
+          error: (error, stackTrace) {
+            if (widget.initialJourney != null) {
+              return _JourneyDetailContent(
+                journey: widget.initialJourney!,
+                errorMessage:
+                    'Showing saved summary. Full detail could not be loaded.',
+              );
+            }
 
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.xl),
-              child: Text(
-                'Unable to load journey details.\n$error',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.grey600,
-                ),
-              ),
-            ),
-          );
-        },
+            return AppErrorWidget(
+              title: 'Unable to load journey details',
+              message: 'Please try again to fetch the latest journey summary.',
+              onRetry: () =>
+                  ref.invalidate(journeyDetailProvider(widget.journeyId)),
+            );
+          },
+        ),
       ),
     );
   }
@@ -407,7 +385,7 @@ class _DetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSurface(
+    return AppCard(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: AppDimensions.md),
       padding: const EdgeInsets.all(AppDimensions.md),

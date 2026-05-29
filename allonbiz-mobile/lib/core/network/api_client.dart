@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
-    show debugPrint, kDebugMode, kIsWeb, kProfileMode, visibleForTesting;
+    show kDebugMode, kIsWeb, kProfileMode, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -11,6 +11,7 @@ import 'package:http/io_client.dart';
 import '../errors/failures.dart';
 import '../models/api_response.dart';
 import '../services/storage_service.dart';
+import '../utils/app_logger.dart';
 import '../utils/background_executor.dart';
 import 'api_parsers.dart';
 import 'base_api.dart';
@@ -127,6 +128,9 @@ class ApiClient {
 
   final Map<String, _MemoryCacheEntry> _memoryCache = {};
   final Map<String, Future<http.Response>> _inFlightGets = {};
+  final StreamController<void> _authFailedController = StreamController<void>.broadcast();
+
+  Stream<void> get onAuthFailed => _authFailedController.stream;
 
   Future<bool>? _refreshFuture;
 
@@ -454,7 +458,9 @@ class ApiClient {
         request = httpRequest;
       }
 
-      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 15));
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
       _logTrackedAuthResponse(endpoint, response);
 
@@ -469,7 +475,11 @@ class ApiClient {
             fields: fields,
             isRetry: true,
           );
+        } else {
+          _authFailedController.add(null);
         }
+      } else if (response.statusCode == 401 && isRetry) {
+        _authFailedController.add(null);
       }
 
       _handleErrorResponse(response);
@@ -582,7 +592,9 @@ class ApiClient {
   }) async {
     try {
       final request = http.Request('GET', uri)..headers.addAll(_headers);
-      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 15));
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 401 && !isRetry) {
@@ -594,7 +606,11 @@ class ApiClient {
             refreshedUri,
             isRetry: true,
           );
+        } else {
+          _authFailedController.add(null);
         }
+      } else if (response.statusCode == 401 && isRetry) {
+        _authFailedController.add(null);
       }
 
       _handleErrorResponse(response);
@@ -606,7 +622,6 @@ class ApiClient {
     } on TimeoutException {
       throw const NetworkFailure();
     }
-
   }
 
   Future<bool> _tryRefreshToken() {
@@ -626,6 +641,8 @@ class ApiClient {
     }
 
     try {
+      // PRESERVED: refresh-token endpoint and storage update keys must remain
+      // unchanged to avoid breaking persisted auth sessions.
       final response = await _client.post(
         Uri.parse('$baseUrl/auth/refresh-token'),
         headers: {
@@ -783,7 +800,7 @@ class ApiClient {
 
     // Lightweight observability for local profiling without pulling in
     // a full telemetry dependency.
-    debugPrint(
+    AppLogger.debug(
       '[ApiClient] ${metrics.endpoint} source=$source network=${networkMs}ms decode=${decodeMs}ms parse=${parseMs}ms background=$background deduped=${metrics.deduped}',
     );
   }
@@ -805,22 +822,24 @@ class ApiClient {
       return;
     }
 
-    debugPrint('[AuthApi] request method=$method url=$uri');
+    AppLogger.debug('[AuthApi] request method=$method url=$uri');
 
     if (body != null) {
-      debugPrint('[AuthApi] request-body ${_logValue(_redactSensitive(body))}');
+      AppLogger.debug(
+        '[AuthApi] request-body ${_logValue(_redactSensitive(body))}',
+      );
       return;
     }
 
     if (fields != null && fields.isNotEmpty) {
-      debugPrint(
+      AppLogger.debug(
         '[AuthApi] request-fields ${_logValue(_redactSensitive(fields))}',
       );
       return;
     }
 
     if (hasFiles) {
-      debugPrint('[AuthApi] request-body <multipart-files>');
+      AppLogger.debug('[AuthApi] request-body <multipart-files>');
     }
   }
 
@@ -830,22 +849,24 @@ class ApiClient {
       return;
     }
 
-    debugPrint(
+    AppLogger.debug(
       '[AuthApi] response status=${response.statusCode} url=${response.request?.url ?? endpoint}',
     );
 
     if (response.body.isEmpty) {
-      debugPrint('[AuthApi] response-body <empty>');
+      AppLogger.debug('[AuthApi] response-body <empty>');
       return;
     }
 
     try {
       final decoded = jsonDecode(response.body);
-      debugPrint(
+      AppLogger.debug(
         '[AuthApi] response-body ${_logValue(_redactSensitive(decoded))}',
       );
     } catch (_) {
-      debugPrint('[AuthApi] response-body ${_truncateForLog(response.body)}');
+      AppLogger.debug(
+        '[AuthApi] response-body ${_truncateForLog(response.body)}',
+      );
     }
   }
 
@@ -855,7 +876,7 @@ class ApiClient {
       return;
     }
 
-    debugPrint(
+    AppLogger.debug(
       '[AuthApi] exception method=$method endpoint=$endpoint type=${error.runtimeType} error=$error',
     );
   }

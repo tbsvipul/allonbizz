@@ -8,7 +8,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/auth_error_mapper.dart';
 import '../widgets/auth_header.dart';
-import '../../../../core/providers/app_bar_provider.dart';
+import '../../../../shared/widgets/app_status_banner.dart';
 
 /// Registration screen with manual Email & Password.
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -59,18 +59,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    // Update global AppBar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(appBarProvider.notifier)
-          .setConfig(
-            AppBarConfig(
-              backgroundColor: Colors.transparent,
-              leading: isLoading ? const SizedBox.shrink() : const BackButton(),
-            ),
-          );
-    });
-
     return PopScope(
       canPop: !isLoading,
       child: Scaffold(
@@ -94,34 +82,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                       if (authState.status == AuthStatus.error &&
                           authState.errorMessage != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                        AppStatusBanner(
+                          message: AuthErrorMapper.getMessage(
+                            authState.errorMessage,
+                            l10n,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: colorScheme.error,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  AuthErrorMapper.getMessage(
-                                    authState.errorMessage,
-                                    l10n,
-                                  ),
-                                  style: TextStyle(
-                                    color: colorScheme.error,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          variant: AppStatusBannerVariant.error,
+                          textStyle: const TextStyle(fontSize: 13),
                         ),
                         const SizedBox(height: 16),
                       ],

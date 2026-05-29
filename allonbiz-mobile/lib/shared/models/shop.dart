@@ -7,7 +7,7 @@ class Shop {
   final String? address;
   final String? phoneNumber;
   final String? email;
-  final String? imageUrl;
+  final String? shopProfileImage;
   final List<String> shopImages;
   final double latitude;
   final double longitude;
@@ -21,7 +21,7 @@ class Shop {
     this.address,
     this.phoneNumber,
     this.email,
-    this.imageUrl,
+    this.shopProfileImage,
     this.shopImages = const [],
     required this.latitude,
     required this.longitude,
@@ -54,7 +54,9 @@ class Shop {
       phoneNumber:
           json['phoneNumber']?.toString() ?? json['PhoneNumber']?.toString(),
       email: json['email']?.toString() ?? json['Email']?.toString(),
-      imageUrl: json['imageUrl']?.toString() ?? json['ImageUrl']?.toString(),
+      shopProfileImage:
+          json['shopProfileImage']?.toString() ??
+          json['ShopProfileImage']?.toString(),
       latitude:
           (json['latitude'] as num?)?.toDouble() ??
           (json['Latitude'] as num?)?.toDouble() ??
@@ -64,15 +66,27 @@ class Shop {
           (json['Longitude'] as num?)?.toDouble() ??
           0.0,
       shopImages: (rawImages as List?)?.map((e) => e.toString()).toList() ?? [],
-      isOpen:
-          json['isOpen'] as bool? ??
-          json['IsOpen'] as bool? ??
-          true,
+      isOpen: json['isOpen'] as bool? ?? json['IsOpen'] as bool? ?? true,
       offers:
           (rawOffers as List?)
               ?.map((offer) => Offer.fromJson(Map<String, dynamic>.from(offer)))
               .toList() ??
           [],
     );
+  }
+
+  String? get primaryImageUrl {
+    final normalizedProfileImage = shopProfileImage?.trim();
+    if (normalizedProfileImage != null && normalizedProfileImage.isNotEmpty) {
+      return normalizedProfileImage;
+    }
+
+    for (final candidate in shopImages) {
+      final normalized = candidate.trim();
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+    return null;
   }
 }

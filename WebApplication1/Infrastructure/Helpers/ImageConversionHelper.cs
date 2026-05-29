@@ -1,11 +1,13 @@
 using System;
-
+using System.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 namespace allonbiz.AdminAPI.Helpers;
 
 public static class ImageConversionHelper
 {
     /// <summary>
-    /// Parses a base64 string (optionally containing the "data:image/...;base64," prefix) into a byte array.
+    /// Parses a base64 string, compresses it using SixLabors.ImageSharp, and returns the optimized byte array.
     /// </summary>
     public static byte[]? ParseBase64Image(string? base64Str)
     {
@@ -20,7 +22,29 @@ public static class ImageConversionHelper
 
         try
         {
-            return Convert.FromBase64String(cleanStr);
+            var rawBytes = Convert.FromBase64String(cleanStr);
+
+            using var image = SixLabors.ImageSharp.Image.Load(rawBytes);
+            
+            // Resize if the image is too large (max 1920x1920)
+            int maxWidth = 1920;
+            int maxHeight = 1920;
+            if (image.Width > maxWidth || image.Height > maxHeight)
+            {
+                image.Mutate(x => x.Resize(new SixLabors.ImageSharp.Processing.ResizeOptions
+                {
+                    Mode = SixLabors.ImageSharp.Processing.ResizeMode.Max,
+                    Size = new SixLabors.ImageSharp.Size(maxWidth, maxHeight)
+                }));
+            }
+
+            using var ms = new MemoryStream();
+            image.SaveAsJpeg(ms, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
+            {
+                Quality = 80 // High quality, small file size
+            });
+
+            return ms.ToArray();
         }
         catch
         {

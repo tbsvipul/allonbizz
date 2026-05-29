@@ -108,8 +108,8 @@ function buildInfoWindowContent(shop: ShopSummary) {
   const latitude = typeof shop.latitude === 'number' ? shop.latitude.toFixed(4) : 'N/A';
   const longitude = typeof shop.longitude === 'number' ? shop.longitude.toFixed(4) : 'N/A';
   
-  const image = shop.imageUrl
-    ? `<img src="${escapeHtml(shop.imageUrl)}" alt="${escapeHtml(shop.name)}" style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08); display: block; flex-shrink: 0;" />`
+  const image = shop.shopProfileImage
+    ? `<img src="${escapeHtml(shop.shopProfileImage)}" alt="${escapeHtml(shop.name)}" style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08); display: block; flex-shrink: 0;" />`
     : `<div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0;">${escapeHtml(shop.name.charAt(0).toUpperCase())}</div>`;
 
   return `
@@ -408,8 +408,8 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
         const innerSize = this.isSelected ? 44 : 38;
         const iconSize = this.isSelected ? 24 : 20;
 
-        const imageHtml = this.shop.imageUrl 
-          ? `<img src="${escapeHtml(this.shop.imageUrl)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`
+        const imageHtml = this.shop.shopProfileImage 
+          ? `<img src="${escapeHtml(this.shop.shopProfileImage)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`
           : `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
 
         div.innerHTML = `

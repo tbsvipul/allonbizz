@@ -6,6 +6,7 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_status_banner.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../utils/auth_error_mapper.dart';
@@ -264,34 +265,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           ),
                           const SizedBox(height: 24),
                           if (_errorMessage != null) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.error.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
+                            AppStatusBanner(
+                              message: AuthErrorMapper.getMessage(
+                                _errorMessage,
+                                l10n,
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: colorScheme.error,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      AuthErrorMapper.getMessage(
-                                        _errorMessage,
-                                        l10n,
-                                      ),
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.error,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              variant: AppStatusBannerVariant.error,
+                              textStyle: textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 16),
                           ],

@@ -56,6 +56,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ref.watch(authControllerProvider.notifier).stream,
     ),
     redirect: (context, state) {
+      // PRESERVED: splash/auth/onboarding redirects are tightly coupled to
+      // session restoration and active journey recovery. Review carefully
+      // before changing any branch in this block.
       final authState = ref.read(authControllerProvider);
       final isLoggedIn = authState.user != null;
       final hasResolvedSession = authState.hasResolvedSession;
@@ -103,6 +106,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.splash,
         builder: (context, state) => SplashScreen(
           onComplete: () {
+            // PRESERVED: SplashScreen owns the final transition after its
+            // animation completes. Do not shortcut this in redirect().
             if (!context.mounted) return;
             final authState = ref.read(authControllerProvider);
             if (!authState.hasResolvedSession) return;
