@@ -149,6 +149,86 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
 
+                // Location Marker Preference
+                ProfileTileWidget(
+                  icon: Icons.person_pin_circle_rounded,
+                  title: 'Location Marker',
+                  trailing: DropdownButton<String>(
+                    value: ref.watch(locationMarkerProvider),
+                    underline: const SizedBox(),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                    ),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'ripple',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.my_location_rounded, size: 20, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            const Text('Ripple'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'blue_car.png',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset('assets/images/location_marker/blue_car.png', width: 20, height: 20),
+                            const SizedBox(width: 8),
+                            const Text('Blue Car'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'man.png',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset('assets/images/location_marker/man.png', width: 20, height: 20),
+                            const SizedBox(width: 8),
+                            const Text('Man'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'weman.png',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset('assets/images/location_marker/weman.png', width: 20, height: 20),
+                            const SizedBox(width: 8),
+                            const Text('Woman'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'yellow_car.png',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset('assets/images/location_marker/yellow_car.png', width: 20, height: 20),
+                            const SizedBox(width: 8),
+                            const Text('Yellow Car'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref.read(locationMarkerProvider.notifier).setMarker(val);
+                      }
+                    },
+                  ),
+                ),
+
                 const SizedBox(height: AppDimensions.xl),
 
                 // ── Account ────────────────────────────────────────

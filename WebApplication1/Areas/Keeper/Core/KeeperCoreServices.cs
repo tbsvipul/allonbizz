@@ -438,6 +438,7 @@ public class KeeperOfferService : IKeeperOfferService
             EndDate = dto.EndDate,
             TermsAndConditions = dto.TermsAndConditions,
             ImageData = ImageConversionHelper.ParseBase64Image(dto.ImageUrl),
+            Tags = dto.Tags?.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).Distinct().ToList() ?? new List<string>(),
             Status = OfferStatus.Active,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -493,6 +494,7 @@ public class KeeperOfferService : IKeeperOfferService
         offer.EndDate = dto.EndDate;
         offer.TermsAndConditions = dto.TermsAndConditions;
         offer.ImageData = ImageConversionHelper.ParseBase64Image(dto.ImageUrl);
+        offer.Tags = dto.Tags?.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).Distinct().ToList() ?? new List<string>();
         offer.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _firestore.SyncOfferAsync(offer);
@@ -697,6 +699,7 @@ public class KeeperOfferService : IKeeperOfferService
             EndDate = offer.EndDate,
             TermsAndConditions = offer.TermsAndConditions,
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(offer.ImageData),
+            Tags = offer.Tags ?? new List<string>(),
             Status = offer.Status,
             RedemptionCount = offer.CurrentRedemptions,
             CreatedAt = offer.CreatedAt

@@ -148,7 +148,10 @@ public class ShopService : IShopService
                 OfferId = o.OfferId,
                 Title = o.Title,
                 Status = o.Status.ToString(),
-                EndDate = o.EndDate
+                EndDate = o.EndDate,
+                Description = o.Description,
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageUrl),
+                Tags = o.Tags ?? new List<string>()
             })
             .ToListAsync(ct);
 
@@ -462,7 +465,10 @@ public class ShopService : IShopService
                 OfferId = o.OfferId,
                 Title = o.Title,
                 Status = o.Status.ToString(),
-                EndDate = o.EndDate
+                EndDate = o.EndDate,
+                Description = o.Description,
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageUrl),
+                Tags = o.Tags ?? new List<string>()
             }).ToList() ?? new List<ShopOfferSummaryDto>()
         };
     }

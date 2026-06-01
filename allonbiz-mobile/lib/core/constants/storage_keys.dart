@@ -17,4 +17,5 @@ abstract final class StorageKeys {
   static const String backendAccessToken = 'backendAccessToken';
   static const String backendRefreshToken = 'backendRefreshToken';
   static const String activeJourneySession = 'activeJourneySession';
+  static const String locationMarker = 'locationMarker';
 }

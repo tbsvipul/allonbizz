@@ -175,6 +175,7 @@ export interface OfferDetail {
   status: string;
   redemptionCount: number;
   imageUrl?: string | null;
+  tags: string[];
   createdAt: string;
 }
 

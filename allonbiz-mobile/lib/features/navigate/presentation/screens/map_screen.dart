@@ -15,6 +15,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/network/base_api.dart';
 import '../../../../core/services/current_location_provider.dart';
+import '../../../../core/services/preference_providers.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -79,6 +80,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   ProviderSubscription<Shop?>? _selectedShopSubscription;
   String? _lastCameraKey;
   bool _isOffersExpanded = false;
+  final Set<String> _deselectedTags = {};
 
   @override
   void initState() {
@@ -237,6 +239,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
     final nearbyOffers = ref.watch(
       navigationControllerProvider.select((state) => state.offersOnRoute),
+    );
+    final selectedInterests = ref.watch(
+      navigationControllerProvider.select((state) => state.selectedInterests),
     );
     final markerEntries = ref.watch(mapMarkerEntriesProvider);
     final currentLocation = ref.watch(
@@ -403,7 +408,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
             Positioned(
               left: AppDimensions.md,
               bottom: AppDimensions.lg + MediaQuery.of(context).padding.bottom,
-              child: _buildOffersOverlay(context, nearbyOffers),
+              child: _buildOffersOverlay(context, nearbyOffers, selectedInterests),
             ),
 
           Positioned(
@@ -455,7 +460,25 @@ class _MapScreenState extends ConsumerState<MapScreen>
     });
   }
 
-  Widget _buildOffersOverlay(BuildContext context, List<Offer> offers) {
+  Widget _buildOffersOverlay(BuildContext context, List<Offer> offers, List<String> userTags) {
+    final activeTags = userTags.where((t) => !_deselectedTags.contains(t)).toList();
+
+    var filteredOffers = offers;
+    if (userTags.isNotEmpty) {
+      filteredOffers = offers.where((offer) {
+        if (offer.tags.isEmpty) return true;
+        if (activeTags.isEmpty) return false;
+        return offer.tags.any((t) => activeTags.contains(t));
+      }).toList();
+    }
+
+    final sortedOffers = List<Offer>.from(filteredOffers);
+    sortedOffers.sort((a, b) {
+      final aMatches = a.tags.where((t) => activeTags.contains(t)).length;
+      final bMatches = b.tags.where((t) => activeTags.contains(t)).length;
+      return bMatches.compareTo(aMatches);
+    });
+
     if (!_isOffersExpanded) {
       return GestureDetector(
         onTap: () => setState(() => _isOffersExpanded = true),
@@ -521,62 +544,114 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
 
     return Container(
-          width: MediaQuery.of(context).size.width * 0.72,
+          width: MediaQuery.of(context).size.width * 0.85,
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
+            maxHeight: MediaQuery.of(context).size.height * 0.55,
           ),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xff57b32c), width: 2),
+            borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 24,
+                spreadRadius: 2,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4.0),
-                    child: Text(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
                       'Exclusive Offers',
                       style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
                         color: Color(0xFF1B5E20),
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      size: 22,
-                      color: Colors.grey,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 20,
+                          color: Colors.grey,
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                        onPressed: () => setState(() => _isOffersExpanded = false),
+                      ),
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => setState(() => _isOffersExpanded = false),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
+              if (userTags.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: userTags.map((tag) {
+                        final isSelected = !_deselectedTags.contains(tag);
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _deselectedTags.add(tag);
+                              } else {
+                                _deselectedTags.remove(tag);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? const Color(0xFF1B5E20).withValues(alpha: 0.1)
+                                  : Colors.grey.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? const Color(0xFF1B5E20) : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
               Flexible(
                 child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   shrinkWrap: true,
-                  itemCount: offers.length,
+                  itemCount: sortedOffers.length,
                   physics: const BouncingScrollPhysics(),
                   separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    return _buildOfferCard(offers[index]);
+                    return _buildOfferCard(sortedOffers[index], activeTags);
                   },
                 ),
               ),
@@ -588,24 +663,34 @@ class _MapScreenState extends ConsumerState<MapScreen>
         .scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack);
   }
 
-  Widget _buildOfferCard(Offer offer) {
+  Widget _buildOfferCard(Offer offer, List<String> userTags) {
+    final matchedTags = offer.tags.where((t) => userTags.contains(t)).toList();
+
     return InkWell(
       onTap: () => _showOfferDetail(offer),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xff57b32c), width: 1.5),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade200, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
-              ),
-              child: AspectRatio(
-                aspectRatio: 22 / 10,
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 80,
+                height: 80,
                 child: offer.imageUrl != null && offer.imageUrl!.isNotEmpty
                     ? AppImage.network(
                         offer.imageUrl!,
@@ -615,53 +700,89 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     : _buildOfferPlaceholder(),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      offer.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFFFC107),
-                          size: 14,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          offer.rating != null
-                              ? offer.rating!.toStringAsFixed(1)
-                              : '0.0',
-                          style: TextStyle(
-                            fontSize: 11,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          offer.title,
+                          style: const TextStyle(
                             fontWeight: FontWeight.w800,
-                            color: Colors.grey.shade800,
+                            fontSize: 15,
+                            color: Colors.black87,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Colors.amber,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              offer.rating != null ? offer.rating!.toStringAsFixed(1) : '0.0',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.amber.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    offer.shopName,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (matchedTags.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: matchedTags.map((tag) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xff57b32c).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          tag,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xff57b32c),
                           ),
                         ),
-                      ],
+                      )).toList(),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -681,24 +802,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
         ),
       ),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.shopping_cart_outlined,
-              color: Colors.orange.shade800,
-              size: 32,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Online Shopping',
-              style: TextStyle(
-                color: Colors.orange.shade900,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
-              ),
-            ),
-          ],
+        child: Icon(
+          Icons.shopping_cart_outlined,
+          color: Colors.orange.shade800,
+          size: 28,
         ),
       ),
     );
@@ -720,7 +827,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: ShopDetailScreen(shopId: shopId),
+          child: ShopDetailScreen(shopId: shopId, isSheet: true),
         ),
       ),
     ).whenComplete(() {
@@ -973,6 +1080,7 @@ class UserLocationMarkerLayer extends ConsumerWidget {
     final currentLocation = ref.watch(
       currentLocationProvider.select((state) => state.position),
     );
+    final markerName = ref.watch(locationMarkerProvider);
 
     if (currentLocation == null) return const SizedBox.shrink();
 
@@ -987,53 +1095,59 @@ class UserLocationMarkerLayer extends ConsumerWidget {
           point: currentPoint,
           width: 60,
           height: 60,
-          child: RepaintBoundary(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (!hasActiveRoute) ...[
-                  for (int i = 0; i < 3; i++)
-                    Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.3),
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .scale(
-                          delay: (i * 700).ms,
-                          duration: 2100.ms,
-                          begin: const Offset(1, 1),
-                          end: const Offset(3.0, 3.0),
-                          curve: Curves.decelerate,
-                        )
-                        .fadeOut(
-                          delay: (i * 700).ms,
-                          duration: 2100.ms,
-                          curve: Curves.decelerate,
+          child: markerName == 'ripple'
+              ? RepaintBoundary(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (!hasActiveRoute) ...[
+                        for (int i = 0; i < 3; i++)
+                          Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                              )
+                              .animate(onPlay: (c) => c.repeat())
+                              .scale(
+                                delay: (i * 700).ms,
+                                duration: 2100.ms,
+                                begin: const Offset(1, 1),
+                                end: const Offset(3.0, 3.0),
+                                curve: Curves.decelerate,
+                              )
+                              .fadeOut(
+                                delay: (i * 700).ms,
+                                duration: 2100.ms,
+                                curve: Curves.decelerate,
+                              ),
+                      ],
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade600,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withValues(alpha: 0.4),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                ],
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade600,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withValues(alpha: 0.4),
-                        blurRadius: 10,
-                        spreadRadius: 2,
                       ),
                     ],
                   ),
+                )
+              : Image.asset(
+                  'assets/images/location_marker/$markerName',
+                  width: 60,
+                  height: 60,
                 ),
-              ],
-            ),
-          ),
         ),
       ],
     );

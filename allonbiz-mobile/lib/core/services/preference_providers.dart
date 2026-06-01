@@ -32,3 +32,20 @@ class LocationTrackingEnabledNotifier extends StateNotifier<bool> {
     state = value;
   }
 }
+
+final locationMarkerProvider =
+    StateNotifierProvider<LocationMarkerNotifier, String>((ref) {
+      return LocationMarkerNotifier(ref.watch(storageServiceProvider));
+    });
+
+class LocationMarkerNotifier extends StateNotifier<String> {
+  final StorageService _storage;
+  LocationMarkerNotifier(this._storage)
+    : super(_storage.locationMarker);
+
+  void setMarker(String value) {
+    _storage.locationMarker = value;
+    state = value;
+  }
+}
+

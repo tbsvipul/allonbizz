@@ -57,6 +57,9 @@ public class ShopOfferSummaryDto
     public string Title { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime EndDate { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public List<string> Tags { get; set; } = new();
 }
 
 public class CreateShopRequestDto

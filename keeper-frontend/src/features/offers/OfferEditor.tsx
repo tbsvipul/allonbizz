@@ -12,7 +12,7 @@ import { InlineNotice } from '@/components/InlineNotice';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusPill } from '@/components/StatusPill';
 import CustomSelect from '@/components/CustomSelect';
-import { Store } from 'lucide-react';
+import { Store, Tag } from 'lucide-react';
 
 interface OfferFormState {
   shopId: string;
@@ -24,6 +24,7 @@ interface OfferFormState {
   endDate: string;
   termsAndConditions: string;
   imageUrl: string;
+  tags: string;
 }
 
 function toFormState(offer: OfferDetail | null): OfferFormState {
@@ -37,6 +38,7 @@ function toFormState(offer: OfferDetail | null): OfferFormState {
     endDate: toDateTimeLocalInput(offer?.endDate),
     termsAndConditions: offer?.termsAndConditions || '',
     imageUrl: offer?.imageUrl || '',
+    tags: offer?.tags?.join(', ') || '',
   };
 }
 
@@ -51,6 +53,24 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
   const [shops, setShops] = useState<ShopSummary[]>([]);
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [form, setForm] = useState<OfferFormState>(toFormState(null));
+  const [availableTags, setAvailableTags] = useState<{ tagId: string; name: string }[]>([]);
+  const [tagInputValue, setTagInputValue] = useState('');
+
+  const handleAddTag = (tagName: string) => {
+    const currentTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+    if (!currentTags.some((tag) => tag.toLowerCase() === tagName.toLowerCase())) {
+      updateField('tags', currentTags.length > 0 ? `${currentTags.join(', ')}, ${tagName}` : tagName);
+    }
+  };
+
+  const handleRemoveTag = (tagName: string) => {
+    const currentTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+    const nextTags = currentTags.filter((tag) => tag.toLowerCase() !== tagName.toLowerCase());
+    updateField('tags', nextTags.join(', '));
+  };
+
+  const selectedTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+  const availableTagsToDisplay = availableTags.filter((tag) => !selectedTags.some((selectedTag) => selectedTag.toLowerCase() === tag.name.toLowerCase()));
 
   function updateField<Key extends keyof OfferFormState>(key: Key, value: OfferFormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -67,6 +87,9 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
         const shopsResponse = await api.get('/keeper/shops');
         const nextShops = unwrapApiData<ShopSummary[]>(shopsResponse);
 
+        const tagsResponse = await api.get('/public/tags').catch(() => null);
+        const nextTags = tagsResponse ? unwrapApiData<{ tagId: string; name: string }[]>(tagsResponse) : [];
+
         let nextOffer: OfferDetail | null = null;
         if (offerId) {
           const offerResponse = await api.get(`/keeper/offer/${offerId}`);
@@ -77,6 +100,7 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
           return;
         }
 
+        setAvailableTags(nextTags || []);
         setShops(nextShops);
         setOffer(nextOffer);
         setForm(toFormState(nextOffer));
@@ -118,6 +142,7 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
         endDate: new Date(form.endDate).toISOString(),
         termsAndConditions: form.termsAndConditions.trim() || null,
         imageUrl: form.imageUrl || null,
+        tags: form.tags.split(',').map((item) => item.trim()).filter(Boolean),
       };
 
       if (isEditing && offerId) {
@@ -262,6 +287,42 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
             <div className="field">
               <label htmlFor="offerTerms">Terms and conditions</label>
               <textarea id="offerTerms" value={form.termsAndConditions} onChange={(event) => updateField('termsAndConditions', event.target.value)} disabled={loading || saving} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="offerTags" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Tag size={16} /> Search Tags
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', background: 'var(--input)', cursor: 'text', minHeight: '80px', alignItems: 'flex-start', alignContent: 'flex-start' }} onClick={() => document.getElementById('offerTags')?.focus()}>
+                {selectedTags.map((tag, index) => (
+                  <span key={`${tag}-${index}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '30px', padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, color: 'hsl(var(--primary))' }}>
+                    <span style={{ color: 'rgba(99, 102, 241, 0.7)' }}>#</span>{tag}
+                    <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveTag(tag); }} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}>&times;</button>
+                  </span>
+                ))}
+                <input
+                  id="offerTags"
+                  value={tagInputValue}
+                  onChange={(event) => setTagInputValue(event.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); if (tagInputValue.trim()) { handleAddTag(tagInputValue.trim()); setTagInputValue(''); } }
+                    else if (e.key === 'Backspace' && !tagInputValue && selectedTags.length > 0) { handleRemoveTag(selectedTags[selectedTags.length - 1]); }
+                  }}
+                  onBlur={() => { if (tagInputValue.trim()) { handleAddTag(tagInputValue.trim()); setTagInputValue(''); } }}
+                  disabled={loading || saving}
+                  placeholder={selectedTags.length === 0 ? "Type and press Enter..." : ""}
+                  style={{ flex: 1, minWidth: '120px', border: 'none', background: 'transparent', outline: 'none', color: 'inherit', fontSize: '0.9rem', marginTop: '0.2rem' }}
+                />
+              </div>
+              {availableTagsToDisplay.length > 0 ? (
+                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {availableTagsToDisplay.slice(0, 8).map((tag) => (
+                    <button key={tag.tagId} type="button" onClick={() => handleAddTag(tag.name)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, borderRadius: '999px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'transparent', color: 'hsl(var(--muted-foreground))', cursor: 'pointer', transition: 'all 0.2s' }}>
+                      + {tag.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="field">

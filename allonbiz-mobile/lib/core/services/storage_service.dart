@@ -114,6 +114,12 @@ class StorageService {
   set locationTrackingEnabled(bool value) =>
       _prefs.put(StorageKeys.locationTrackingEnabled, value);
 
+  /// Chosen location marker. 'ripple' is default.
+  String get locationMarker =>
+      _prefs.get(StorageKeys.locationMarker, defaultValue: 'ripple');
+  set locationMarker(String value) =>
+      _prefs.put(StorageKeys.locationMarker, value);
+
   /// Last known latitude.
   double? get lastLatitude => _prefs.get(StorageKeys.lastLatitude);
   set lastLatitude(double? value) =>

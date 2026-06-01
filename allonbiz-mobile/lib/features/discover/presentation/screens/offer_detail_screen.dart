@@ -242,18 +242,18 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
+                        horizontal: 10,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: typeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         offer.category.toUpperCase(),
                         style: AppTextStyles.labelSmall.copyWith(
                           color: typeColor,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
@@ -283,10 +283,32 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                 Text(
                   offer.title,
                   style: AppTextStyles.titleLarge.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
                   ),
                 ),
-                const SizedBox(height: 8),
+                if (offer.tags.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: offer.tags.map((tag) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        tag,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )).toList(),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     const Icon(
