@@ -23,7 +23,7 @@ final class Offer extends Equatable {
     this.keeperName,
     this.keeperPhone,
     this.isActive = true,
-    this.loyaltyPoints = 0,
+
     this.rating,
     this.reviewCount,
     this.distance,
@@ -49,7 +49,7 @@ final class Offer extends Equatable {
   final String? keeperName;
   final String? keeperPhone;
   final bool isActive;
-  final int loyaltyPoints;
+
   final double? rating;
   final int? reviewCount;
   final DateTime createdAt;
@@ -77,10 +77,10 @@ final class Offer extends Equatable {
       keeperName: data['keeperName'] as String?,
       keeperPhone: data['keeperPhone'] as String?,
       isActive: data['isActive'] as bool? ?? true,
-      loyaltyPoints: data['loyaltyPoints'] as int? ?? 0,
+
       createdAt: _parseTimestamp(data['createdAt']),
       distance: null,
-      tags: _parseTags(data['tags']),
+      tags: parseTags(data['tags']),
     );
   }
 
@@ -148,12 +148,21 @@ final class Offer extends Equatable {
       keeperName: (json['keeperName'] ?? json['KeeperName'])?.toString(),
       keeperPhone: (json['keeperPhone'] ?? json['KeeperPhone'])?.toString(),
       isActive: json['isActive'] as bool? ?? json['IsActive'] as bool? ?? true,
-      loyaltyPoints: json['loyaltyPoints'] as int? ?? 0,
+
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: json['reviewCount'] as int?,
       createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
       distance: json['distance']?.toString() ?? json['distanceKm']?.toString(),
-      tags: _parseTags(json['tags'] ?? json['Tags']),
+      tags: parseTags(
+        json['tags'] ??
+            json['Tags'] ??
+            json['tagNames'] ??
+            json['TagNames'] ??
+            json['offerTags'] ??
+            json['OfferTags'] ??
+            json['keywords'] ??
+            json['Keywords'],
+      ),
     );
   }
 
@@ -177,7 +186,7 @@ final class Offer extends Equatable {
     if (keeperName != null) 'keeperName': keeperName,
     if (keeperPhone != null) 'keeperPhone': keeperPhone,
     'isActive': isActive,
-    'loyaltyPoints': loyaltyPoints,
+
     if (rating != null) 'rating': rating,
     if (reviewCount != null) 'reviewCount': reviewCount,
     'createdAt': createdAt.toIso8601String(),
@@ -203,7 +212,7 @@ final class Offer extends Equatable {
     String? keeperName,
     String? keeperPhone,
     bool? isActive,
-    int? loyaltyPoints,
+
     DateTime? createdAt,
     String? distance,
     List<String>? tags,
@@ -227,7 +236,7 @@ final class Offer extends Equatable {
       keeperName: keeperName ?? this.keeperName,
       keeperPhone: keeperPhone ?? this.keeperPhone,
       isActive: isActive ?? this.isActive,
-      loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
+
       createdAt: createdAt ?? this.createdAt,
       distance: distance ?? this.distance,
       tags: tags ?? this.tags,
@@ -261,10 +270,23 @@ final class Offer extends Equatable {
     return null;
   }
 
-  static List<String> _parseTags(dynamic field) {
+  static List<String> parseTags(dynamic field) {
     if (field is List) {
       return field
-          .map((tag) => tag.toString().trim())
+          .map((tag) {
+            if (tag is Map) {
+              return (tag['name'] ??
+                      tag['Name'] ??
+                      tag['label'] ??
+                      tag['Label'] ??
+                      tag['title'] ??
+                      tag['Title'] ??
+                      '')
+                  .toString()
+                  .trim();
+            }
+            return tag.toString().trim();
+          })
           .where((tag) => tag.isNotEmpty)
           .toList();
     }
@@ -298,7 +320,7 @@ final class Offer extends Equatable {
     keeperName,
     keeperPhone,
     isActive,
-    loyaltyPoints,
+
     createdAt,
     distance,
     tags,

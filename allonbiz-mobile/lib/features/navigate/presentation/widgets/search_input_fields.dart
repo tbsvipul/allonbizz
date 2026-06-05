@@ -63,7 +63,7 @@ class SearchInputFields extends StatelessWidget {
         const SizedBox(height: AppDimensions.sm),
         _buildFieldContainer(
           icon: Icons.location_on_rounded,
-          iconColor: const Color(0xFFA1887F),
+          iconColor: AppColors.accent,
           child: TextField(
             controller: destinationController,
             focusNode: destinationFocus,

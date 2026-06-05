@@ -13,7 +13,7 @@ using allonbiz.AdminAPI.Models.Enums;
 
 namespace allonbiz.AdminAPI.Services;
 
-public class PlatformFeatureService : IReviewService, ILoyaltyService, IAdminPanelService, IRuleService, IPlacesService
+public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleService, IPlacesService
 {
     private readonly AppDbContext _db;
     public PlatformFeatureService(AppDbContext db) => _db = db;
@@ -110,62 +110,7 @@ public class PlatformFeatureService : IReviewService, ILoyaltyService, IAdminPan
         await _db.SaveChangesAsync();
     }
 
-    public async Task<LoyaltyProgramDto> GetLoyaltyProgramAsync(Guid keeperId, Guid shopId)
-    {
-        _ = await _db.Shops
-            .AsNoTracking()
-            .FirstOrDefaultAsync(shop => shop.ShopId == shopId && shop.KeeperId == keeperId)
-            ?? throw new KeyNotFoundException($"Shop {shopId} not found.");
 
-        var program = await _db.ShopLoyaltyPrograms.AsNoTracking()
-            .FirstOrDefaultAsync(item => item.ShopId == shopId);
-
-        return new LoyaltyProgramDto
-        {
-            ShopId = shopId,
-            Configured = program != null,
-            IsEnabled = program?.IsEnabled ?? false,
-            ProgramName = program?.ProgramName,
-            PointsPerRedemption = program?.PointsPerRedemption ?? 0,
-            MinimumPointsToRedeem = program?.MinimumPointsToRedeem ?? 0,
-            RewardDescription = program?.RewardDescription,
-            TermsAndConditions = program?.TermsAndConditions,
-            UpdatedAt = program?.UpdatedAt
-        };
-    }
-
-    public async Task<LoyaltyProgramDto> ManageLoyaltyProgramAsync(Guid keeperId, UpdateLoyaltyProgramDto dto)
-    {
-        _ = await _db.Shops
-            .AsNoTracking()
-            .FirstOrDefaultAsync(shop => shop.ShopId == dto.ShopId && shop.KeeperId == keeperId)
-            ?? throw new KeyNotFoundException($"Shop {dto.ShopId} not found.");
-
-        var program = await _db.ShopLoyaltyPrograms
-            .FirstOrDefaultAsync(item => item.ShopId == dto.ShopId);
-
-        if (program == null)
-        {
-            program = new ShopLoyaltyProgram
-            {
-                ShopId = dto.ShopId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _db.ShopLoyaltyPrograms.Add(program);
-        }
-
-        program.IsEnabled = dto.IsEnabled;
-        program.ProgramName = string.IsNullOrWhiteSpace(dto.ProgramName) ? null : dto.ProgramName.Trim();
-        program.PointsPerRedemption = dto.PointsPerRedemption;
-        program.MinimumPointsToRedeem = dto.MinimumPointsToRedeem;
-        program.RewardDescription = string.IsNullOrWhiteSpace(dto.RewardDescription) ? null : dto.RewardDescription.Trim();
-        program.TermsAndConditions = string.IsNullOrWhiteSpace(dto.TermsAndConditions) ? null : dto.TermsAndConditions.Trim();
-        program.UpdatedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        return await GetLoyaltyProgramAsync(keeperId, dto.ShopId);
-    }
 
     public async Task<AdminDashboardSummaryDto> GetDashboardSummaryAsync()
     {

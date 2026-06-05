@@ -6,8 +6,12 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_bar_binding.dart';
+import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/app_detail_media_header.dart';
+import '../../../../shared/widgets/app_error_widget.dart';
+import '../../../../shared/widgets/app_glass.dart';
+import '../../../../shared/widgets/app_loader.dart';
 import '../../data/repositories/offers_repository.dart';
 import 'shop_detail_screen.dart';
 import 'package:latlong2/latlong.dart';
@@ -24,12 +28,14 @@ class OfferDetailScreen extends ConsumerStatefulWidget {
   final String? offerId;
   final Offer? initialOffer;
   final bool isSheet;
+  final ScrollController? scrollController;
 
   const OfferDetailScreen({
     super.key,
     this.offerId,
     this.initialOffer,
     this.isSheet = false,
+    this.scrollController,
   });
 
   @override
@@ -44,69 +50,72 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Padding(
+            return GlassmorphicContainer(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: AppDimensions.lg,
-                right: AppDimensions.lg,
-                top: AppDimensions.lg,
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Write a Review',
-                      style: AppTextStyles.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppDimensions.lg),
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(5, (index) {
-                          return IconButton(
-                            onPressed: () {
-                              setSheetState(() {
-                                selectedRating = index + 1;
-                              });
-                            },
-                            icon: Icon(
-                              index < selectedRating
-                                  ? Icons.star_rounded
-                                  : Icons.star_outline_rounded,
-                              color: AppColors.secondary,
-                              size: 40,
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                    const SizedBox(height: AppDimensions.md),
-                    TextField(
-                      controller: reviewController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: 'Share your experience...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppDimensions.lg,
+                  right: AppDimensions.lg,
+                  top: AppDimensions.lg,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Write a Review',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppDimensions.xl),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
+                      const SizedBox(height: AppDimensions.lg),
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(5, (index) {
+                            return IconButton(
+                              onPressed: () {
+                                setSheetState(() {
+                                  selectedRating = index + 1;
+                                });
+                              },
+                              icon: Icon(
+                                index < selectedRating
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                color: AppColors.secondary,
+                                size: 40,
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.md),
+                      TextField(
+                        controller: reviewController,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: 'Share your experience...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.xl),
+                      AppButton.primary(
                         onPressed: () async {
                           if (selectedRating == 0) {
                             AppSnackbar.show(
@@ -144,18 +153,12 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                             }
                           }
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Submit Review'),
+                        label: 'Submit Review',
+                        icon: Icons.rate_review_rounded,
                       ),
-                    ),
-                    const SizedBox(height: AppDimensions.xl),
-                  ],
+                      const SizedBox(height: AppDimensions.xl),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -181,8 +184,12 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
       data: (offer) {
         return _buildContent(context, offer, l10n);
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
+      loading: () => const Center(child: AppLoader.inline()),
+      error: (err, stack) => AppErrorWidget(
+        title: 'Unable to load offer',
+        message: '$err',
+        onRetry: () => ref.invalidate(offerDetailProvider(offerId)),
+      ),
     );
 
     if (widget.isSheet) {
@@ -214,6 +221,7 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
         : AppColors.pinSightseeing;
 
     return CustomScrollView(
+      controller: widget.scrollController,
       slivers: [
         if (widget.isSheet)
           SliverToBoxAdapter(
@@ -240,24 +248,31 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                 const SizedBox(height: AppDimensions.lg),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: typeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        offer.category.toUpperCase(),
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: typeColor,
-                          fontWeight: FontWeight.w900,
+                    Flexible(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: typeColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            offer.category.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: typeColor,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 10),
                     const Icon(
                       Icons.star_rounded,
                       color: AppColors.secondary,
@@ -271,10 +286,14 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      '(${offer.reviewCount ?? 0} reviews)',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.grey500,
+                    Flexible(
+                      child: Text(
+                        '(${offer.reviewCount ?? 0} reviews)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.grey500,
+                        ),
                       ),
                     ),
                   ],
@@ -292,20 +311,27 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: offer.tags.map((tag) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        tag,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    )).toList(),
+                    children: offer.tags
+                        .map(
+                          (tag) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              tag,
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -329,7 +355,7 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                 if (offer.latitude != 0.0 && offer.longitude != 0.0)
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: AppButton.primary(
                       onPressed: () async {
                         final locState = ref.read(currentLocationProvider);
                         if (locState.position == null) {
@@ -395,16 +421,8 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                           context.go(AppRoutes.navigate);
                         }
                       },
-                      icon: const Icon(Icons.directions_rounded),
-                      label: const Text('Get Directions'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      icon: Icons.directions_rounded,
+                      label: 'Get Directions',
                     ),
                   ),
                 const SizedBox(height: AppDimensions.xl),
@@ -484,18 +502,10 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: AppButton.secondary(
                         onPressed: () => _showReviewSheet(context, offer.id),
-                        icon: const Icon(Icons.rate_review_rounded),
-                        label: const Text('Write a Review'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          minimumSize: const Size(double.infinity, 54),
-                        ),
+                        icon: Icons.rate_review_rounded,
+                        label: 'Write a Review',
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -530,7 +540,13 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
             ),
           ),
         ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+        SliverPadding(
+          padding: EdgeInsets.only(
+            bottom:
+                (widget.isSheet ? 190 : 150) +
+                MediaQuery.of(context).padding.bottom,
+          ),
+        ),
       ],
     );
   }

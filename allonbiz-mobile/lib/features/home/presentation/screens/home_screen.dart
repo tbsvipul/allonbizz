@@ -7,11 +7,8 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/services/current_location_provider.dart';
-import '../../../../core/services/geofence_service.dart';
-import '../../../../core/services/preference_providers.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/models/offer.dart';
-import '../../../discover/data/repositories/deals_repository.dart';
 import '../widgets/home_offers_section.dart';
 import '../widgets/home_recent_journeys_section.dart';
 import '../widgets/navigate_card_widget.dart';
@@ -24,7 +21,8 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   ProviderSubscription<AsyncValue<List<Offer>>>? _dealsSubscription;
 
   @override
@@ -33,7 +31,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
-      unawaited(_initGeofencing());
 
       final locationState = ref.read(currentLocationProvider);
       if (locationState.position == null && !locationState.isLoading) {
@@ -49,11 +46,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ref.read(currentLocationProvider.notifier).fetchCurrentLocation(
-        requestPermission: false, 
-        resolvePlaceName: false, 
-        forceRefresh: true,
-      );
+      ref
+          .read(currentLocationProvider.notifier)
+          .fetchCurrentLocation(
+            requestPermission: false,
+            resolvePlaceName: false,
+            forceRefresh: true,
+          );
     }
   }
 
@@ -74,24 +73,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     super.dispose();
   }
 
-  Future<void> _initGeofencing() async {
-    final isTrackingEnabled = ref.read(locationTrackingEnabledProvider);
-    if (!isTrackingEnabled) return;
-
-    final geofencer = ref.read(geofenceServiceProvider);
-
-    _dealsSubscription ??= ref.listenManual(dealsProvider, (previous, next) {
-      if (next.hasValue) {
-        geofencer.startMonitoring(next.value!);
-      }
-    });
-
-    final currentDeals = ref.read(dealsProvider);
-    if (currentDeals.hasValue) {
-      await geofencer.startMonitoring(currentDeals.value!);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -109,7 +90,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         ),
         SliverToBoxAdapter(child: HomeOffersSection(l10n: l10n)),
         SliverToBoxAdapter(child: const HomeRecentJourneysSection()),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
+        SliverPadding(
+          padding: EdgeInsets.only(
+            bottom: 178 + MediaQuery.of(context).padding.bottom,
+          ),
+        ),
       ],
     );
   }

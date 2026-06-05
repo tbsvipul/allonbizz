@@ -128,7 +128,8 @@ class ApiClient {
 
   final Map<String, _MemoryCacheEntry> _memoryCache = {};
   final Map<String, Future<http.Response>> _inFlightGets = {};
-  final StreamController<void> _authFailedController = StreamController<void>.broadcast();
+  final StreamController<void> _authFailedController =
+      StreamController<void>.broadcast();
 
   Stream<void> get onAuthFailed => _authFailedController.stream;
 

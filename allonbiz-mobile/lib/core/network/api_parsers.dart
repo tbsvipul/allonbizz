@@ -159,7 +159,20 @@ DateTime? nullableDateValue(JsonMap json, List<String> keys) {
 List<String> parseStringList(Object? field) {
   if (field is List) {
     return field
-        .map((tag) => tag.toString().trim())
+        .map((tag) {
+          if (tag is Map) {
+            final tagJson = Map<String, dynamic>.from(tag);
+            return stringValue(tagJson, [
+              'name',
+              'Name',
+              'label',
+              'Label',
+              'title',
+              'Title',
+            ]);
+          }
+          return tag.toString().trim();
+        })
         .where((tag) => tag.isNotEmpty)
         .toList(growable: false);
   }
@@ -215,7 +228,16 @@ Offer parseOfferJson(JsonMap json) {
     ]),
     latitude: doubleValue(json, ['latitude', 'lat', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'lng', 'lon', 'Longitude']),
-    imageUrl: nullableStringValue(json, ['imageUrl', 'ImageUrl']),
+    imageUrl: nullableStringValue(json, [
+      'imageUrl',
+      'ImageUrl',
+      'offerImageUrl',
+      'OfferImageUrl',
+      'imageData',
+      'ImageData',
+      'thumbnailUrl',
+      'ThumbnailUrl',
+    ]),
     shopProfileImage: nullableStringValue(json, [
       'shopProfileImage',
       'ShopProfileImage',
@@ -227,7 +249,7 @@ Offer parseOfferJson(JsonMap json) {
     keeperName: nullableStringValue(json, ['keeperName', 'KeeperName']),
     keeperPhone: nullableStringValue(json, ['keeperPhone', 'KeeperPhone']),
     isActive: boolValue(json, ['isActive', 'IsActive'], fallback: true),
-    loyaltyPoints: intValue(json, ['loyaltyPoints', 'LoyaltyPoints']),
+
     rating: nullableDoubleValue(json, ['rating', 'Rating']),
     reviewCount: nullableIntValue(json, ['reviewCount', 'ReviewCount']),
     createdAt:
@@ -237,7 +259,18 @@ Offer parseOfferJson(JsonMap json) {
       'distanceKm',
       'DistanceKm',
     ]),
-    tags: parseStringList(firstPresent(json, ['tags', 'Tags'])),
+    tags: parseStringList(
+      firstPresent(json, [
+        'tags',
+        'Tags',
+        'tagNames',
+        'TagNames',
+        'offerTags',
+        'OfferTags',
+        'keywords',
+        'Keywords',
+      ]),
+    ),
   );
 }
 
@@ -274,6 +307,7 @@ Shop parseShopJson(JsonMap json) {
     shopImages: parseStringList(
       firstPresent(json, ['shopImages', 'ShopImages']),
     ),
+    tags: parseStringList(firstPresent(json, ['tags', 'Tags'])),
     offers: parseOfferList(
       firstPresent(json, ['offers', 'Offers', 'recentOffers', 'RecentOffers']),
     ),
@@ -295,6 +329,7 @@ Shop parseJourneyNearbyShopJson(JsonMap json) {
     ]),
     latitude: doubleValue(json, ['latitude', 'Latitude']),
     longitude: doubleValue(json, ['longitude', 'Longitude']),
+    tags: parseStringList(firstPresent(json, ['tags', 'Tags'])),
     isOpen: boolValue(json, ['isOpen', 'IsOpen'], fallback: false),
   );
 }
@@ -305,7 +340,9 @@ CategoryModel parseCategoryJson(JsonMap json) {
     label: stringValue(json, ['label', 'name', 'Label', 'Name']),
     iconCode:
         nullableIntValue(json, ['iconCode', 'IconCode']) ??
-        int.tryParse(stringValue(json, ['icon', 'Icon'])) ??
+        int.tryParse(
+          stringValue(json, ['icon', 'Icon', 'iconData', 'IconData']),
+        ) ??
         Icons.help_outline.codePoint,
     colorHex: stringValue(json, [
       'colorHex',
@@ -347,7 +384,9 @@ TagModel parseTagJson(JsonMap json) {
     color: nullableStringValue(json, ['color', 'Color']),
     iconCode:
         nullableIntValue(json, ['iconCode', 'IconCode']) ??
-        int.tryParse(stringValue(json, ['icon', 'Icon'])) ??
+        int.tryParse(
+          stringValue(json, ['icon', 'Icon', 'iconData', 'IconData']),
+        ) ??
         TagModel.guessIcon(name).codePoint,
   );
 }

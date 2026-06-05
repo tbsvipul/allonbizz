@@ -55,4 +55,12 @@ public class UserNotificationsController : ControllerBase
         var count = await _notificationService.GetUnreadNotificationCountAsync(userId, "customer");
         return Ok(ApiResponse<int>.Ok(count));
     }
+    [HttpGet("test-roles")]
+    public async Task<IActionResult> TestRoles()
+    {
+        var count = await _notificationService.GetUnreadNotificationCountAsync(Guid.Empty, "keeper"); // just to compile, will return 0
+        // We actually want to check how many keepers are there. We can just inject the DB context, but we don't have it here.
+        // Let's modify the service instead.
+        return Ok(ApiResponse<int>.Ok(count));
+    }
 }

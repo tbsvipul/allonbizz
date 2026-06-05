@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 
 enum AppTextFieldVariant { regular, password, search, multiline }
 
-/// Universal standard Text Field implementation.
+/// Universal standard text field with premium focus animation.
 class AppTextField extends StatefulWidget {
   const AppTextField._({
     required this.variant,
@@ -87,102 +88,178 @@ class AppTextField extends StatefulWidget {
 }
 
 class _AppTextFieldState extends State<AppTextField> {
+  late FocusNode _internalFocusNode;
   bool _obscureText = true;
+
+  FocusNode get _effectiveFocusNode => widget.focusNode ?? _internalFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _internalFocusNode = FocusNode();
+    _effectiveFocusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldFocus = oldWidget.focusNode ?? _internalFocusNode;
+    final newFocus = widget.focusNode ?? _internalFocusNode;
+    if (oldFocus != newFocus) {
+      oldFocus.removeListener(_handleFocusChanged);
+      newFocus.addListener(_handleFocusChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _effectiveFocusNode.removeListener(_handleFocusChanged);
+    _internalFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     final isPassword = widget.variant == AppTextFieldVariant.password;
     final isSearch = widget.variant == AppTextFieldVariant.search;
     final isMultiline = widget.variant == AppTextFieldVariant.multiline;
+    final hasFocus = _effectiveFocusNode.hasFocus;
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.label != null && !isSearch) ...[
-          Text(
-            widget.label!,
-            style: textTheme.labelMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 160),
+            style: textTheme.labelMedium!.copyWith(
+              color: hasFocus
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.1,
             ),
+            child: Text(widget.label!),
           ),
           const SizedBox(height: AppDimensions.xs),
         ],
-        TextFormField(
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          obscureText: isPassword && _obscureText,
-          keyboardType: isMultiline
-              ? TextInputType.multiline
-              : (widget.keyboardType ??
-                    (isPassword
-                        ? TextInputType.visiblePassword
-                        : TextInputType.text)),
-          textInputAction: isMultiline
-              ? TextInputAction.newline
-              : (widget.textInputAction ?? TextInputAction.next),
-          maxLines: isMultiline ? 4 : 1,
-          readOnly: widget.readOnly,
-          validator: widget.validator,
-          onChanged: widget.onChanged,
-          onFieldSubmitted: widget.onSubmitted,
-          style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            hintStyle: textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(
+              isSearch ? AppDimensions.radiusXl : AppDimensions.radiusLg,
             ),
-            prefixIcon: isSearch
-                ? Icon(Icons.search_rounded, color: colorScheme.primary)
-                : widget.prefixIcon,
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      _obscureText
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () =>
-                        setState(() => _obscureText = !_obscureText),
+            boxShadow: hasFocus
+                ? AppColors.glow(
+                    isSearch ? AppColors.secondary : colorScheme.primary,
                   )
-                : widget.suffixIcon,
-            filled: true,
-            fillColor: isSearch
-                ? colorScheme.surfaceContainerHighest
-                : colorScheme.surface,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.md,
-              vertical: AppDimensions.md,
+                : [
+                    BoxShadow(
+                      color: AppColors.black.withValues(
+                        alpha: isDark ? 0.16 : 0.035,
+                      ),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+          ),
+          child: TextFormField(
+            controller: widget.controller,
+            focusNode: _effectiveFocusNode,
+            obscureText: isPassword && _obscureText,
+            keyboardType: isMultiline
+                ? TextInputType.multiline
+                : (widget.keyboardType ??
+                      (isPassword
+                          ? TextInputType.visiblePassword
+                          : TextInputType.text)),
+            textInputAction: isMultiline
+                ? TextInputAction.newline
+                : (widget.textInputAction ?? TextInputAction.next),
+            maxLines: isMultiline ? 4 : 1,
+            readOnly: widget.readOnly,
+            validator: widget.validator,
+            onChanged: widget.onChanged,
+            onFieldSubmitted: widget.onSubmitted,
+            style: textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              borderSide: BorderSide(
-                color: isSearch
-                    ? Colors.transparent
-                    : colorScheme.outlineVariant,
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              hintStyle: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.58),
+                fontWeight: FontWeight.w500,
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              borderSide: BorderSide(
-                color: isSearch
-                    ? Colors.transparent
-                    : colorScheme.outlineVariant,
+              prefixIcon: isSearch
+                  ? Icon(Icons.search_rounded, color: colorScheme.primary)
+                  : widget.prefixIcon,
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        _obscureText
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscureText = !_obscureText),
+                    )
+                  : widget.suffixIcon,
+              filled: true,
+              fillColor: isSearch
+                  ? (isDark
+                        ? AppColors.glassDark
+                        : AppColors.white.withValues(alpha: 0.88))
+                  : (isDark
+                        ? AppColors.surfaceElevatedDark.withValues(alpha: 0.86)
+                        : AppColors.white.withValues(alpha: 0.92)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.md,
+                vertical: AppDimensions.md,
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              borderSide: BorderSide(color: colorScheme.primary, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              borderSide: BorderSide(color: colorScheme.error),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  isSearch ? AppDimensions.radiusXl : AppDimensions.radiusLg,
+                ),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  isSearch ? AppDimensions.radiusXl : AppDimensions.radiusLg,
+                ),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  isSearch ? AppDimensions.radiusXl : AppDimensions.radiusLg,
+                ),
+                borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  isSearch ? AppDimensions.radiusXl : AppDimensions.radiusLg,
+                ),
+                borderSide: BorderSide(color: colorScheme.error),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  isSearch ? AppDimensions.radiusXl : AppDimensions.radiusLg,
+                ),
+                borderSide: BorderSide(color: colorScheme.error, width: 1.6),
+              ),
             ),
           ),
         ),

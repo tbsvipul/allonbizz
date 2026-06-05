@@ -238,6 +238,8 @@ public class NotificationService : INotificationService
                     job.Status = "completed";
                     job.CompletedAt = DateTime.UtcNow;
                 }
+                
+                await DeliverNotificationToUsersAsync(notification, ct);
             }
         }
 
@@ -349,6 +351,8 @@ public class NotificationService : INotificationService
         deliveryJob.CompletedAt = DateTime.UtcNow;
         _db.NotificationDeliveryJobs.Add(deliveryJob);
 
+        await DeliverNotificationToUsersAsync(notification, ct);
+
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("Notification {NotificationId} queued for delivery to {RecipientCount} recipients", notificationId, notification.RecipientCount);
     }
@@ -402,6 +406,41 @@ public class NotificationService : INotificationService
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+    }
+
+    private async Task DeliverNotificationToUsersAsync(Notification notification, CancellationToken ct)
+    {
+        var targetAudience = NotificationAudienceHelper.Normalize(notification.TargetAudience);
+        List<Guid> recipientIds;
+
+        if (targetAudience == "customers")
+        {
+            recipientIds = await _db.Users.Where(u => u.Role == "customer" && u.IsActive).Select(u => u.UserId).ToListAsync(ct);
+        }
+        else if (targetAudience == "keepers")
+        {
+            recipientIds = await _db.Users.Where(u => u.Role == "keeper" && u.IsActive).Select(u => u.UserId).ToListAsync(ct);
+        }
+        else
+        {
+            recipientIds = await _db.Users.Where(u => u.IsActive).Select(u => u.UserId).ToListAsync(ct);
+        }
+
+        if (recipientIds.Any())
+        {
+            var now = DateTime.UtcNow;
+            var userNotifications = recipientIds.Select(id => new UserNotification
+            {
+                UserId = id,
+                NotificationId = notification.NotificationId,
+                IsRead = false,
+                IsDeleted = false,
+                DeliveryStatus = "Delivered",
+                SentAt = now
+            });
+
+            await _db.UserNotifications.AddRangeAsync(userNotifications, ct);
+        }
     }
 
     private static UserNotificationDto MapUserNotification(UserNotification un)

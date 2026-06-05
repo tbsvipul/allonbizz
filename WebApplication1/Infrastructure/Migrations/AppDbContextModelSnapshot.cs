@@ -743,36 +743,6 @@ namespace allonbiz.AdminAPI.Migrations
                     b.ToTable("keeper_review_messages", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.LoyaltyWallet", b =>
-                {
-                    b.Property<Guid>("WalletId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("wallet_id");
-
-                    b.Property<DateTime>("LastUpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("RedeemedPoints")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Tier")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TotalPoints")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("WalletId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("loyalty_wallets", (string)null);
-                });
-
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.MediaAsset", b =>
                 {
                     b.Property<Guid>("AssetId")
@@ -1217,9 +1187,6 @@ namespace allonbiz.AdminAPI.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("LoyaltyPointsEarned")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("OfferId")
                         .HasColumnType("uuid");
 
@@ -1503,48 +1470,6 @@ namespace allonbiz.AdminAPI.Migrations
                         });
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
-                {
-                    b.Property<Guid>("ProgramId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MinimumPointsToRedeem")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PointsPerRedemption")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ProgramName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("RewardDescription")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ShopId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TermsAndConditions")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ProgramId");
-
-                    b.HasIndex("ShopId")
-                        .IsUnique();
-
-                    b.ToTable("shop_loyalty_programs", (string)null);
-                });
-
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
                 {
                     b.Property<Guid>("SettingId")
@@ -1574,6 +1499,74 @@ namespace allonbiz.AdminAPI.Migrations
                     b.HasIndex("ShopId");
 
                     b.ToTable("ShopNotificationSettings");
+                });
+
+            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.SupportTicket", b =>
+                {
+                    b.Property<Guid>("TicketId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("TicketId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SupportTickets");
+                });
+
+            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.SupportTicketMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SenderRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("SupportTicketMessages");
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Tag", b =>
@@ -1962,17 +1955,6 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Navigation("Keeper");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.LoyaltyWallet", b =>
-                {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ModerationQueueItem", b =>
                 {
                     b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "Reviewer")
@@ -2140,7 +2122,7 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Navigation("Keeper");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
+            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
                 {
                     b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany()
@@ -2151,15 +2133,26 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Navigation("Shop");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
+            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.SupportTicket", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
-                        .HasForeignKey("ShopId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Shop");
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.SupportTicketMessage", b =>
+                {
+                    b.HasOne("allonbiz.AdminAPI.Models.Entities.SupportTicket", "Ticket")
+                        .WithMany("Messages")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.UserNotification", b =>
@@ -2223,6 +2216,11 @@ namespace allonbiz.AdminAPI.Migrations
                     b.Navigation("Offers");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

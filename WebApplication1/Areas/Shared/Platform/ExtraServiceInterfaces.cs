@@ -13,11 +13,7 @@ public interface IReviewService
     Task SubmitReviewAsync(Guid userId, SubmitReviewDto dto);
 }
 
-public interface ILoyaltyService
-{
-    Task<LoyaltyProgramDto> GetLoyaltyProgramAsync(Guid keeperId, Guid shopId);
-    Task<LoyaltyProgramDto> ManageLoyaltyProgramAsync(Guid keeperId, UpdateLoyaltyProgramDto dto);
-}
+
 
 public interface IAdminPanelService
 {

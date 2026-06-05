@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_glass.dart';
 
 class CatTileWidget extends StatelessWidget {
   const CatTileWidget({
@@ -18,46 +19,49 @@ class CatTileWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.white;
+    final colorScheme = Theme.of(context).colorScheme;
+    final tileWidth = (MediaQuery.sizeOf(context).width * 0.62)
+        .clamp(220.0, 280.0)
+        .toDouble();
 
     return Semantics(
       label: label,
       button: true,
-      child: Material(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-          child: Container(
-            padding: const EdgeInsets.all(AppDimensions.md),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-              border: Border.all(
-                color: isDark ? AppColors.grey800 : AppColors.grey100,
+      child: GlassmorphicContainer(
+        onTap: onTap,
+        width: tileWidth,
+        padding: const EdgeInsets.all(AppDimensions.md),
+        borderRadius: BorderRadius.circular(22),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppDimensions.xs),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withValues(alpha: 0.18),
+                    AppColors.secondary.withValues(alpha: 0.10),
+                  ],
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: color.withValues(alpha: 0.18)),
+              ),
+              child: Icon(icon, color: color, size: AppDimensions.iconMd),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.xs),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: AppDimensions.iconMd),
-                ),
-                const SizedBox(width: AppDimensions.sm),
-                Text(
-                  label,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

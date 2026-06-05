@@ -4,12 +4,20 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_error_widget.dart';
+import '../../../../shared/widgets/app_glass.dart';
 import '../../../../shared/widgets/app_image.dart';
+import '../../../../shared/widgets/app_loader.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../data/repositories/notifications_repository.dart';
 import 'package:intl/intl.dart';
 
-final notificationsListProvider = AsyncNotifierProvider.autoDispose<
-    NotificationsNotifier, List<UserNotification>>(NotificationsNotifier.new);
+final notificationsListProvider =
+    AsyncNotifierProvider.autoDispose<
+      NotificationsNotifier,
+      List<UserNotification>
+    >(NotificationsNotifier.new);
 
 class NotificationsNotifier
     extends AutoDisposeAsyncNotifier<List<UserNotification>> {
@@ -34,7 +42,9 @@ class NotificationsNotifier
     }
 
     _isLoadingMore = true;
-    state = const AsyncLoading<List<UserNotification>>().copyWithPrevious(state);
+    state = const AsyncLoading<List<UserNotification>>().copyWithPrevious(
+      state,
+    );
 
     try {
       _page++;
@@ -55,7 +65,7 @@ class NotificationsNotifier
     try {
       await ref.read(notificationsRepositoryProvider).markAsRead(id);
       ref.invalidate(unreadNotificationCountProvider);
-      
+
       if (state.hasValue) {
         final currentList = state.requireValue;
         final index = currentList.indexWhere((n) => n.id == id);
@@ -73,6 +83,10 @@ class NotificationsNotifier
             metadata: n.metadata,
             actionOfferId: n.actionOfferId,
             actionShopId: n.actionShopId,
+            actionJourneyId: n.actionJourneyId,
+            supportTicketId: n.supportTicketId,
+            supportMessageId: n.supportMessageId,
+            supportSubject: n.supportSubject,
           );
           state = AsyncData(updatedList);
         }
@@ -117,186 +131,227 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final notificationsAsync = ref.watch(notificationsListProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Notifications')),
-      body: notificationsAsync.when(
-        skipLoadingOnReload: true,
-        data: (notifications) {
-          if (notifications.isEmpty) {
-            return const Center(child: Text('No notifications yet.'));
-          }
-          
-          final hasMore = ref.read(notificationsListProvider.notifier).hasMore;
-          
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(notificationsListProvider);
-            },
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(AppDimensions.md),
-              itemCount: notifications.length + (hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == notifications.length) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                
-                final n = notifications[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 0,
-                  color: n.isRead
-                      ? Colors.transparent
-                      : AppColors.primary.withValues(alpha: 0.05),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.grey200),
-                  ),
-                  child: ListTile(
-                    onTap: () async {
-                      if (!n.isRead) {
-                        await ref
-                            .read(notificationsListProvider.notifier)
-                            .markAsRead(n.id);
-                      }
-                      if (!context.mounted) return;
+      body: GradientBackground(
+        child: notificationsAsync.when(
+          skipLoadingOnReload: true,
+          data: (notifications) {
+            if (notifications.isEmpty) {
+              return const AppEmptyState(
+                title: 'No notifications yet',
+                subtitle:
+                    'Nearby deal alerts and journey updates will appear here.',
+                icon: Icons.notifications_none_rounded,
+              );
+            }
 
-                      if (n.actionOfferId != null &&
-                          n.actionOfferId!.isNotEmpty) {
-                        context.push('/offer-detail/${n.actionOfferId}');
-                      } else if (n.actionShopId != null &&
-                          n.actionShopId!.isNotEmpty) {
-                        context.push('/shop-detail/${n.actionShopId}');
-                      }
-                    },
-                    leading: n.imageUrl != null && n.imageUrl!.isNotEmpty
-                        ? AppImage.network(
-                            n.imageUrl!,
-                            width: 44,
-                            height: 44,
-                            borderRadius: BorderRadius.circular(10),
-                          )
-                        : Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              n.type == 'OfferAlert' || n.type == 'Offer'
-                                  ? Icons.local_offer_rounded
-                                  : Icons.notifications_rounded,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                    title: Text(
-                      n.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(n.message),
-                        if (n.actionOfferId != null &&
-                            n.actionOfferId!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(
-                                alpha: 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.sell_rounded,
-                                  size: 12,
-                                  color: AppColors.success,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Tap to view offer',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.bold,
+            final hasMore = ref
+                .read(notificationsListProvider.notifier)
+                .hasMore;
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(notificationsListProvider);
+              },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(AppDimensions.md),
+                itemCount: notifications.length + (hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == notifications.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final n = notifications[index];
+                  final notificationIcon = n.isSupportReply
+                      ? Icons.support_agent_rounded
+                      : (n.type == 'OfferAlert' || n.type == 'Offer')
+                      ? Icons.local_offer_rounded
+                      : Icons.notifications_rounded;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: AppCard(
+                      padding: EdgeInsets.zero,
+                      borderColor: n.isRead
+                          ? null
+                          : AppColors.secondary.withValues(alpha: 0.42),
+                      onTap: () async {
+                        if (!n.isRead) {
+                          await ref
+                              .read(notificationsListProvider.notifier)
+                              .markAsRead(n.id);
+                        }
+                        if (!context.mounted) return;
+
+                        if (n.isSupportReply) {
+                          context.push(
+                            '/notifications/support-reply/${n.id}',
+                            extra: n,
+                          );
+                        } else if (n.actionOfferId != null &&
+                            n.actionOfferId!.isNotEmpty) {
+                          context.push('/offer-detail/${n.actionOfferId}');
+                        } else if (n.actionShopId != null &&
+                            n.actionShopId!.isNotEmpty) {
+                          context.push('/shop-detail/${n.actionShopId}');
+                        }
+                      },
+                      child: ListTile(
+                        leading: n.imageUrl != null && n.imageUrl!.isNotEmpty
+                            ? AppImage.network(
+                                n.imageUrl!,
+                                width: 44,
+                                height: 44,
+                                borderRadius: BorderRadius.circular(10),
+                              )
+                            : Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
                                   ),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ] else if (n.actionShopId != null &&
-                            n.actionShopId!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.storefront_rounded,
-                                  size: 12,
+                                child: Icon(
+                                  notificationIcon,
                                   color: AppColors.primary,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Tap to view shop',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Text(
-                          DateFormat.yMMMd().add_jm().format(n.sentAt),
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.grey500,
-                          ),
+                              ),
+                        title: Text(
+                          n.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                      ],
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(n.message),
+                            if (n.isSupportReply) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.support_agent_rounded,
+                                      size: 12,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Tap to view reply',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (n.actionOfferId != null &&
+                                n.actionOfferId!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.sell_rounded,
+                                      size: 12,
+                                      color: AppColors.success,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Tap to view offer',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.success,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (n.actionShopId != null &&
+                                n.actionShopId!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.storefront_rounded,
+                                      size: 12,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Tap to view shop',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Text(
+                              DateFormat.yMMMd().add_jm().format(n.sentAt),
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.grey500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error: $err'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(notificationsListProvider),
-                child: const Text('Retry'),
+                  );
+                },
               ),
-            ],
+            );
+          },
+          loading: () => const Center(child: AppLoader.inline()),
+          error: (err, stack) => AppErrorWidget(
+            title: 'Unable to load notifications',
+            message: '$err',
+            onRetry: () => ref.invalidate(notificationsListProvider),
           ),
         ),
       ),

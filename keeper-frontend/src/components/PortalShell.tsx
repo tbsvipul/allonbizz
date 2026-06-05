@@ -20,9 +20,11 @@ import {
   Sun,
   UserRound,
   WalletCards,
+  MessageCircle,
 } from 'lucide-react';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { StatusPill } from '@/components/StatusPill';
+import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { getKeeperStatusMessage } from '@/lib/keeper';
@@ -33,8 +35,8 @@ const navItems = [
   { href: '/offers', label: 'Offers', icon: BadgeDollarSign, description: 'Campaigns and redemptions' },
   { href: '/notifications', label: 'Notifications', icon: Bell, description: 'Send alerts to nearby users' },
   { href: '/reviews', label: 'Reviews', icon: MessageSquareReply, description: 'Customer sentiment and replies' },
-  { href: '/loyalty', label: 'Loyalty', icon: WalletCards, description: 'Rewards and repeat visits' },
   { href: '/profile', label: 'Profile', icon: UserRound, description: 'Business identity and approval' },
+  { href: '/support', label: 'Support', icon: MessageCircle, description: 'Contact NaviDeals administrators' },
 ];
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
@@ -190,6 +192,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
+
+              <NotificationBell />
 
               <span className="topbar-badge topbar-badge-success">
                 <ShieldCheck size={14} />

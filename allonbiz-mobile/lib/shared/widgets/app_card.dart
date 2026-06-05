@@ -12,7 +12,9 @@ class AppCard extends StatelessWidget {
     this.margin,
     this.onTap,
     this.elevation = AppDimensions.elevationNone,
+    this.backgroundColor,
     this.borderColor,
+    this.gradient,
   });
 
   final Widget child;
@@ -20,7 +22,9 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
   final double elevation;
+  final Color? backgroundColor;
   final Color? borderColor;
+  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +33,9 @@ class AppCard extends StatelessWidget {
       margin: margin,
       onTap: onTap,
       elevation: elevation,
+      backgroundColor: backgroundColor,
       borderColor: borderColor,
+      gradient: gradient,
       child: child,
     );
   }

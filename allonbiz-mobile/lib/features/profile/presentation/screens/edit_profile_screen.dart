@@ -5,6 +5,9 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../../../../core/widgets/app_bar_binding.dart';
+import '../../../../shared/widgets/app_glass.dart';
+import '../../../../shared/widgets/app_status_banner.dart';
+import '../../../../shared/widgets/app_text_field.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -95,34 +98,54 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return AppBarBinding(
       config: _buildAppBarConfig(state.isLoading),
       child: Scaffold(
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDimensions.xl),
-          child: Column(
-            children: [
-              TextField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(labelText: 'First Name'),
-              ),
-              const SizedBox(height: AppDimensions.md),
-              TextField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(labelText: 'Last Name'),
-              ),
-              const SizedBox(height: AppDimensions.md),
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone Number'),
-                keyboardType: TextInputType.phone,
-              ),
-              if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Text(
-                    state.error!,
-                    style: const TextStyle(color: Colors.red),
+        backgroundColor: Colors.transparent,
+        body: GradientBackground(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppDimensions.xl),
+            child: GlassmorphicContainer(
+              padding: const EdgeInsets.all(AppDimensions.lg),
+              child: Column(
+                children: [
+                  AppTextField.regular(
+                    controller: _firstNameController,
+                    label: 'First Name',
+                    hint: 'Enter first name',
+                    prefixIcon: Icon(
+                      Icons.person_outline_rounded,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-            ],
+                  const SizedBox(height: AppDimensions.md),
+                  AppTextField.regular(
+                    controller: _lastNameController,
+                    label: 'Last Name',
+                    hint: 'Enter last name',
+                    prefixIcon: Icon(
+                      Icons.badge_outlined,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.md),
+                  AppTextField.regular(
+                    controller: _phoneController,
+                    label: 'Phone Number',
+                    hint: 'Enter phone number',
+                    keyboardType: TextInputType.phone,
+                    prefixIcon: Icon(
+                      Icons.phone_outlined,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (state.error != null) ...[
+                    const SizedBox(height: AppDimensions.md),
+                    AppStatusBanner(
+                      message: state.error!,
+                      variant: AppStatusBannerVariant.error,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

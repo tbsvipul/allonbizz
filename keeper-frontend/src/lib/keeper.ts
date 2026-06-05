@@ -68,7 +68,7 @@ export function getKeeperStatusMessage(keeper?: KeeperProfile | null) {
       : 'Your account is suspended. Contact support if you think this is a mistake.';
   }
 
-  return 'Your account can manage shops, offers, reviews, and loyalty settings.';
+  return 'Your account can manage shops, offers, and reviews.';
 }
 
 export function statusTone(status?: unknown) {

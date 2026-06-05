@@ -14,6 +14,9 @@ abstract final class StorageKeys {
   static const String lastLatitude = 'lastLatitude';
   static const String lastLongitude = 'lastLongitude';
   static const String notifiedOfferIds = 'notifiedOfferIds';
+  static const String notifiedOfferTimestamps = 'notifiedOfferTimestamps';
+  static const String notifiedShopIds = 'notifiedShopIds';
+  static const String notifiedShopTimestamps = 'notifiedShopTimestamps';
   static const String backendAccessToken = 'backendAccessToken';
   static const String backendRefreshToken = 'backendRefreshToken';
   static const String activeJourneySession = 'activeJourneySession';

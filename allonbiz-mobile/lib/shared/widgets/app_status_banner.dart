@@ -54,9 +54,13 @@ class AppStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final content = Container(
       padding: padding,
-      decoration: AppDecorations.statusBanner(color: _color),
+      decoration: AppDecorations.statusBanner(
+        color: _color,
+        radius: AppDimensions.radiusLg,
+      ).copyWith(boxShadow: AppColors.glow(_color)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -67,7 +71,10 @@ class AppStatusBanner extends StatelessWidget {
               message,
               style:
                   textStyle?.copyWith(color: _color) ??
-                  AppTextStyles.bodyMedium.copyWith(color: _color),
+                  AppTextStyles.bodyMedium.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ),
         ],

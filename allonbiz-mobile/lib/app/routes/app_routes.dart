@@ -14,10 +14,12 @@ abstract final class AppRoutes {
   static const String shopDetail = '/shop-detail/:id';
   static const String arView = '/ar-view';
   static const String notifications = '/notifications';
+  static const String supportReply = '/notifications/support-reply/:id';
   static const String error = '/error';
   static const String pastJourneys = '/profile/history';
   static const String savedItems = '/profile/saved';
   static const String changePassword = '/profile/change-password';
   static const String editProfile = '/profile/edit';
   static const String journeyDetail = '/journey-detail/:id';
+  static const String contactSupport = '/profile/support';
 }

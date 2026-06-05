@@ -641,7 +641,6 @@ public class UserService : IUserService
                 ShopName = r.Shop != null ? r.Shop.Name : "Unknown shop",
                 Status = r.Status.ToString(),
                 SavedAmount = r.SavedAmount,
-                LoyaltyPointsEarned = r.LoyaltyPointsEarned,
                 RedeemedAt = r.RedeemedAt
             })
             .ToListAsync(ct);

@@ -6,6 +6,8 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_glass.dart';
 import '../../../../shared/widgets/app_status_banner.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -185,21 +187,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
       if (!mounted) return;
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Password Reset'),
-          content: const Text(
+      await AppDialog.show<void>(
+        context,
+        title: 'Password Reset',
+        message:
             'Your password has been reset successfully. Please sign in with your new password.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+        confirmLabel: 'OK',
       );
 
       if (!mounted) return;
@@ -238,163 +231,176 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       canPop: !_isLoading,
       child: Scaffold(
         appBar: AppBar(title: const Text('Forgot Password'), centerTitle: true),
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         body: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: AbsorbPointer(
             absorbing: _isLoading,
-            child: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AuthHeader(
-                            title: _isResetStep
-                                ? 'Reset your password'
-                                : 'Recover your account',
-                            subtitle: _isResetStep
-                                ? 'Enter the OTP from your email and choose a new password.'
-                                : 'We will send a one-time password to your email address.',
-                            showIcon: false,
-                          ),
-                          const SizedBox(height: 24),
-                          if (_errorMessage != null) ...[
-                            AppStatusBanner(
-                              message: AuthErrorMapper.getMessage(
-                                _errorMessage,
-                                l10n,
+            child: GradientBackground(
+              child: SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: GlassmorphicContainer(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              AuthHeader(
+                                title: _isResetStep
+                                    ? 'Reset your password'
+                                    : 'Recover your account',
+                                subtitle: _isResetStep
+                                    ? 'Enter the OTP from your email and choose a new password.'
+                                    : 'We will send a one-time password to your email address.',
+                                showIcon: false,
                               ),
-                              variant: AppStatusBannerVariant.error,
-                              textStyle: textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          AppTextField.regular(
-                            controller: _emailController,
-                            label: 'Email',
-                            hint: 'Enter your email address',
-                            readOnly: _isResetStep,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: _isResetStep
-                                ? TextInputAction.next
-                                : TextInputAction.done,
-                            prefixIcon: Icon(
-                              Icons.email_outlined,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            validator: _validateEmail,
-                            onChanged: (_) => _clearError(),
-                          ),
-                          if (_isResetStep) ...[
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(
-                                  alpha: 0.08,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.mark_email_read_outlined,
-                                    color: colorScheme.primary,
+                              const SizedBox(height: 24),
+                              if (_errorMessage != null) ...[
+                                AppStatusBanner(
+                                  message: AuthErrorMapper.getMessage(
+                                    _errorMessage,
+                                    l10n,
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Check your email for the 6-digit OTP.',
-                                      style: textTheme.bodyMedium,
+                                  variant: AppStatusBannerVariant.error,
+                                  textStyle: textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              AppTextField.regular(
+                                controller: _emailController,
+                                label: 'Email',
+                                hint: 'Enter your email address',
+                                readOnly: _isResetStep,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: _isResetStep
+                                    ? TextInputAction.next
+                                    : TextInputAction.done,
+                                prefixIcon: Icon(
+                                  Icons.email_outlined,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                                validator: _validateEmail,
+                                onChanged: (_) => _clearError(),
+                              ),
+                              if (_isResetStep) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer
+                                        .withValues(alpha: 0.65),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.16,
+                                      ),
                                     ),
                                   ),
-                                ],
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.mark_email_read_outlined,
+                                        color: colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'Check your email for the 6-digit OTP.',
+                                          style: textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _isLoading ? null : _editEmail,
+                                    child: const Text('Use a different email'),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField.regular(
+                                  controller: _otpController,
+                                  label: 'OTP',
+                                  hint: 'Enter 6-digit OTP',
+                                  keyboardType: TextInputType.number,
+                                  textInputAction: TextInputAction.next,
+                                  prefixIcon: Icon(
+                                    Icons.password_rounded,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  validator: _validateOtp,
+                                  onChanged: (_) => _clearError(),
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField.password(
+                                  controller: _newPasswordController,
+                                  label: 'New Password',
+                                  hint: 'Enter your new password',
+                                  textInputAction: TextInputAction.next,
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  validator: _validatePassword,
+                                  onChanged: (_) => _clearError(),
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField.password(
+                                  controller: _confirmPasswordController,
+                                  label: 'Confirm Password',
+                                  hint: 'Re-enter your new password',
+                                  textInputAction: TextInputAction.done,
+                                  prefixIcon: Icon(
+                                    Icons.lock_reset_rounded,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  validator: _validateConfirmPassword,
+                                  onChanged: (_) => _clearError(),
+                                  onSubmitted: (_) => _resetPassword(),
+                                ),
+                              ],
+                              const SizedBox(height: 24),
+                              AppButton.primary(
+                                label: _isResetStep
+                                    ? 'Reset Password'
+                                    : 'Send OTP',
+                                isLoading: _isLoading,
+                                onPressed: _isLoading
+                                    ? null
+                                    : () {
+                                        if (_isResetStep) {
+                                          _resetPassword();
+                                        } else {
+                                          _sendOtp();
+                                        }
+                                      },
                               ),
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _isLoading ? null : _editEmail,
-                                child: const Text('Use a different email'),
+                              if (_isResetStep) ...[
+                                const SizedBox(height: 12),
+                                AppButton.outlined(
+                                  label: 'Resend OTP',
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _sendOtp(isResend: true),
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => context.pop(),
+                                child: const Text('Back to Login'),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            AppTextField.regular(
-                              controller: _otpController,
-                              label: 'OTP',
-                              hint: 'Enter 6-digit OTP',
-                              keyboardType: TextInputType.number,
-                              textInputAction: TextInputAction.next,
-                              prefixIcon: Icon(
-                                Icons.password_rounded,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              validator: _validateOtp,
-                              onChanged: (_) => _clearError(),
-                            ),
-                            const SizedBox(height: 16),
-                            AppTextField.password(
-                              controller: _newPasswordController,
-                              label: 'New Password',
-                              hint: 'Enter your new password',
-                              textInputAction: TextInputAction.next,
-                              prefixIcon: Icon(
-                                Icons.lock_outline,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              validator: _validatePassword,
-                              onChanged: (_) => _clearError(),
-                            ),
-                            const SizedBox(height: 16),
-                            AppTextField.password(
-                              controller: _confirmPasswordController,
-                              label: 'Confirm Password',
-                              hint: 'Re-enter your new password',
-                              textInputAction: TextInputAction.done,
-                              prefixIcon: Icon(
-                                Icons.lock_reset_rounded,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              validator: _validateConfirmPassword,
-                              onChanged: (_) => _clearError(),
-                              onSubmitted: (_) => _resetPassword(),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          AppButton.primary(
-                            label: _isResetStep ? 'Reset Password' : 'Send OTP',
-                            isLoading: _isLoading,
-                            onPressed: _isLoading
-                                ? null
-                                : () {
-                                    if (_isResetStep) {
-                                      _resetPassword();
-                                    } else {
-                                      _sendOtp();
-                                    }
-                                  },
+                            ],
                           ),
-                          if (_isResetStep) ...[
-                            const SizedBox(height: 12),
-                            AppButton.outlined(
-                              label: 'Resend OTP',
-                              onPressed: _isLoading
-                                  ? null
-                                  : () => _sendOtp(isResend: true),
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: _isLoading ? null : () => context.pop(),
-                            child: const Text('Back to Login'),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

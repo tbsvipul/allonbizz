@@ -30,8 +30,7 @@ public class AppDbContext : DbContext
     public DbSet<RouteRecord> Routes { get; set; } = null!;
     public DbSet<Favourite> Favourites { get; set; } = null!;
     public DbSet<Review> Reviews { get; set; } = null!;
-    public DbSet<LoyaltyWallet> LoyaltyWallets { get; set; } = null!;
-    public DbSet<ShopLoyaltyProgram> ShopLoyaltyPrograms { get; set; } = null!;
+
     public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<UserNotification> UserNotifications { get; set; } = null!;
     public DbSet<ShopNotificationSetting> ShopNotificationSettings { get; set; } = null!;
@@ -43,6 +42,8 @@ public class AppDbContext : DbContext
     public DbSet<MediaAsset> MediaAssets { get; set; } = null!;
     public DbSet<ChatThread> ChatThreads { get; set; } = null!;
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    public DbSet<SupportTicket> SupportTickets { get; set; } = null!;
+    public DbSet<SupportTicketMessage> SupportTicketMessages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

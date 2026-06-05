@@ -53,7 +53,7 @@ export default function LoginPage() {
       <AuthHero
         eyebrow="Keeper Workspace"
         title="Run your local business with sharper daily visibility."
-        description="Sign in to track shop activity, launch offers, answer customer reviews, and keep your loyalty program moving."
+        description="Sign in to track shop activity, launch offers, and answer customer reviews."
         points={[
           'See offer performance and redemptions in one dashboard.',
           'Keep shop details updated without waiting on admin support.',

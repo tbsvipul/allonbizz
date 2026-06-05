@@ -21,7 +21,8 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/models/offer.dart';
 import '../../../../shared/models/shop.dart';
-import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_glass.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../discover/presentation/screens/offer_detail_screen.dart';
 import '../../../discover/presentation/screens/shop_detail_screen.dart';
@@ -231,9 +232,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final destination = ref.watch(
       navigationControllerProvider.select((state) => state.destination),
     );
-    final isFreeRoam = ref.watch(
-      navigationControllerProvider.select((state) => state.isFreeRoam),
-    );
     final isJourneyActive = ref.watch(
       navigationControllerProvider.select((state) => state.hasActiveJourney),
     );
@@ -254,9 +252,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
     final mapFocus = origin ?? currentPoint ?? _defaultCenter;
     final hasActiveRoute = route.length >= 2 && destination != null;
-    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final topPadding = MediaQuery.of(context).padding.top;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final navClearance = 30 + bottomInset;
 
     _syncCamera(route, mapFocus);
 
@@ -321,18 +320,24 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         width: 48,
                         height: 48,
                         alignment: Alignment.topCenter,
-                        child: const Icon(
-                          Icons.location_on_rounded,
-                          color: Color(0xFFDC2626),
-                          size: 48,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black38,
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.3),
+                        child:
+                            Icon(
+                                  Icons.location_on_rounded,
+                                  color: AppColors.accent,
+                                  size: 48,
+                                  shadows: [
+                                    Shadow(
+                                      color: AppColors.black.withValues(
+                                        alpha: 0.38,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                )
+                                .animate()
+                                .fadeIn(duration: 300.ms)
+                                .slideY(begin: -0.3),
                       ),
                   ],
                 ),
@@ -348,7 +353,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
           EtaOverlayWidget(topPadding: topPadding),
           Positioned(
             right: AppDimensions.lg,
-            bottom: AppDimensions.lg + MediaQuery.of(context).padding.bottom,
+            bottom: AppDimensions.lg + navClearance,
             child: Column(
               children: [
                 _MapControlButton(
@@ -407,31 +412,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
           if (isJourneyActive && nearbyOffers.isNotEmpty)
             Positioned(
               left: AppDimensions.md,
-              bottom: AppDimensions.lg + MediaQuery.of(context).padding.bottom,
-              child: _buildOffersOverlay(context, nearbyOffers, selectedInterests),
+              bottom: AppDimensions.lg + navClearance,
+              child: _buildOffersOverlay(
+                context,
+                nearbyOffers,
+                selectedInterests,
+              ),
             ),
-
-          Positioned(
-            left: AppDimensions.lg,
-            right: AppDimensions.lg,
-            bottom: AppDimensions.lg,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isJourneyActive)
-                  AppButton.danger(
-                    label: isFreeRoam ? 'End Exploration' : l10n.endJourney,
-                    onPressed: () {
-                      ref
-                          .read(navigationControllerProvider.notifier)
-                          .clearRoute();
-                    },
-                    icon: Icons.close_rounded,
-                    width: 180,
-                  ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.2),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -441,18 +428,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppColors.cardDark
-              : AppColors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: OfferDetailScreen(initialOffer: offer, isSheet: true),
+      barrierColor: AppColors.black.withValues(alpha: 0.28),
+      builder: (context) => _DraggableDetailSheet(
+        childBuilder: (scrollController) => OfferDetailScreen(
+          initialOffer: offer,
+          isSheet: true,
+          scrollController: scrollController,
         ),
       ),
     ).whenComplete(() {
@@ -460,8 +443,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
     });
   }
 
-  Widget _buildOffersOverlay(BuildContext context, List<Offer> offers, List<String> userTags) {
-    final activeTags = userTags.where((t) => !_deselectedTags.contains(t)).toList();
+  Widget _buildOffersOverlay(
+    BuildContext context,
+    List<Offer> offers,
+    List<String> userTags,
+  ) {
+    final activeTags = userTags
+        .where((t) => !_deselectedTags.contains(t))
+        .toList();
 
     var filteredOffers = offers;
     if (userTags.isNotEmpty) {
@@ -482,20 +471,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     if (!_isOffersExpanded) {
       return GestureDetector(
         onTap: () => setState(() => _isOffersExpanded = true),
-        child: Container(
+        child: GlassmorphicContainer(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: const Color(0xFFE8F5E9), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          borderRadius: BorderRadius.circular(30),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -506,7 +484,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00C853).withValues(alpha: 0.5),
+                          color: AppColors.accent.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
                         ),
                       )
@@ -521,7 +499,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     width: 14,
                     height: 14,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF00C853),
+                      color: AppColors.accent,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -531,7 +509,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               const Text(
                 'OFFERS',
                 style: TextStyle(
-                  color: Color(0xFF1B5E20),
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
                   letterSpacing: 0.5,
@@ -543,24 +521,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
       ).animate().fadeIn(duration: 200.ms).scale(begin: const Offset(0.8, 0.8));
     }
 
-    return Container(
+    return GlassmorphicContainer(
           width: MediaQuery.of(context).size.width * 0.85,
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.55,
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 24,
-                spreadRadius: 2,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
+          borderRadius: BorderRadius.circular(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -574,24 +541,25 @@ class _MapScreenState extends ConsumerState<MapScreen>
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 18,
-                        color: Color(0xFF1B5E20),
+                        color: AppColors.primary,
                         letterSpacing: -0.5,
                       ),
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: AppColors.grey100,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
                         icon: const Icon(
                           Icons.close_rounded,
                           size: 20,
-                          color: Colors.grey,
+                          color: AppColors.grey500,
                         ),
                         padding: const EdgeInsets.all(8),
                         constraints: const BoxConstraints(),
-                        onPressed: () => setState(() => _isOffersExpanded = false),
+                        onPressed: () =>
+                            setState(() => _isOffersExpanded = false),
                       ),
                     ),
                   ],
@@ -619,11 +587,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color: isSelected 
-                                  ? const Color(0xFF1B5E20).withValues(alpha: 0.1)
-                                  : Colors.grey.withValues(alpha: 0.1),
+                              color: isSelected
+                                  ? AppColors.primary.withValues(alpha: 0.1)
+                                  : AppColors.grey400.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -631,7 +602,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? const Color(0xFF1B5E20) : Colors.grey.shade600,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.grey600,
                               ),
                             ),
                           ),
@@ -664,129 +637,235 @@ class _MapScreenState extends ConsumerState<MapScreen>
   }
 
   Widget _buildOfferCard(Offer offer, List<String> userTags) {
-    final matchedTags = offer.tags.where((t) => userTags.contains(t)).toList();
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeTagKeys = userTags.map(_tagKey).toSet();
+    final offerTags = _dedupeTags(offer.tags);
+    final visibleTags = offerTags.take(4).toList(growable: false);
 
-    return InkWell(
+    return AppCard(
       onTap: () => _showOfferDetail(offer),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.shade200, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      padding: const EdgeInsets.all(12),
+      elevation: 3,
+      borderColor: colorScheme.primary.withValues(alpha: 0.16),
+      gradient: LinearGradient(
+        colors: [
+          colorScheme.surfaceContainerHighest.withValues(
+            alpha: isDark ? 0.74 : 0.70,
+          ),
+          colorScheme.primary.withValues(alpha: isDark ? 0.05 : 0.08),
+          colorScheme.primaryContainer.withValues(alpha: isDark ? 0.08 : 0.14),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 80,
+              height: 80,
+              child:
+                  (offer.imageUrl != null && offer.imageUrl!.trim().isNotEmpty)
+                  ? AppImage.network(
+                      offer.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: _buildOfferPlaceholder(),
+                    )
+                  : (offer.shopProfileImage != null &&
+                        offer.shopProfileImage!.trim().isNotEmpty)
+                  ? AppImage.network(
+                      offer.shopProfileImage!,
+                      fit: BoxFit.cover,
+                      errorWidget: _buildOfferPlaceholder(),
+                    )
+                  : _buildOfferPlaceholder(),
             ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                width: 80,
-                height: 80,
-                child: offer.imageUrl != null && offer.imageUrl!.isNotEmpty
-                    ? AppImage.network(
-                        offer.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorWidget: _buildOfferPlaceholder(),
-                      )
-                    : _buildOfferPlaceholder(),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          offer.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: Colors.black87,
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        offer.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          height: 1.2,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.amber,
-                              size: 12,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              offer.rating != null ? offer.rating!.toStringAsFixed(1) : '0.0',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.amber.shade900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    offer.shopName,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (matchedTags.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: matchedTags.map((tag) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff57b32c).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          tag,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xff57b32c),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryLight.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            color: AppColors.secondary,
+                            size: 12,
                           ),
-                        ),
-                      )).toList(),
+                          const SizedBox(width: 2),
+                          Text(
+                            offer.rating != null
+                                ? offer.rating!.toStringAsFixed(1)
+                                : '0.0',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.secondaryDark,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  offer.shopName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (visibleTags.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ...visibleTags.map(
+                        (tag) => _buildRouteTagChip(
+                          context,
+                          tag,
+                          isHighlighted:
+                              activeTagKeys.isEmpty ||
+                              activeTagKeys.contains(_tagKey(tag)),
+                        ),
+                      ),
+                      if (offerTags.length > 4)
+                        _buildRouteTagCountChip(context, offerTags.length - 4),
+                    ],
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _tagKey(String tag) => tag.trim().toLowerCase();
+
+  List<String> _dedupeTags(Iterable<String> tags) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final tag in tags) {
+      final normalized = tag.trim();
+      if (normalized.isEmpty) continue;
+      if (seen.add(_tagKey(normalized))) {
+        result.add(normalized);
+      }
+    }
+    return result;
+  }
+
+  Widget _buildRouteTagChip(
+    BuildContext context,
+    String tag, {
+    required bool isHighlighted,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = isHighlighted
+        ? (isDark ? AppColors.secondaryLight : colorScheme.primary)
+        : colorScheme.onSurfaceVariant;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: isHighlighted
+            ? LinearGradient(
+                colors: [
+                  colorScheme.primary.withValues(alpha: isDark ? 0.32 : 0.18),
+                  colorScheme.primaryContainer.withValues(
+                    alpha: isDark ? 0.20 : 0.24,
+                  ),
+                ],
+              )
+            : null,
+        color: isHighlighted
+            ? null
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: (isHighlighted ? colorScheme.primary : colorScheme.outline)
+              .withValues(alpha: isHighlighted ? 0.26 : 0.20),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isHighlighted ? Icons.sell_rounded : Icons.tag_rounded,
+            size: 11,
+            color: foreground,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            tag,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: isHighlighted ? FontWeight.w900 : FontWeight.w700,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRouteTagCountChip(BuildContext context, int count) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.70),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Text(
+        '+$count',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w900,
+          height: 1,
         ),
       ),
     );
@@ -794,17 +873,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   Widget _buildOfferPlaceholder() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFF3E0), Color(0xFFFFB74D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
       child: Center(
-        child: Icon(
+        child: const Icon(
           Icons.shopping_cart_outlined,
-          color: Colors.orange.shade800,
+          color: AppColors.white,
           size: 28,
         ),
       ),
@@ -816,23 +889,66 @@ class _MapScreenState extends ConsumerState<MapScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppColors.cardDark
-              : AppColors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: ShopDetailScreen(shopId: shopId, isSheet: true),
+      barrierColor: AppColors.black.withValues(alpha: 0.28),
+      builder: (context) => _DraggableDetailSheet(
+        childBuilder: (scrollController) => ShopDetailScreen(
+          shopId: shopId,
+          isSheet: true,
+          scrollController: scrollController,
         ),
       ),
     ).whenComplete(() {
       ref.read(navigationControllerProvider.notifier).selectShop(null);
     });
+  }
+}
+
+class _DraggableDetailSheet extends StatelessWidget {
+  const _DraggableDetailSheet({required this.childBuilder});
+
+  static const double _initialSize = 0.92;
+  static const double _minSize = 0.34;
+
+  final Widget Function(ScrollController scrollController) childBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    var hasDismissed = false;
+
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        if (!hasDismissed &&
+            notification.extent <= _minSize + 0.01 &&
+            Navigator.of(context).canPop()) {
+          hasDismissed = true;
+          Navigator.of(context).pop();
+        }
+        return false;
+      },
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: _initialSize,
+        minChildSize: _minSize,
+        maxChildSize: _initialSize,
+        snap: true,
+        snapSizes: const [_minSize, _initialSize],
+        builder: (context, scrollController) {
+          return GlassmorphicContainer(
+            opacity: 0.97,
+            blur: 10,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+              child: childBuilder(scrollController),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -849,24 +965,17 @@ class _MapControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: isDark ? AppColors.cardDark : AppColors.white,
-      shape: const CircleBorder(),
-      elevation: 4,
-      shadowColor: AppColors.black.withValues(alpha: 0.15),
+    final colorScheme = Theme.of(context).colorScheme;
+    return GlassmorphicContainer(
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onPressed,
-        customBorder: const CircleBorder(),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
           width: 48,
           height: 48,
           alignment: Alignment.center,
-          child: Icon(
-            icon,
-            color: color ?? (isDark ? AppColors.white : AppColors.grey800),
-            size: 24,
-          ),
+          child: Icon(icon, color: color ?? colorScheme.onSurface, size: 24),
         ),
       ),
     );
@@ -1038,7 +1147,7 @@ class _MapPin extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
+                    color: AppColors.black.withValues(alpha: 0.25),
                     blurRadius: 8,
                     offset: const Offset(2, 2),
                   ),
@@ -1106,7 +1215,9 @@ class UserLocationMarkerLayer extends ConsumerWidget {
                                 width: 24,
                                 height: 24,
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.3),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   shape: BoxShape.circle,
                                 ),
                               )
@@ -1128,12 +1239,12 @@ class UserLocationMarkerLayer extends ConsumerWidget {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade600,
+                          color: AppColors.primaryDark,
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blue.withValues(alpha: 0.4),
+                              color: AppColors.primary.withValues(alpha: 0.4),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),

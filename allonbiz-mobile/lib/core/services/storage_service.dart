@@ -130,12 +130,44 @@ class StorageService {
   set lastLongitude(double? value) =>
       _prefs.put(StorageKeys.lastLongitude, value);
 
-  /// List of offer IDs already notified to user (to prevent spam).
   List<String> get notifiedOfferIds => List<String>.from(
     _prefs.get(StorageKeys.notifiedOfferIds, defaultValue: []),
   );
   set notifiedOfferIds(List<String> value) =>
       _prefs.put(StorageKeys.notifiedOfferIds, value);
+
+  /// Map of offer IDs to timestamp (millisecondsSinceEpoch) of when they were last notified.
+  Map<String, int> get notifiedOfferTimestamps {
+    final raw = _prefs.get(
+      StorageKeys.notifiedOfferTimestamps,
+      defaultValue: {},
+    );
+    if (raw is! Map) return {};
+    return Map<String, int>.from(raw);
+  }
+
+  set notifiedOfferTimestamps(Map<String, int> value) =>
+      _prefs.put(StorageKeys.notifiedOfferTimestamps, value);
+
+  /// List of shop IDs already notified to user (to prevent spam).
+  List<String> get notifiedShopIds => List<String>.from(
+    _prefs.get(StorageKeys.notifiedShopIds, defaultValue: []),
+  );
+  set notifiedShopIds(List<String> value) =>
+      _prefs.put(StorageKeys.notifiedShopIds, value);
+
+  /// Map of shop IDs to timestamp (millisecondsSinceEpoch) of when they were last notified.
+  Map<String, int> get notifiedShopTimestamps {
+    final raw = _prefs.get(
+      StorageKeys.notifiedShopTimestamps,
+      defaultValue: {},
+    );
+    if (raw is! Map) return {};
+    return Map<String, int>.from(raw);
+  }
+
+  set notifiedShopTimestamps(Map<String, int> value) =>
+      _prefs.put(StorageKeys.notifiedShopTimestamps, value);
 
   /// Backend API Access Token.
   String? get backendAccessToken => _prefs.get(StorageKeys.backendAccessToken);

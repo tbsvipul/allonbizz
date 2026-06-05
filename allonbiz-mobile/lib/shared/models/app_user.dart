@@ -13,8 +13,7 @@ final class AppUser extends Equatable {
     this.totalSaved = 0.0,
     this.totalKm = 0.0,
     this.totalTrips = 0,
-    this.loyaltyPoints = 0,
-    this.loyaltyTier = 'bronze',
+
     this.savedOfferIds = const [],
     this.redeemedOfferIds = const [],
     this.fcmToken,
@@ -30,8 +29,7 @@ final class AppUser extends Equatable {
   final double totalSaved;
   final double totalKm;
   final int totalTrips;
-  final int loyaltyPoints;
-  final String loyaltyTier;
+
   final List<String> savedOfferIds;
   final List<String> redeemedOfferIds;
   final String? fcmToken;
@@ -72,10 +70,7 @@ final class AppUser extends Equatable {
           (json['totalSaved'] ?? json['TotalSaved'] as num?)?.toDouble() ?? 0.0,
       totalKm: (json['totalKm'] ?? json['TotalKm'] as num?)?.toDouble() ?? 0.0,
       totalTrips: json['totalTrips'] ?? json['TotalTrips'] as int? ?? 0,
-      loyaltyPoints:
-          json['loyaltyPoints'] ?? json['LoyaltyPoints'] as int? ?? 0,
-      loyaltyTier:
-          json['loyaltyTier'] ?? json['LoyaltyTier'] as String? ?? 'bronze',
+
       savedOfferIds: List<String>.from(
         json['savedOfferIds'] ?? json['SavedOfferIds'] as Iterable? ?? [],
       ),
@@ -100,8 +95,7 @@ final class AppUser extends Equatable {
     'totalSaved': totalSaved,
     'totalKm': totalKm,
     'totalTrips': totalTrips,
-    'loyaltyPoints': loyaltyPoints,
-    'loyaltyTier': loyaltyTier,
+
     'savedOfferIds': savedOfferIds,
     'redeemedOfferIds': redeemedOfferIds,
     if (fcmToken != null) 'fcmToken': fcmToken,
@@ -120,8 +114,7 @@ final class AppUser extends Equatable {
     double? totalSaved,
     double? totalKm,
     int? totalTrips,
-    int? loyaltyPoints,
-    String? loyaltyTier,
+
     List<String>? savedOfferIds,
     List<String>? redeemedOfferIds,
     String? fcmToken,
@@ -139,8 +132,7 @@ final class AppUser extends Equatable {
       totalSaved: totalSaved ?? this.totalSaved,
       totalKm: totalKm ?? this.totalKm,
       totalTrips: totalTrips ?? this.totalTrips,
-      loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
-      loyaltyTier: loyaltyTier ?? this.loyaltyTier,
+
       savedOfferIds: savedOfferIds ?? this.savedOfferIds,
       redeemedOfferIds: redeemedOfferIds ?? this.redeemedOfferIds,
       fcmToken: fcmToken ?? this.fcmToken,
@@ -170,8 +162,7 @@ final class AppUser extends Equatable {
     totalSaved,
     totalKm,
     totalTrips,
-    loyaltyPoints,
-    loyaltyTier,
+
     savedOfferIds,
     redeemedOfferIds,
     fcmToken,
@@ -182,6 +173,5 @@ final class AppUser extends Equatable {
   ];
 
   @override
-  String toString() =>
-      'AppUser(uid: $uid, email: $email, loyalty: $loyaltyTier)';
+  String toString() => 'AppUser(uid: $uid, email: $email)';
 }

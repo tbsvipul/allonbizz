@@ -344,7 +344,7 @@ export default function ShopsPage() {
         {loading ? (
           <p className="muted-text">Loading shops...</p>
         ) : filteredShops.length === 0 ? (
-          <EmptyState title={search ? 'No matches found' : 'No shops yet'} message={search ? 'Try a different search term.' : 'Create the first shop to unlock traffic analytics, loyalty, and offer assignment.'} />
+          <EmptyState title={search ? 'No matches found' : 'No shops yet'} message={search ? 'Try a different search term.' : 'Create the first shop to unlock traffic analytics and offer assignment.'} />
         ) : (
           <div className="shop-list">
             {filteredShops.map((shop) => {

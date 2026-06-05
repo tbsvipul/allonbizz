@@ -12,7 +12,7 @@ import { InlineNotice } from '@/components/InlineNotice';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusPill } from '@/components/StatusPill';
 import CustomSelect from '@/components/CustomSelect';
-import { Store, Tag } from 'lucide-react';
+import { Image as ImageIcon, Store, Tag, UploadCloud, X } from 'lucide-react';
 
 interface OfferFormState {
   shopId: string;
@@ -76,6 +76,26 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function handleImageFile(file?: File | null) {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setError('Upload a valid image file for the offer.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        updateField('imageUrl', event.target.result as string);
+        setError('');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -132,6 +152,10 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
         throw new Error('Select a shop before saving the offer.');
       }
 
+      if (!form.imageUrl.trim()) {
+        throw new Error('Upload at least one offer image before saving.');
+      }
+
       const payload = {
         shopId: form.shopId,
         title: form.title.trim(),
@@ -156,7 +180,11 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
         return;
       }
     } catch (err) {
-      const message = err instanceof Error && err.message === 'Select a shop before saving the offer.'
+      const localValidationMessages = new Set([
+        'Select a shop before saving the offer.',
+        'Upload at least one offer image before saving.',
+      ]);
+      const message = err instanceof Error && localValidationMessages.has(err.message)
         ? err.message
         : getApiErrorMessage(err, 'Unable to save the offer.');
       setError(message);
@@ -326,37 +354,53 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
             </div>
 
             <div className="field">
-              <label htmlFor="offerImage" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                Offer Image (Optional)
-                <label style={{ cursor: 'pointer', fontSize: '0.75rem', color: '#6366f1', fontWeight: 700, textDecoration: 'underline' }}>
-                  Upload File
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <label htmlFor="offerImage" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ImageIcon size={16} /> Offer image
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--danger))', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '999px', padding: '0.15rem 0.45rem' }}>
+                    Required
+                  </span>
+                </label>
+                <label htmlFor="offerImage" className="button-secondary" style={{ cursor: loading || saving ? 'not-allowed' : 'pointer', padding: '0.65rem 1rem', opacity: loading || saving ? 0.55 : 1 }}>
+                  <UploadCloud size={16} /> {form.imageUrl ? 'Replace image' : 'Upload image'}
                   <input
+                    id="offerImage"
                     type="file"
                     accept="image/*"
+                    disabled={loading || saving}
                     style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        if (ev.target?.result) {
-                          updateField('imageUrl', ev.target.result as string);
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                    onChange={(event) => {
+                      handleImageFile(event.target.files?.[0]);
+                      event.currentTarget.value = '';
                     }}
                   />
                 </label>
-              </label>
+              </div>
+              {!form.imageUrl ? (
+                <label
+                  htmlFor="offerImage"
+                  style={{ border: '1.5px dashed hsl(var(--primary))', borderRadius: 'var(--radius-lg)', background: 'rgba(99, 102, 241, 0.06)', minHeight: 168, padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '0.65rem', textAlign: 'center', cursor: loading || saving ? 'not-allowed' : 'pointer', opacity: loading || saving ? 0.55 : 1 }}
+                >
+                  <span style={{ width: 52, height: 52, borderRadius: '999px', background: 'rgba(99, 102, 241, 0.12)', color: 'hsl(var(--primary))', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UploadCloud size={24} />
+                  </span>
+                  <strong style={{ color: 'hsl(var(--foreground))' }}>Upload offer image</strong>
+                  <span className="muted-text" style={{ maxWidth: 420, fontSize: '0.86rem' }}>Choose one clear product, shop, or offer image. PNG, JPG, or WEBP files are supported.</span>
+                </label>
+              ) : null}
               {form.imageUrl && (
                 <div style={{ marginTop: '0.5rem', position: 'relative', width: 'fit-content' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={form.imageUrl} alt="Offer preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} />
                   <button 
                     type="button" 
                     onClick={() => updateField('imageUrl', '')}
-                    style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
+                    disabled={loading || saving}
+                    aria-label="Remove offer image"
+                    title="Remove image"
+                    style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(15, 23, 42, 0.72)', color: 'white', border: '1px solid rgba(255,255,255,0.28)', borderRadius: '50%', width: 32, height: 32, cursor: loading || saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 0 }}
                   >
-                    ✕
+                    <X size={16} />
                   </button>
                 </div>
               )}

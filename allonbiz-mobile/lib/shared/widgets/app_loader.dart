@@ -3,6 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import 'app_glass.dart';
 
 enum AppLoaderVariant { fullScreen, inline, shimmer }
 
@@ -39,37 +40,53 @@ class AppLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (variant) {
       case AppLoaderVariant.fullScreen:
-        return Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SpinKitPulse(color: color, size: size),
-              if (message != null) ...[
-                const SizedBox(height: 20),
-                Text(
-                  message!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ],
+        return GradientBackground(
+          child: Center(
+            child: GlassmorphicContainer(
+              padding: const EdgeInsets.all(AppDimensions.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SpinKitPulse(color: color, size: size),
+                  if (message != null) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      message!,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         );
       case AppLoaderVariant.inline:
         return SpinKitThreeBounce(color: color, size: size / 2);
       case AppLoaderVariant.shimmer:
-        // Stand-in for full shimmer without introducing more libraries. Basic animated container or fallback.
-        return Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: AppColors.grey200,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.35, end: 1),
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeInOut,
+          builder: (context, value, child) {
+            return Opacity(opacity: value, child: child);
+          },
+          onEnd: () {},
+          child: Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.grey200.withValues(alpha: 0.78),
+                  AppColors.champagne.withValues(alpha: 0.7),
+                  AppColors.grey200.withValues(alpha: 0.78),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            ),
           ),
         );
     }

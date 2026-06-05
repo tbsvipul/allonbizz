@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_glass.dart';
 
 /// Standard header for login and registration screens.
 class AuthHeader extends StatelessWidget {
@@ -18,6 +19,8 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         if (showIcon) ...[
@@ -26,13 +29,7 @@ class AuthHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: AppColors.primaryGradient,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+                  boxShadow: AppColors.glow(colorScheme.primary),
                 ),
                 child: const Icon(
                   Icons.navigation_rounded,
@@ -52,14 +49,24 @@ class AuthHeader extends StatelessWidget {
         ],
         Text(
           title,
-          style: AppTextStyles.headlineLarge,
+          style: AppTextStyles.headlineLarge.copyWith(
+            color: colorScheme.onSurface,
+            letterSpacing: -0.7,
+          ),
           textAlign: TextAlign.center,
         ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
         const SizedBox(height: 8),
-        Text(
-          subtitle,
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey600),
-          textAlign: TextAlign.center,
+        GlassmorphicContainer(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          borderRadius: BorderRadius.circular(999),
+          child: Text(
+            subtitle,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ).animate().fadeIn(delay: 350.ms, duration: 400.ms),
       ],
     );

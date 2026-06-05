@@ -99,7 +99,7 @@ interface RedemptionSummary {
   shopName: string;
   status: string;
   savedAmount?: number | null;
-  loyaltyPointsEarned: number;
+
   redeemedAt: string;
 }
 
@@ -648,10 +648,7 @@ export default function UserProfilePage() {
                               <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Redeemed at</p>
                               <p style={{ fontWeight: 600 }}>{formatDateTime(redemption.redeemedAt)}</p>
                             </div>
-                            <div>
-                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Points earned</p>
-                              <p style={{ fontWeight: 600 }}>{redemption.loyaltyPointsEarned}</p>
-                            </div>
+
                           </div>
                         </div>
                       ))}

@@ -16,8 +16,9 @@ class GeofenceService {
   final StorageService _storage;
   StreamSubscription<Position>? _positionSub;
 
-  // Track notified IDs to avoid spamming within the same stream update
-  final Set<String> _currentNotifiedIds = {};
+  // Track notified IDs and timestamps to avoid spamming within the same stream update
+  // and to enforce the 24-hour cooldown period.
+  final Map<String, int> _notifiedTimestamps = {};
 
   GeofenceService({
     required LocationService location,
@@ -26,8 +27,21 @@ class GeofenceService {
   }) : _location = location,
        _notifications = notifications,
        _storage = storage {
-    // Sync with persisted storage IDs
-    _currentNotifiedIds.addAll(_storage.notifiedOfferIds);
+    // Sync with persisted storage timestamps
+    _notifiedTimestamps.addAll(_storage.notifiedOfferTimestamps);
+
+    // Migrate old IDs if they exist and don't have a timestamp yet
+    final oldIds = _storage.notifiedOfferIds;
+    bool needsSave = false;
+    for (final id in oldIds) {
+      if (!_notifiedTimestamps.containsKey(id)) {
+        _notifiedTimestamps[id] = DateTime.now().millisecondsSinceEpoch;
+        needsSave = true;
+      }
+    }
+    if (needsSave) {
+      _storage.notifiedOfferTimestamps = _notifiedTimestamps;
+    }
   }
 
   /// Start monitoring user location for nearby deals.
@@ -75,17 +89,20 @@ class GeofenceService {
     final notifiedIds = await compute(_checkDistancesTask, {
       'pos': currentPos,
       'offers': offers,
-      'alreadyNotified': _currentNotifiedIds.toList(),
+      'notifiedTimestamps': _notifiedTimestamps,
+      'now': DateTime.now().millisecondsSinceEpoch,
     });
 
     if (notifiedIds.isNotEmpty) {
       bool hasChanged = false;
+      final now = DateTime.now().millisecondsSinceEpoch;
       for (final match in notifiedIds) {
         final offer = offers.firstWhere((o) => o.id == match['id']);
         final distance = match['distance'] as double;
 
-        if (!_currentNotifiedIds.contains(offer.id)) {
-          _currentNotifiedIds.add(offer.id);
+        final lastTime = _notifiedTimestamps[offer.id] ?? 0;
+        if (now - lastTime >= 86400000) {
+          _notifiedTimestamps[offer.id] = now;
           hasChanged = true;
           await _notifications.showNotification(
             id: offer.id.hashCode & 0x7FFFFFFF,
@@ -97,7 +114,7 @@ class GeofenceService {
         }
       }
       if (hasChanged) {
-        _storage.notifiedOfferIds = _currentNotifiedIds.toList();
+        _storage.notifiedOfferTimestamps = _notifiedTimestamps;
       }
     }
   }
@@ -107,12 +124,19 @@ class GeofenceService {
 List<Map<String, dynamic>> _checkDistancesTask(Map<String, dynamic> data) {
   final Position pos = data['pos'];
   final List<Offer> offers = data['offers'];
-  final List<String> alreadyNotified = data['alreadyNotified'];
+  final Map<String, int> notifiedTimestamps = data['notifiedTimestamps'];
+  final int now = data['now'];
 
   final List<Map<String, dynamic>> results = [];
 
   for (final offer in offers) {
-    if (alreadyNotified.contains(offer.id)) continue;
+    if (notifiedTimestamps.containsKey(offer.id)) {
+      final lastNotified = notifiedTimestamps[offer.id]!;
+      // 24 hours = 86400000 ms
+      if (now - lastNotified < 86400000) {
+        continue;
+      }
+    }
 
     final dist = LocationService.calculateDistance(
       pos.latitude,

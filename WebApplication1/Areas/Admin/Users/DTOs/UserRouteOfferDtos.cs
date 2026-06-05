@@ -49,9 +49,3 @@ public class RedemptionHistoryDto
     public DateTime RedeemedAt { get; set; }
 }
 
-public class LoyaltySummaryDto
-{
-    public int CurrentPoints { get; set; }
-    public string Tier { get; set; } = "Bronze";
-    public int PointsToNextTier { get; set; }
-}

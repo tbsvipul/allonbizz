@@ -453,13 +453,15 @@ class NavigationController extends Notifier<NavigationState> {
 
     try {
       final startedAt = DateTime.now();
-      
+
       String resolvedStartName = 'Free Roam Start';
       try {
-        final suggestion = await ref.read(placesServiceProvider).reverseGeocode(
-          effectivePosition.latitude,
-          effectivePosition.longitude,
-        );
+        final suggestion = await ref
+            .read(placesServiceProvider)
+            .reverseGeocode(
+              effectivePosition.latitude,
+              effectivePosition.longitude,
+            );
         if (suggestion != null && suggestion.name.trim().isNotEmpty) {
           resolvedStartName = suggestion.name.trim();
         }
@@ -571,6 +573,7 @@ class NavigationController extends Notifier<NavigationState> {
         distanceMeters: progressSnapshot.distanceMeters,
         durationSeconds: progressSnapshot.durationSeconds,
       );
+      unawaited(_checkAndNotifyNearbyShops(position, routeShops));
       return;
     }
 
@@ -601,6 +604,56 @@ class NavigationController extends Notifier<NavigationState> {
       distanceMeters: progressSnapshot.distanceMeters,
       durationSeconds: progressSnapshot.durationSeconds,
     );
+    unawaited(_checkAndNotifyNearbyShops(position, nearbyShops));
+  }
+
+  Future<void> _checkAndNotifyNearbyShops(
+    LatLng currentPosition,
+    List<Shop> shops,
+  ) async {
+    final notifiedTimestamps = _storageService.notifiedShopTimestamps;
+    bool hasChanged = false;
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Migrate old ones if necessary
+    final oldIds = _storageService.notifiedShopIds;
+    for (final id in oldIds) {
+      if (!notifiedTimestamps.containsKey(id)) {
+        notifiedTimestamps[id] = now;
+        hasChanged = true;
+      }
+    }
+
+    for (final shop in shops) {
+      if (notifiedTimestamps.containsKey(shop.id)) {
+        final lastNotified = notifiedTimestamps[shop.id]!;
+        if (now - lastNotified < 86400000) {
+          continue;
+        }
+      }
+
+      final dist = const Distance().as(
+        LengthUnit.Meter,
+        currentPosition,
+        LatLng(shop.latitude, shop.longitude),
+      );
+
+      if (dist <= 200) {
+        notifiedTimestamps[shop.id] = now;
+        hasChanged = true;
+
+        await _notificationService.showNotification(
+          id: shop.id.hashCode & 0x7FFFFFFF,
+          title: 'Nearby Shop! 🏬',
+          body: '${shop.name} is just ${dist.toInt()}m away',
+          payload: '/shop-detail/${shop.id}',
+        );
+      }
+    }
+
+    if (hasChanged) {
+      _storageService.notifiedShopTimestamps = notifiedTimestamps;
+    }
   }
 
   /// Static helper for Isolate-based filtering to keep main thread responsive.
@@ -643,7 +696,10 @@ class NavigationController extends Notifier<NavigationState> {
     );
 
     if (journeyId != null) {
-      final endName = await _resolveJourneyEndName(navigationSnapshot, finalPosition);
+      final endName = await _resolveJourneyEndName(
+        navigationSnapshot,
+        finalPosition,
+      );
       final ended = await _journeyService.endJourney(
         journeyId: journeyId,
         endLat: finalPosition.latitude,
@@ -1241,13 +1297,15 @@ class NavigationController extends Notifier<NavigationState> {
     return distanceMeters;
   }
 
-  Future<String> _resolveJourneyEndName(NavigationState snapshot, LatLng finalPosition) async {
+  Future<String> _resolveJourneyEndName(
+    NavigationState snapshot,
+    LatLng finalPosition,
+  ) async {
     if (snapshot.isFreeRoam) {
       try {
-        final suggestion = await ref.read(placesServiceProvider).reverseGeocode(
-          finalPosition.latitude,
-          finalPosition.longitude,
-        );
+        final suggestion = await ref
+            .read(placesServiceProvider)
+            .reverseGeocode(finalPosition.latitude, finalPosition.longitude);
         if (suggestion != null && suggestion.name.trim().isNotEmpty) {
           return suggestion.name.trim();
         }

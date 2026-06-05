@@ -15,6 +15,7 @@ import '../../../../core/services/locale_provider.dart';
 import '../widgets/profile_tile_widget.dart';
 import '../widgets/profile_switch_tile_widget.dart';
 import '../../../../core/services/preference_providers.dart';
+import '../../../../shared/widgets/app_glass.dart';
 
 /// User profile, statistics, and settings.
 class ProfileScreen extends ConsumerWidget {
@@ -39,43 +40,62 @@ class ProfileScreen extends ConsumerWidget {
       slivers: [
         // ── Profile Banner Section ───────────────────────────
         SliverToBoxAdapter(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: AppDimensions.xl),
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: colorScheme.surface,
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 50,
-                      color: colorScheme.primary,
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimensions.lg),
+            child: GlassmorphicContainer(
+              borderRadius: BorderRadius.circular(30),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: AppDimensions.xl),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppColors.white.withValues(
+                          alpha: 0.22,
+                        ),
+                        child: Icon(
+                          Icons.person_rounded,
+                          size: 50,
+                          color: AppColors.secondaryLight,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        displayName,
+                        style: textTheme.titleLarge?.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        displayEmail,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.white.withValues(alpha: 0.78),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => context.push(AppRoutes.editProfile),
+                        icon: const Icon(Icons.edit_rounded, size: 16),
+                        label: const Text('Edit Profile'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.white.withValues(
+                            alpha: 0.2,
+                          ),
+                          foregroundColor: AppColors.white,
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    displayName,
-                    style: textTheme.titleLarge?.copyWith(
-                      color: AppColors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => context.push(AppRoutes.editProfile),
-                    icon: const Icon(Icons.edit_rounded, size: 16),
-                    label: const Text('Edit Profile'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.white.withValues(alpha: 0.2),
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -170,7 +190,11 @@ class ProfileScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.my_location_rounded, size: 20, color: AppColors.primary),
+                            Icon(
+                              Icons.my_location_rounded,
+                              size: 20,
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 8),
                             const Text('Ripple'),
                           ],
@@ -181,7 +205,11 @@ class ProfileScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/images/location_marker/blue_car.png', width: 20, height: 20),
+                            Image.asset(
+                              'assets/images/location_marker/blue_car.png',
+                              width: 20,
+                              height: 20,
+                            ),
                             const SizedBox(width: 8),
                             const Text('Blue Car'),
                           ],
@@ -192,7 +220,11 @@ class ProfileScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/images/location_marker/man.png', width: 20, height: 20),
+                            Image.asset(
+                              'assets/images/location_marker/man.png',
+                              width: 20,
+                              height: 20,
+                            ),
                             const SizedBox(width: 8),
                             const Text('Man'),
                           ],
@@ -203,7 +235,11 @@ class ProfileScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/images/location_marker/weman.png', width: 20, height: 20),
+                            Image.asset(
+                              'assets/images/location_marker/weman.png',
+                              width: 20,
+                              height: 20,
+                            ),
                             const SizedBox(width: 8),
                             const Text('Woman'),
                           ],
@@ -214,7 +250,11 @@ class ProfileScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/images/location_marker/yellow_car.png', width: 20, height: 20),
+                            Image.asset(
+                              'assets/images/location_marker/yellow_car.png',
+                              width: 20,
+                              height: 20,
+                            ),
                             const SizedBox(width: 8),
                             const Text('Yellow Car'),
                           ],
@@ -223,7 +263,9 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                     onChanged: (val) {
                       if (val != null) {
-                        ref.read(locationMarkerProvider.notifier).setMarker(val);
+                        ref
+                            .read(locationMarkerProvider.notifier)
+                            .setMarker(val);
                       }
                     },
                   ),
@@ -261,6 +303,11 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.security_rounded,
                   title: l10n.privacySecurity,
                   onTap: () {},
+                ),
+                ProfileTileWidget(
+                  icon: Icons.support_agent_rounded,
+                  title: 'Contact Support',
+                  onTap: () => context.push(AppRoutes.contactSupport),
                 ),
 
                 const SizedBox(height: AppDimensions.xl),
@@ -322,7 +369,11 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
         ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
+        SliverPadding(
+          padding: EdgeInsets.only(
+            bottom: 188 + MediaQuery.of(context).padding.bottom,
+          ),
+        ),
       ],
     );
   }

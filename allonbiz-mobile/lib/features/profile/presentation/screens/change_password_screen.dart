@@ -11,6 +11,8 @@ import '../../../auth/data/repositories/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/utils/auth_error_mapper.dart';
 import '../../../../core/widgets/app_bar_binding.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_glass.dart';
 import '../../../../shared/widgets/app_status_banner.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -102,21 +104,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
       if (!mounted) return;
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Password Changed'),
-          content: const Text(
+      await AppDialog.show<void>(
+        context,
+        title: 'Password Changed',
+        message:
             'Your password has been changed successfully. Please sign in again.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+        confirmLabel: 'OK',
       );
 
       if (!mounted) return;
@@ -157,89 +150,95 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           ),
         ),
         child: Scaffold(
+          backgroundColor: Colors.transparent,
           body: GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
             child: AbsorbPointer(
               absorbing: _isLoading,
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 460),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Update your password',
-                              style: textTheme.headlineSmall,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'For security, you will be signed out after changing your password.',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            if (_errorMessage != null) ...[
-                              AppStatusBanner(
-                                message: AuthErrorMapper.getMessage(
-                                  _errorMessage,
-                                  l10n,
+              child: GradientBackground(
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: GlassmorphicContainer(
+                          padding: const EdgeInsets.all(24),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Update your password',
+                                  style: textTheme.headlineSmall,
                                 ),
-                                variant: AppStatusBannerVariant.error,
-                                textStyle: textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            AppTextField.password(
-                              controller: _currentPasswordController,
-                              label: 'Current Password',
-                              hint: 'Enter your current password',
-                              prefixIcon: Icon(
-                                Icons.lock_outline,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              validator: _validateCurrentPassword,
-                              onChanged: (_) => _clearError(),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'For security, you will be signed out after changing your password.',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                if (_errorMessage != null) ...[
+                                  AppStatusBanner(
+                                    message: AuthErrorMapper.getMessage(
+                                      _errorMessage,
+                                      l10n,
+                                    ),
+                                    variant: AppStatusBannerVariant.error,
+                                    textStyle: textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                                AppTextField.password(
+                                  controller: _currentPasswordController,
+                                  label: 'Current Password',
+                                  hint: 'Enter your current password',
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  validator: _validateCurrentPassword,
+                                  onChanged: (_) => _clearError(),
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField.password(
+                                  controller: _newPasswordController,
+                                  label: 'New Password',
+                                  hint: 'Enter your new password',
+                                  prefixIcon: Icon(
+                                    Icons.lock_reset_rounded,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  validator: _validateNewPassword,
+                                  onChanged: (_) => _clearError(),
+                                ),
+                                const SizedBox(height: 16),
+                                AppTextField.password(
+                                  controller: _confirmPasswordController,
+                                  label: 'Confirm Password',
+                                  hint: 'Re-enter your new password',
+                                  prefixIcon: Icon(
+                                    Icons.verified_user_outlined,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  validator: _validateConfirmPassword,
+                                  onChanged: (_) => _clearError(),
+                                  onSubmitted: (_) => _changePassword(),
+                                ),
+                                const SizedBox(height: 24),
+                                AppButton.primary(
+                                  label: 'Change Password',
+                                  isLoading: _isLoading,
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _changePassword(),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            AppTextField.password(
-                              controller: _newPasswordController,
-                              label: 'New Password',
-                              hint: 'Enter your new password',
-                              prefixIcon: Icon(
-                                Icons.lock_reset_rounded,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              validator: _validateNewPassword,
-                              onChanged: (_) => _clearError(),
-                            ),
-                            const SizedBox(height: 16),
-                            AppTextField.password(
-                              controller: _confirmPasswordController,
-                              label: 'Confirm Password',
-                              hint: 'Re-enter your new password',
-                              prefixIcon: Icon(
-                                Icons.verified_user_outlined,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              validator: _validateConfirmPassword,
-                              onChanged: (_) => _clearError(),
-                              onSubmitted: (_) => _changePassword(),
-                            ),
-                            const SizedBox(height: 24),
-                            AppButton.primary(
-                              label: 'Change Password',
-                              isLoading: _isLoading,
-                              onPressed: _isLoading
-                                  ? null
-                                  : () => _changePassword(),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),

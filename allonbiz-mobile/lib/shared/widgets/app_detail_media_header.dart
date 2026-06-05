@@ -4,7 +4,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_decorations.dart';
-import '../../core/constants/app_dimensions.dart';
+import 'app_glass.dart';
 import 'app_image.dart';
 
 /// Shared image carousel + avatar treatment for detail screens.
@@ -46,7 +46,7 @@ class _AppDetailMediaHeaderState extends State<AppDetailMediaHeader> {
             right: 0,
             height: widget.heroHeight,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+              borderRadius: BorderRadius.circular(28),
               child: images.isNotEmpty
                   ? CarouselSlider(
                       options: CarouselOptions(
@@ -73,7 +73,9 @@ class _AppDetailMediaHeaderState extends State<AppDetailMediaHeader> {
                           .toList(growable: false),
                     )
                   : Container(
-                      color: AppColors.grey200,
+                      decoration: const BoxDecoration(
+                        gradient: AppColors.appBackgroundLight,
+                      ),
                       child: const Center(
                         child: Icon(
                           Icons.image_not_supported,
@@ -96,8 +98,11 @@ class _AppDetailMediaHeaderState extends State<AppDetailMediaHeader> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.black.withValues(alpha: 0.36),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.24),
+                    ),
                   ),
                   child: AnimatedSmoothIndicator(
                     activeIndex: _currentPage,
@@ -115,17 +120,21 @@ class _AppDetailMediaHeaderState extends State<AppDetailMediaHeader> {
           Positioned(
             left: 16,
             bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: AppDecorations.mediaHeaderAvatar(
-                Theme.of(context).scaffoldBackgroundColor,
-              ),
-              child: ClipOval(
-                child: AppImage.network(
-                  avatarImageUrl ?? '',
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
+            child: GlassmorphicContainer(
+              padding: const EdgeInsets.all(5),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: AppDecorations.mediaHeaderAvatar(
+                  Theme.of(context).scaffoldBackgroundColor,
+                ),
+                child: ClipOval(
+                  child: AppImage.network(
+                    avatarImageUrl ?? '',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),

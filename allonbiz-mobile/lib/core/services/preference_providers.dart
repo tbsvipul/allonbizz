@@ -40,12 +40,10 @@ final locationMarkerProvider =
 
 class LocationMarkerNotifier extends StateNotifier<String> {
   final StorageService _storage;
-  LocationMarkerNotifier(this._storage)
-    : super(_storage.locationMarker);
+  LocationMarkerNotifier(this._storage) : super(_storage.locationMarker);
 
   void setMarker(String value) {
     _storage.locationMarker = value;
     state = value;
   }
 }
-

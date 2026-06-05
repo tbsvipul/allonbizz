@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/api_response.dart';
 import '../../../../core/network/api_client.dart';
@@ -71,6 +73,10 @@ class UserNotification {
   final String? metadata;
   final String? actionOfferId;
   final String? actionShopId;
+  final String? actionJourneyId;
+  final String? supportTicketId;
+  final String? supportMessageId;
+  final String? supportSubject;
 
   UserNotification({
     required this.id,
@@ -83,9 +89,19 @@ class UserNotification {
     this.metadata,
     this.actionOfferId,
     this.actionShopId,
+    this.actionJourneyId,
+    this.supportTicketId,
+    this.supportMessageId,
+    this.supportSubject,
   });
 
+  bool get isSupportReply =>
+      supportTicketId != null && supportTicketId!.isNotEmpty;
+
   factory UserNotification.fromJson(Map<String, dynamic> json) {
+    final metadata = (json['metadataJson'] ?? json['MetadataJson'])?.toString();
+    final metadataMap = _decodeMetadata(metadata);
+
     return UserNotification(
       id:
           json['notificationId']?.toString() ??
@@ -102,10 +118,44 @@ class UserNotification {
           ) ??
           DateTime.now(),
       isRead: json['isRead'] as bool? ?? json['IsRead'] as bool? ?? false,
-      metadata: (json['metadataJson'] ?? json['MetadataJson'])?.toString(),
+      metadata: metadata,
       actionOfferId: (json['actionOfferId'] ?? json['ActionOfferId'])
           ?.toString(),
       actionShopId: (json['actionShopId'] ?? json['ActionShopId'])?.toString(),
+      actionJourneyId: (json['actionJourneyId'] ?? json['ActionJourneyId'])
+          ?.toString(),
+      supportTicketId:
+          _metadataValue(metadataMap, 'ticketId') ??
+          _metadataValue(metadataMap, 'supportTicketId'),
+      supportMessageId:
+          _metadataValue(metadataMap, 'messageId') ??
+          _metadataValue(metadataMap, 'supportMessageId'),
+      supportSubject: _metadataValue(metadataMap, 'subject'),
     );
+  }
+
+  static Map<String, dynamic> _decodeMetadata(String? metadata) {
+    if (metadata == null || metadata.trim().isEmpty) {
+      return const {};
+    }
+
+    try {
+      final decoded = jsonDecode(metadata);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+    } catch (_) {}
+
+    return const {};
+  }
+
+  static String? _metadataValue(Map<String, dynamic> metadata, String key) {
+    final value = metadata[key];
+    if (value == null) return null;
+    final text = value.toString();
+    return text.isEmpty ? null : text;
   }
 }

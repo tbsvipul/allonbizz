@@ -45,6 +45,6 @@ public class UserRedemptionSummaryDto
     public string ShopName { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public decimal? SavedAmount { get; set; }
-    public int LoyaltyPointsEarned { get; set; }
+
     public DateTime RedeemedAt { get; set; }
 }

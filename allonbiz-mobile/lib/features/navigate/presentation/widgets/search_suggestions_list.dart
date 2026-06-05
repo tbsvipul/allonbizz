@@ -32,11 +32,11 @@ class SearchSuggestionsList extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8),
       constraints: const BoxConstraints(maxHeight: 300),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.grey800 : Colors.white,
+        color: isDark ? AppColors.grey800 : AppColors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: AppColors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

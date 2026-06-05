@@ -14,16 +14,13 @@ namespace allonbiz.AdminAPI.Controllers;
 public class KeeperReviewsController : ControllerBase
 {
     private readonly IReviewService _reviewService;
-    private readonly ILoyaltyService _loyaltyService;
     private readonly IKeeperContextService _keeperContextService;
 
     public KeeperReviewsController(
         IReviewService reviewService,
-        ILoyaltyService loyaltyService,
         IKeeperContextService keeperContextService)
     {
         _reviewService = reviewService;
-        _loyaltyService = loyaltyService;
         _keeperContextService = keeperContextService;
     }
 
@@ -47,22 +44,4 @@ public class KeeperReviewsController : ControllerBase
         return Ok(ApiResponse<object?>.Ok(null, "Reply submitted"));
     }
 
-    /// <summary>GET /api/v1/keeper/loyalty — Loyalty program management.</summary>
-    [HttpGet("loyalty")]
-    public async Task<IActionResult> GetLoyaltyProgram([FromQuery] Guid? shopId)
-    {
-        if (shopId == null || shopId == Guid.Empty)
-            return this.ValidationProblemResponse("shopId is required.", nameof(shopId));
-        var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
-        var result = await _loyaltyService.GetLoyaltyProgramAsync(keeper.KeeperId, shopId.Value);
-        return Ok(ApiResponse<LoyaltyProgramDto>.Ok(result));
-    }
-
-    [HttpPut("loyalty")]
-    public async Task<IActionResult> UpdateLoyaltyProgram([FromBody] UpdateLoyaltyProgramDto dto)
-    {
-        var keeper = await _keeperContextService.GetRequiredActiveKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
-        var result = await _loyaltyService.ManageLoyaltyProgramAsync(keeper.KeeperId, dto);
-        return Ok(ApiResponse<LoyaltyProgramDto>.Ok(result, "Loyalty program updated"));
-    }
 }

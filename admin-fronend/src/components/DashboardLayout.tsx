@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import api from '@/lib/api';
 import {
   LayoutDashboard,
   Users,
@@ -26,7 +27,8 @@ import {
   Tag,
   Star,
   Sun,
-  Moon
+  Moon,
+  MessageCircle
 } from 'lucide-react';
 import AccessDenied from '@/components/AccessDenied';
 import { PERMISSIONS, pathPermission } from '@/lib/permissions';
@@ -43,6 +45,7 @@ const sidebarItems = [
   { icon: FolderTree, label: 'Categories', href: '/categories', permission: PERMISSIONS.categoriesView },
   { icon: Tag, label: 'Tags', href: '/tags', permission: PERMISSIONS.tagsView },
   { icon: AlertCircle, label: 'Content Moderation', href: '/moderation', permission: PERMISSIONS.moderationView },
+  { icon: MessageCircle, label: 'Support Tickets', href: '/support', permission: PERMISSIONS.systemView },
   { icon: Settings, label: 'System Settings', href: '/settings', permission: [PERMISSIONS.systemView, PERMISSIONS.settingsEdit, PERMISSIONS.adminsManage] },
   { icon: Users, label: 'Admin Profile', href: '/profile', permission: null },
 ];
@@ -54,11 +57,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (user && hasPermission(PERMISSIONS.systemView)) {
+      api.get('/admin/support/unread-count')
+        .then(res => {
+          setUnreadCount(res.data.data?.unreadCount || 0);
+        })
+        .catch(err => console.error('Failed to fetch unread tickets count', err));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -218,10 +232,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Moon size={20} />
               )}
             </button>
-            <button style={{ background: 'none', border: 'none', color: 'hsl(var(--foreground))', position: 'relative' }}>
+            <Link href="/support" style={{ background: 'none', border: 'none', color: 'hsl(var(--foreground))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Support Tickets">
               <Bell size={20} />
-              <span style={{ position: 'absolute', top: -2, right: -2, width: '8px', height: '8px', background: 'hsl(var(--destructive))', borderRadius: '50%' }}></span>
-            </button>
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: -6, right: -6, background: 'hsl(var(--destructive))', color: 'white', borderRadius: '10px', fontSize: '0.65rem', padding: '0 4px', minWidth: '16px', textAlign: 'center', fontWeight: 'bold' }}>
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
             <div style={{ height: '32px', width: '1px', background: 'hsl(var(--border))' }}></div>
             <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
               <div style={{ textAlign: 'right' }}>

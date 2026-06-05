@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 
 enum AppButtonVariant { primary, secondary, outlined, text, danger, icon }
 
-/// Universal App Button for standardized UI interactions.
-class AppButton extends StatelessWidget {
+/// Universal premium app button for standardized UI interactions.
+class AppButton extends StatefulWidget {
   const AppButton._({
     required this.variant,
     this.label,
@@ -78,121 +79,213 @@ class AppButton extends StatelessWidget {
   }) = _AppButtonIcon;
 
   @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton> {
+  bool _pressed = false;
+
+  bool get _enabled =>
+      !widget.isDisabled && !widget.isLoading && widget.onPressed != null;
+
+  @override
   Widget build(BuildContext context) {
-    if (variant == AppButtonVariant.icon && icon != null) {
-      return IconButton(
-        onPressed: (isDisabled || isLoading) ? null : onPressed,
-        icon: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Icon(icon),
-        color: Theme.of(context).colorScheme.primary,
+    if (widget.variant == AppButtonVariant.icon) {
+      return _buildIconButton(context);
+    }
+
+    if (widget.variant == AppButtonVariant.text) {
+      return SizedBox(
+        width: widget.width,
+        height: 48,
+        child: TextButton(
+          onPressed: _enabled ? widget.onPressed : null,
+          style: _buttonStyle(context),
+          child: _buildChild(context),
+        ),
       );
     }
 
-    final Widget child = isLoading
-        ? SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color:
-                  variant == AppButtonVariant.primary ||
-                      variant == AppButtonVariant.danger
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.primary,
-            ),
-          )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20),
-                const SizedBox(width: AppDimensions.xs),
-              ],
-              if (label != null)
-                Flexible(child: Text(label!, overflow: TextOverflow.ellipsis)),
+    if (widget.variant == AppButtonVariant.outlined) {
+      return SizedBox(
+        width: widget.width ?? double.infinity,
+        height: AppDimensions.xxxl + AppDimensions.xs,
+        child: OutlinedButton(
+          onPressed: _enabled ? widget.onPressed : null,
+          style: _buttonStyle(context),
+          child: _buildChild(context),
+        ),
+      );
+    }
+
+    return _buildGradientButton(context);
+  }
+
+  Widget _buildGradientButton(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(AppDimensions.radiusLg);
+    final isDanger = widget.variant == AppButtonVariant.danger;
+    final gradient = isDanger
+        ? LinearGradient(
+            colors: [
+              colorScheme.error,
+              colorScheme.error.withValues(alpha: 0.78),
             ],
-          );
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : widget.variant == AppButtonVariant.secondary
+        ? AppColors.dealGradient
+        : AppColors.primaryGradient;
 
-    final ButtonStyle style = _getButtonStyle(context);
-
-    return SizedBox(
-      width: width ?? double.infinity,
-      height: AppDimensions.xxxl + AppDimensions.xs,
-      child: variant == AppButtonVariant.outlined
-          ? OutlinedButton(
-              onPressed: (isDisabled || isLoading) ? null : onPressed,
-              style: style,
-              child: child,
-            )
-          : variant == AppButtonVariant.text
-          ? TextButton(
-              onPressed: (isDisabled || isLoading) ? null : onPressed,
-              style: style,
-              child: child,
-            )
-          : ElevatedButton(
-              onPressed: (isDisabled || isLoading) ? null : onPressed,
-              style: style,
-              child: child,
+    return Semantics(
+      button: true,
+      enabled: _enabled,
+      child: MouseRegion(
+        cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTapDown: _enabled ? (_) => setState(() => _pressed = true) : null,
+          onTapCancel: _enabled ? () => setState(() => _pressed = false) : null,
+          onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 130),
+            curve: Curves.easeOutCubic,
+            scale: _pressed ? 0.985 : 1,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: _enabled ? 1 : 0.54,
+              child: Container(
+                width: widget.width ?? double.infinity,
+                height: AppDimensions.xxxl + AppDimensions.xs,
+                decoration: BoxDecoration(
+                  gradient: gradient,
+                  borderRadius: radius,
+                  boxShadow: _enabled
+                      ? AppColors.glow(
+                          isDanger ? colorScheme.error : colorScheme.primary,
+                        )
+                      : null,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: radius,
+                  child: InkWell(
+                    onTap: _enabled ? widget.onPressed : null,
+                    borderRadius: radius,
+                    child: Center(
+                      child: _buildChild(context, forceLight: true),
+                    ),
+                  ),
+                ),
+              ),
             ),
+          ),
+        ),
+      ),
     );
   }
 
-  ButtonStyle _getButtonStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textStyle = theme.textTheme.labelLarge?.copyWith(
-      fontWeight: FontWeight.w600,
-    );
+  Widget _buildIconButton(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(AppDimensions.radiusLg);
 
-    switch (variant) {
-      case AppButtonVariant.primary:
-        return ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          elevation: 0,
-          textStyle: textStyle,
-          minimumSize: const Size(48, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 130),
+      scale: _pressed ? 0.94 : 1,
+      child: Container(
+        width: widget.width ?? 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: colorScheme.surface.withValues(alpha: 0.78),
+          borderRadius: radius,
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.75),
           ),
-        );
-      case AppButtonVariant.secondary:
-        return ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.secondary,
-          foregroundColor: colorScheme.onSecondary,
-          elevation: 0,
-          textStyle: textStyle,
-          minimumSize: const Size(48, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+          boxShadow: AppColors.softShadow(colorScheme.primary),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          child: InkWell(
+            onTap: _enabled ? widget.onPressed : null,
+            onTapDown: _enabled ? (_) => setState(() => _pressed = true) : null,
+            onTapCancel: _enabled
+                ? () => setState(() => _pressed = false)
+                : null,
+            onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
+            borderRadius: radius,
+            child: Center(
+              child: widget.isLoading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.primary,
+                      ),
+                    )
+                  : Icon(widget.icon, color: colorScheme.primary, size: 22),
+            ),
           ),
-        );
-      case AppButtonVariant.danger:
-        return ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.error,
-          foregroundColor: colorScheme.onError,
-          elevation: 0,
-          textStyle: textStyle,
-          minimumSize: const Size(48, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChild(BuildContext context, {bool forceLight = false}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor = forceLight ? AppColors.white : colorScheme.primary;
+    final foreground =
+        widget.variant == AppButtonVariant.secondary && forceLight
+        ? AppColors.ink
+        : textColor;
+
+    if (widget.isLoading) {
+      return SizedBox(
+        height: 20,
+        width: 20,
+        child: CircularProgressIndicator(strokeWidth: 2, color: foreground),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (widget.icon != null) ...[
+          Icon(widget.icon, size: 20, color: foreground),
+          const SizedBox(width: AppDimensions.xs),
+        ],
+        if (widget.label != null)
+          Flexible(
+            child: Text(
+              widget.label!,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-        );
+      ],
+    );
+  }
+
+  ButtonStyle _buttonStyle(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textStyle = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800);
+
+    switch (widget.variant) {
       case AppButtonVariant.outlined:
         return OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          side: BorderSide(color: colorScheme.primary, width: 1.5),
+          side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.55)),
           textStyle: textStyle,
           minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           ),
         );
       case AppButtonVariant.text:
@@ -204,6 +297,9 @@ class AppButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           ),
         );
+      case AppButtonVariant.primary:
+      case AppButtonVariant.secondary:
+      case AppButtonVariant.danger:
       case AppButtonVariant.icon:
         return TextButton.styleFrom();
     }

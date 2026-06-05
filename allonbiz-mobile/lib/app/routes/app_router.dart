@@ -22,6 +22,9 @@ import '../../features/profile/presentation/screens/saved_offers_screen.dart';
 import '../../features/profile/presentation/screens/change_password_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/journey_detail_screen.dart';
+import '../../features/profile/presentation/screens/contact_support_screen.dart';
+import '../../features/profile/presentation/screens/support_reply_screen.dart';
+import '../../features/profile/data/repositories/notifications_repository.dart';
 import '../../shared/screens/app_error_screen.dart';
 import '../../shared/models/offer.dart';
 import '../../core/models/journey_model.dart';
@@ -202,6 +205,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     name: 'changePassword',
                     builder: (context, state) => const ChangePasswordScreen(),
                   ),
+                  GoRoute(
+                    path: 'support',
+                    name: 'contactSupport',
+                    builder: (context, state) => const ContactSupportScreen(),
+                  ),
                 ],
               ),
             ],
@@ -277,6 +285,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.notifications,
         builder: (context, state) => const NotificationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.supportReply,
+        builder: (context, state) => SupportReplyScreen(
+          notification: state.extra is UserNotification
+              ? state.extra as UserNotification
+              : null,
+        ),
       ),
       GoRoute(
         path: AppRoutes.error,

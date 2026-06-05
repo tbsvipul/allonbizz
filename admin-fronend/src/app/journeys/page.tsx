@@ -415,7 +415,6 @@ export default function JourneysPage() {
             <h3 style={{ fontWeight: 700, fontSize: '1rem' }}>Performance Metrics</h3>
             {[
               { icon: TrendingUp, label: 'Total Distance', value: fmtDist(summary?.totalDistanceKm || 0), color: '#7c3aed' },
-              { icon: Award, label: 'Offers Redeemed', value: fmt(summary?.totalOffersRedeemed || 0), color: '#f59e0b' },
               { icon: Clock, label: 'Avg Duration', value: fmtDur(summary?.avgDurationMinutes || 0), color: '#ec4899' },
               { icon: MapPin, label: 'Avg Distance', value: fmtDist(summary?.avgDistanceKm || 0), color: '#6366f1' },
             ].map((m, i) => (
@@ -677,7 +676,6 @@ export default function JourneysPage() {
                         {[
                           { label: 'Total Distance', value: fmtDist(selectedJourney.distance), icon: MapPin, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)' },
                           { label: 'Duration', value: fmtDur(selectedJourney.duration / 60), icon: Clock, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
-                          { label: 'Offers Redeemed', value: selectedJourney.offersRedeemed?.toString() || '0', icon: Award, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
                           { label: 'Total Savings', value: `$${selectedJourney.totalSavings?.toFixed(2) || '0.00'}`, icon: Tag, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' },
                         ].map((stat, i) => (
                           <div key={i} style={{ padding: '1.25rem', borderRadius: '16px', background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

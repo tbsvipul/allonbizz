@@ -5,7 +5,7 @@ public enum NotificationType
     OfferAlert,
     RouteUpdate,
     Redemption,
-    LoyaltyReward,
+
     SystemMessage,
     Chat,
     Review,

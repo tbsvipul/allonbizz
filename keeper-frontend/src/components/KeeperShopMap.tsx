@@ -150,6 +150,153 @@ function buildInfoWindowContent(shop: ShopSummary) {
   `;
 }
 
+function createOverlayClasses(googleMaps: any) {
+  class CurrentLocationOverlay extends googleMaps.OverlayView {
+    private container: HTMLDivElement | null = null;
+    private position: { lat: number; lng: number };
+
+    constructor(position: { lat: number; lng: number }) {
+      super();
+      this.position = position;
+    }
+
+    onAdd() {
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      div.style.transform = 'translate(-50%, -50%)';
+      div.style.pointerEvents = 'none';
+      div.style.zIndex = '1000';
+      div.innerHTML = `
+        <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+          <div style="position: absolute; width: 100%; height: 100%; background-color: #3b82f6; border-radius: 50%; opacity: 0.4; animation: map-ripple 2s infinite ease-out;"></div>
+          <div style="position: absolute; width: 16px; height: 16px; background-color: #2563eb; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 2;"></div>
+        </div>
+      `;
+      this.container = div;
+      const panes = this.getPanes();
+      if (panes && panes.floatPane) {
+        panes.floatPane.appendChild(div);
+      }
+    }
+
+    draw() {
+      if (!this.container) return;
+      const projection = this.getProjection();
+      if (!projection) return;
+      const latLng = new googleMaps.LatLng(this.position.lat, this.position.lng);
+      const pixel = projection.fromLatLngToDivPixel(latLng);
+      if (!pixel) return;
+      this.container.style.left = pixel.x + 'px';
+      this.container.style.top = pixel.y + 'px';
+    }
+
+    onRemove() {
+      if (this.container && this.container.parentNode) {
+        this.container.parentNode.removeChild(this.container);
+        this.container = null;
+      }
+    }
+    
+    updatePosition(pos: {lat: number; lng: number}) {
+      this.position = pos;
+      this.draw();
+    }
+  }
+
+  class ShopMarkerOverlay extends googleMaps.OverlayView {
+    private container: HTMLDivElement | null = null;
+    private shop: ShopSummary;
+    private isSelected: boolean;
+    private onClick: () => void;
+
+    constructor(shop: ShopSummary, isSelected: boolean, onClick: () => void) {
+      super();
+      this.shop = shop;
+      this.isSelected = isSelected;
+      this.onClick = onClick;
+    }
+
+    onAdd() {
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      const tipOffset = this.isSelected ? 38 : 32.5; 
+      div.style.transform = `translate(-50%, calc(-50% - ${tipOffset}px))`;
+      div.style.cursor = 'pointer';
+      div.style.zIndex = this.isSelected ? '100' : '10';
+      div.onclick = (e) => {
+        e.stopPropagation();
+        this.onClick();
+      };
+
+      const pinColor = this.shop.isOpen ? '#10b981' : '#f59e0b';
+      const size = this.isSelected ? 54 : 46;
+      const innerSize = this.isSelected ? 44 : 38;
+      const iconSize = this.isSelected ? 24 : 20;
+
+      const imageHtml = this.shop.shopProfileImage 
+        ? `<img src="${escapeHtml(this.shop.shopProfileImage)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
+
+      div.innerHTML = `
+        <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+          <div style="
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: ${pinColor};
+            border-radius: 50% 50% 4px 50%;
+            transform: rotate(45deg);
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
+            ${this.isSelected ? `border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.4), 2px 4px 16px rgba(0,0,0,0.4);` : ''}
+          "></div>
+          <div style="
+            position: absolute;
+            width: ${innerSize}px;
+            height: ${innerSize}px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            z-index: 2;
+          ">
+            ${imageHtml}
+          </div>
+        </div>
+      `;
+
+      this.container = div;
+      const panes = this.getPanes();
+      if (panes && panes.overlayMouseTarget) {
+        panes.overlayMouseTarget.appendChild(div);
+      }
+    }
+
+    draw() {
+      if (!this.container) return;
+      const projection = this.getProjection();
+      if (!projection) return;
+      const pos = new googleMaps.LatLng(this.shop.latitude!, this.shop.longitude!);
+      const positionPixel = projection.fromLatLngToDivPixel(pos);
+      if (!positionPixel) return;
+
+      this.container.style.left = positionPixel.x + 'px';
+      this.container.style.top = positionPixel.y + 'px';
+    }
+
+    onRemove() {
+      if (this.container && this.container.parentNode) {
+        this.container.parentNode.removeChild(this.container);
+        this.container = null;
+      }
+    }
+  }
+
+  return { CurrentLocationOverlay, ShopMarkerOverlay };
+}
+
+
 export function KeeperShopMap({ shops }: KeeperShopMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -261,57 +408,7 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
         document.head.appendChild(style);
       }
 
-      class CurrentLocationOverlay extends win.google.maps.OverlayView {
-        private container: HTMLDivElement | null = null;
-        private position: { lat: number; lng: number };
-
-        constructor(position: { lat: number; lng: number }) {
-          super();
-          this.position = position;
-        }
-
-        onAdd() {
-          const div = document.createElement('div');
-          div.style.position = 'absolute';
-          div.style.transform = 'translate(-50%, -50%)';
-          div.style.pointerEvents = 'none';
-          div.style.zIndex = '1000';
-          div.innerHTML = `
-            <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-              <div style="position: absolute; width: 100%; height: 100%; background-color: #3b82f6; border-radius: 50%; opacity: 0.4; animation: map-ripple 2s infinite ease-out;"></div>
-              <div style="position: absolute; width: 16px; height: 16px; background-color: #2563eb; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 2;"></div>
-            </div>
-          `;
-          this.container = div;
-          const panes = this.getPanes();
-          if (panes && panes.floatPane) {
-            panes.floatPane.appendChild(div);
-          }
-        }
-
-        draw() {
-          if (!this.container) return;
-          const projection = this.getProjection();
-          if (!projection) return;
-          const latLng = new win.google.maps.LatLng(this.position.lat, this.position.lng);
-          const pixel = projection.fromLatLngToDivPixel(latLng);
-          if (!pixel) return;
-          this.container.style.left = pixel.x + 'px';
-          this.container.style.top = pixel.y + 'px';
-        }
-
-        onRemove() {
-          if (this.container && this.container.parentNode) {
-            this.container.parentNode.removeChild(this.container);
-            this.container = null;
-          }
-        }
-        
-        updatePosition(pos: {lat: number; lng: number}) {
-          this.position = pos;
-          this.draw();
-        }
-      }
+      const { CurrentLocationOverlay, ShopMarkerOverlay } = createOverlayClasses(win.google.maps);
 
       locationButton.addEventListener('click', () => {
         if (!navigator.geolocation) {
@@ -378,95 +475,7 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
 
     const bounds = new googleMaps.LatLngBounds();
 
-    class ShopMarkerOverlay extends googleMaps.OverlayView {
-      private container: HTMLDivElement | null = null;
-      private shop: ShopSummary;
-      private isSelected: boolean;
-      private onClick: () => void;
 
-      constructor(shop: ShopSummary, isSelected: boolean, onClick: () => void) {
-        super();
-        this.shop = shop;
-        this.isSelected = isSelected;
-        this.onClick = onClick;
-      }
-
-      onAdd() {
-        const div = document.createElement('div');
-        div.style.position = 'absolute';
-        const tipOffset = this.isSelected ? 38 : 32.5; 
-        div.style.transform = `translate(-50%, calc(-50% - ${tipOffset}px))`;
-        div.style.cursor = 'pointer';
-        div.style.zIndex = this.isSelected ? '100' : '10';
-        div.onclick = (e) => {
-          e.stopPropagation();
-          this.onClick();
-        };
-
-        const pinColor = this.shop.isOpen ? '#10b981' : '#f59e0b';
-        const size = this.isSelected ? 54 : 46;
-        const innerSize = this.isSelected ? 44 : 38;
-        const iconSize = this.isSelected ? 24 : 20;
-
-        const imageHtml = this.shop.shopProfileImage 
-          ? `<img src="${escapeHtml(this.shop.shopProfileImage)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`
-          : `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
-
-        div.innerHTML = `
-          <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div style="
-              position: absolute;
-              width: 100%;
-              height: 100%;
-              background-color: ${pinColor};
-              border-radius: 50% 50% 4px 50%;
-              transform: rotate(45deg);
-              box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
-              ${this.isSelected ? `border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.4), 2px 4px 16px rgba(0,0,0,0.4);` : ''}
-            "></div>
-            <div style="
-              position: absolute;
-              width: ${innerSize}px;
-              height: ${innerSize}px;
-              background-color: #ffffff;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              overflow: hidden;
-              z-index: 2;
-            ">
-              ${imageHtml}
-            </div>
-          </div>
-        `;
-
-        this.container = div;
-        const panes = this.getPanes();
-        if (panes && panes.overlayMouseTarget) {
-          panes.overlayMouseTarget.appendChild(div);
-        }
-      }
-
-      draw() {
-        if (!this.container) return;
-        const projection = this.getProjection();
-        if (!projection) return;
-        const pos = new win.google.maps.LatLng(this.shop.latitude!, this.shop.longitude!);
-        const positionPixel = projection.fromLatLngToDivPixel(pos);
-        if (!positionPixel) return;
-
-        this.container.style.left = positionPixel.x + 'px';
-        this.container.style.top = positionPixel.y + 'px';
-      }
-
-      onRemove() {
-        if (this.container && this.container.parentNode) {
-          this.container.parentNode.removeChild(this.container);
-          this.container = null;
-        }
-      }
-    }
 
     mappableShops.forEach((shop) => {
       const isSelected = shop.id === selectedShopId;

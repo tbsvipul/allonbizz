@@ -30,10 +30,15 @@ public interface IOfferService
     Task RateOfferAsync(Guid offerId, Guid userId, int rating, string? comment);
 }
 
+public interface IUserDiscoverService
+{
+    Task<UserDiscoverResponseDto> GetDiscoverAsync(Guid userId, UserDiscoverQueryDto query, CancellationToken ct = default);
+}
+
 public interface IUserHistoryService
 {
     Task<List<RedemptionHistoryDto>> GetRedemptionHistoryAsync(Guid userId);
-    Task<LoyaltySummaryDto> GetLoyaltyWalletAsync(Guid userId);
+
     Task<UserSavingsSummaryDto> GetSavingsSummaryAsync(Guid userId);
 }
 

@@ -9,6 +9,7 @@ class Shop {
   final String? email;
   final String? shopProfileImage;
   final List<String> shopImages;
+  final List<String> tags;
   final double latitude;
   final double longitude;
   final List<Offer> offers;
@@ -23,6 +24,7 @@ class Shop {
     this.email,
     this.shopProfileImage,
     this.shopImages = const [],
+    this.tags = const [],
     required this.latitude,
     required this.longitude,
     this.offers = const [],
@@ -66,6 +68,7 @@ class Shop {
           (json['Longitude'] as num?)?.toDouble() ??
           0.0,
       shopImages: (rawImages as List?)?.map((e) => e.toString()).toList() ?? [],
+      tags: Offer.parseTags(json['tags'] ?? json['Tags']),
       isOpen: json['isOpen'] as bool? ?? json['IsOpen'] as bool? ?? true,
       offers:
           (rawOffers as List?)

@@ -4,7 +4,7 @@ import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
   title: 'Keeper Portal',
-  description: 'Merchant workspace for managing shops, offers, reviews, loyalty, and profile status.',
+  description: 'Merchant workspace for managing shops, offers, reviews, and profile status.',
 };
 
 export default function RootLayout({

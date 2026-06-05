@@ -150,7 +150,7 @@ public class ShopService : IShopService
                 Status = o.Status.ToString(),
                 EndDate = o.EndDate,
                 Description = o.Description,
-                ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageUrl),
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageData, "image/jpeg"),
                 Tags = o.Tags ?? new List<string>()
             })
             .ToListAsync(ct);
@@ -467,7 +467,7 @@ public class ShopService : IShopService
                 Status = o.Status.ToString(),
                 EndDate = o.EndDate,
                 Description = o.Description,
-                ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageUrl),
+                ImageUrl = ImageConversionHelper.ToBase64DataUrl(o.ImageData, "image/jpeg"),
                 Tags = o.Tags ?? new List<string>()
             }).ToList() ?? new List<ShopOfferSummaryDto>()
         };

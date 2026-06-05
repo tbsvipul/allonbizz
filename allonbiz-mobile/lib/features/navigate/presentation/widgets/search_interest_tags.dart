@@ -342,13 +342,13 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
           avatar: Icon(
             tag.icon,
             size: 16,
-            color: isSelected ? Colors.white : AppColors.grey600,
+            color: isSelected ? AppColors.white : AppColors.grey600,
           ),
           backgroundColor: tag.displayColor.withValues(alpha: 0.1),
           selectedColor: tag.displayColor,
-          checkmarkColor: Colors.white,
+          checkmarkColor: AppColors.white,
           labelStyle: AppTextStyles.labelSmall.copyWith(
-            color: isSelected ? Colors.white : AppColors.grey700,
+            color: isSelected ? AppColors.white : AppColors.grey700,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         )

@@ -299,11 +299,6 @@ public class UserProfileService : IUserProfileService
             .AsNoTracking()
             .CountAsync(j => j.UserId == userId);
         var totalSaved = await GetTotalSavedAsync(userId);
-        var loyaltyPoints = await _db.LoyaltyWallets
-            .AsNoTracking()
-            .Where(wallet => wallet.UserId == userId)
-            .Select(wallet => (int?)(wallet.TotalPoints - wallet.RedeemedPoints))
-            .FirstOrDefaultAsync();
         var activeJourney = await _db.Journeys
             .AsNoTracking()
             .Where(j => j.UserId == userId && j.Status == "active")
@@ -317,7 +312,6 @@ public class UserProfileService : IUserProfileService
             {
                 TotalTrips = totalTrips,
                 TotalSaved = totalSaved,
-                LoyaltyPoints = loyaltyPoints ?? 0,
                 HasActiveJourney = activeJourney != null,
                 ActiveJourneyId = activeJourney?.JourneyId,
                 ActiveJourneyType = activeJourney?.Type,
@@ -670,29 +664,6 @@ public class UserHistoryService : IUserHistoryService
             .OrderByDescending(r => r.RedeemedAt)
             .Select(r => new RedemptionHistoryDto { RedemptionId = r.RedemptionId, OfferTitle = r.Offer != null ? r.Offer.Title : "Unknown Offer" })
             .ToListAsync();
-    }
-
-    public async Task<LoyaltySummaryDto> GetLoyaltyWalletAsync(Guid userId)
-    {
-        var wallet = await _db.LoyaltyWallets
-            .AsNoTracking()
-            .FirstOrDefaultAsync(w => w.UserId == userId);
-        var tier = wallet?.Tier ?? "Bronze";
-        var currentPoints = wallet?.CurrentPoints ?? 0;
-        var nextTierThreshold = tier switch
-        {
-            "Bronze" => 100,
-            "Silver" => 250,
-            "Gold" => 500,
-            _ => currentPoints
-        };
-
-        return new LoyaltySummaryDto
-        {
-            CurrentPoints = currentPoints,
-            Tier = tier,
-            PointsToNextTier = Math.Max(0, nextTierThreshold - currentPoints)
-        };
     }
 
     public async Task<UserSavingsSummaryDto> GetSavingsSummaryAsync(Guid userId)

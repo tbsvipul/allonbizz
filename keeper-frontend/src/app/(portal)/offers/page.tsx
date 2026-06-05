@@ -160,7 +160,7 @@ export default function OffersPage() {
       ) : user?.canManage && shops.length === 0 ? (
         <SectionCard
           title="Create a shop before creating offers"
-          description="Offers must belong to one of your shops so redemption, analytics, and loyalty stay linked to a real location."
+          description="Offers must belong to one of your shops so redemption and analytics stay linked to a real location."
           action={
             <Link href="/shops/new" className="button">
               Create shop

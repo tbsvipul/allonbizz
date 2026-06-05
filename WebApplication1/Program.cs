@@ -224,7 +224,7 @@ builder.Services.AddScoped<IJourneyService, JourneyService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 
 builder.Services.AddScoped<IReviewService, PlatformFeatureService>();
-builder.Services.AddScoped<ILoyaltyService, PlatformFeatureService>();
+
 builder.Services.AddScoped<IAdminPanelService, PlatformFeatureService>();
 builder.Services.AddScoped<IRuleService, PlatformFeatureService>();
 builder.Services.AddScoped<IPlacesService, PlatformFeatureService>();
@@ -256,9 +256,11 @@ builder.Services.AddScoped<IAdminJourneyService, AdminJourneyService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IRouteService, RouteService>();
 builder.Services.AddScoped<IOfferService, UserOfferService>();
+builder.Services.AddScoped<IUserDiscoverService, UserDiscoverService>();
 builder.Services.AddScoped<IUserHistoryService, UserHistoryService>();
 builder.Services.AddScoped<IFavouriteService, FavouriteService>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<ISupportTicketService, allonbiz.AdminAPI.Infrastructure.Support.SupportTicketService>();
 
 builder.Services.AddScoped<IKeeperProfileService, KeeperProfileService>();
 builder.Services.AddScoped<IKeeperOfferService, KeeperOfferService>();

@@ -7,6 +7,7 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/extensions/navigation_x.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_glass.dart';
 import '../../../navigate/presentation/controllers/navigation_controller.dart';
 
 class NavigateCardWidget extends ConsumerWidget {
@@ -20,22 +21,16 @@ class NavigateCardWidget extends ConsumerWidget {
     final hasActiveJourney = navigationState.hasActiveJourney;
     final theme = Theme.of(context);
 
-    return GestureDetector(
+    return GlassmorphicContainer(
       onTap: () => context.pushTo(
         hasActiveJourney ? AppRoutes.navigate : AppRoutes.search,
       ),
+      borderRadius: BorderRadius.circular(28),
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.lg),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.25),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(28),
         ),
         child: Row(
           children: [
@@ -47,7 +42,8 @@ class NavigateCardWidget extends ConsumerWidget {
                     hasActiveJourney ? l10n.endJourney : l10n.startJourney,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: AppColors.white,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.1,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -135,8 +131,13 @@ class NavigateCardWidget extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.accentLight, AppColors.accent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                  boxShadow: AppColors.glow(AppColors.accent),
                 ),
                 child: Icon(
                   hasActiveJourney

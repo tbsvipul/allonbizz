@@ -51,9 +51,7 @@ public static class Permissions
     public const string ReviewsView  = "Reviews.View";
     public const string ReviewsReply = "Reviews.Reply";
 
-    // Loyalty
-    public const string LoyaltyView = "Loyalty.View";
-    public const string LoyaltyEdit = "Loyalty.Edit";
+
 
     // Rules & Journeys
     public const string RulesView    = "Rules.View";
@@ -102,7 +100,7 @@ public static class AppPermissions
             Permissions.ShopsApprove, Permissions.ShopsReject,
             Permissions.TagsView, Permissions.TagsCreate, Permissions.TagsEdit, Permissions.TagsDelete,
             Permissions.OffersView, Permissions.OffersCreate, Permissions.OffersEdit, Permissions.OffersDelete, Permissions.OffersApprove,
-            Permissions.RoutesView, Permissions.ReviewsView, Permissions.ReviewsReply, Permissions.LoyaltyView, Permissions.LoyaltyEdit,
+            Permissions.RoutesView, Permissions.ReviewsView, Permissions.ReviewsReply,
             Permissions.RulesView, Permissions.RulesEdit, Permissions.JourneysView, Permissions.JourneysDelete,
             Permissions.ModerationView, Permissions.ModerationApprove, Permissions.ModerationReject, Permissions.ModerationEdit, Permissions.ModerationEscalate,
             Permissions.AnalyticsView, Permissions.ReportsGenerate,
@@ -119,7 +117,7 @@ public static class AppPermissions
             Permissions.ShopsApprove, Permissions.ShopsReject,
             Permissions.TagsView, Permissions.TagsCreate, Permissions.TagsEdit, Permissions.TagsDelete,
             Permissions.OffersView, Permissions.OffersApprove,
-            Permissions.RoutesView, Permissions.ReviewsView, Permissions.LoyaltyView,
+            Permissions.RoutesView, Permissions.ReviewsView,
             Permissions.JourneysView, Permissions.JourneysDelete,
             Permissions.ModerationView, Permissions.ModerationApprove, Permissions.ModerationReject, Permissions.ModerationEdit, Permissions.ModerationEscalate,
             Permissions.AnalyticsView, Permissions.ReportsGenerate,
@@ -150,8 +148,7 @@ public static class AppPermissions
             Permissions.UsersView,
             Permissions.ShopsView,
             Permissions.OffersView,
-            Permissions.RoutesView,
-            Permissions.LoyaltyView
+            Permissions.RoutesView
         },
 
         [Roles.Keeper] = new List<string>
@@ -161,7 +158,7 @@ public static class AppPermissions
             Permissions.ShopsEdit,
             Permissions.OffersView, Permissions.OffersCreate, Permissions.OffersEdit, Permissions.OffersDelete,
             Permissions.ReviewsView, Permissions.ReviewsReply,
-            Permissions.LoyaltyView,
+
             Permissions.TagsView,
             Permissions.AnalyticsView
         },
@@ -173,7 +170,6 @@ public static class AppPermissions
             Permissions.OffersView,
             Permissions.RoutesView,
             Permissions.ReviewsView,
-            Permissions.LoyaltyView,
             Permissions.TagsView
         }
     };

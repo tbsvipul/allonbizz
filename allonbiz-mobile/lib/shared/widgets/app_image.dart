@@ -67,9 +67,11 @@ class AppImage extends StatelessWidget {
         } else if (normalizedUrl.startsWith('data:image') ||
             (!normalizedUrl.startsWith('http') && normalizedUrl.length > 100)) {
           try {
-            final base64String = (normalizedUrl.startsWith('data:image')
-                ? normalizedUrl.split(',').last
-                : normalizedUrl).replaceAll(RegExp(r'\s+'), '');
+            final base64String =
+                (normalizedUrl.startsWith('data:image')
+                        ? normalizedUrl.split(',').last
+                        : normalizedUrl)
+                    .replaceAll(RegExp(r'\s+'), '');
             final bytes = base64Decode(base64String);
             imageWidget = Image.memory(
               bytes,
@@ -90,11 +92,13 @@ class AppImage extends StatelessWidget {
             height: height,
             fit: fit,
             placeholder: (context, url) => Container(
-              color: AppColors.grey200,
+              decoration: const BoxDecoration(
+                gradient: AppColors.appBackgroundLight,
+              ),
               width: width,
               height: height,
               child: const Center(
-                child: SpinKitPulse(color: AppColors.primary, size: 24),
+                child: SpinKitPulse(color: AppColors.secondary, size: 24),
               ),
             ),
             errorWidget: (context, url, error) =>
@@ -124,14 +128,14 @@ class AppImage extends StatelessWidget {
           height: height,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.grey100,
+            gradient: AppColors.primaryGradient,
           ),
           clipBehavior: Clip.antiAlias,
           child: (url == null || url!.isEmpty)
               ? Icon(
                   Icons.person_rounded,
                   size: (width ?? 40) * 0.6,
-                  color: AppColors.grey500,
+                  color: AppColors.white,
                 )
               : normalizedUrl!.startsWith('data:image') ||
                     (!normalizedUrl.startsWith('http') &&
@@ -139,8 +143,9 @@ class AppImage extends StatelessWidget {
               ? Image.memory(
                   base64Decode(
                     (normalizedUrl.startsWith('data:image')
-                        ? normalizedUrl.split(',').last
-                        : normalizedUrl).replaceAll(RegExp(r'\s+'), ''),
+                            ? normalizedUrl.split(',').last
+                            : normalizedUrl)
+                        .replaceAll(RegExp(r'\s+'), ''),
                   ),
                   width: width,
                   height: height,
@@ -149,19 +154,19 @@ class AppImage extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.person_rounded,
                     size: (width ?? 40) * 0.6,
-                    color: AppColors.grey500,
+                    color: AppColors.white,
                   ),
                 )
               : CachedNetworkImage(
                   imageUrl: normalizedUrl,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => const Center(
-                    child: SpinKitPulse(color: AppColors.primary, size: 20),
+                    child: SpinKitPulse(color: AppColors.secondary, size: 20),
                   ),
                   errorWidget: (context, url, error) => Icon(
                     Icons.person_rounded,
                     size: (width ?? 40) * 0.6,
-                    color: AppColors.grey500,
+                    color: AppColors.white,
                   ),
                 ),
         );
@@ -184,7 +189,9 @@ class AppImage extends StatelessWidget {
       return trimmed;
     }
 
-    if (!trimmed.startsWith('http') && !trimmed.startsWith('/') && trimmed.length > 200) {
+    if (!trimmed.startsWith('http') &&
+        !trimmed.startsWith('/') &&
+        trimmed.length > 200) {
       // Very likely a raw base64 string
       return trimmed;
     }
@@ -233,11 +240,11 @@ class AppImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: AppColors.grey200,
+      decoration: const BoxDecoration(gradient: AppColors.dealGradient),
       child: const Center(
         child: Icon(
           Icons.image_not_supported_rounded,
-          color: AppColors.grey400,
+          color: AppColors.secondaryDark,
         ),
       ),
     );

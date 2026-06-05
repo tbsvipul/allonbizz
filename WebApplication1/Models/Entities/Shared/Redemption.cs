@@ -10,7 +10,7 @@ public class Redemption
     public Guid ShopId { get; set; }
     public RedemptionStatus Status { get; set; } = RedemptionStatus.Redeemed;
     public decimal? SavedAmount { get; set; }
-    public int LoyaltyPointsEarned { get; set; }
+
     public DateTime RedeemedAt { get; set; } = DateTime.UtcNow;
 
     public User? User { get; set; }

@@ -195,18 +195,6 @@ export interface ReviewItem {
   status: string;
 }
 
-export interface LoyaltyProgram {
-  shopId: string;
-  configured: boolean;
-  isEnabled: boolean;
-  programName?: string | null;
-  pointsPerRedemption: number;
-  minimumPointsToRedeem: number;
-  rewardDescription?: string | null;
-  termsAndConditions?: string | null;
-  updatedAt?: string | null;
-}
-
 export interface CategoryTree {
   categoryId: string;
   name: string;

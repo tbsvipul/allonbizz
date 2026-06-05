@@ -60,7 +60,7 @@ class DealSectionWidget extends ConsumerWidget {
           ),
           const SizedBox(height: AppDimensions.sm),
           SizedBox(
-            height: 200,
+            height: 240,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppDimensions.lg),
@@ -75,8 +75,13 @@ class DealSectionWidget extends ConsumerWidget {
                     shopName: offer.shopName,
                     category: offer.category,
                     discountPercent: offer.discountPercent,
-                    distance: formatDistance(offer.latitude, offer.longitude, offer.distance),
+                    distance: formatDistance(
+                      offer.latitude,
+                      offer.longitude,
+                      offer.distance,
+                    ),
                     imageUrl: offer.imageUrl,
+                    shopProfileImage: offer.shopProfileImage,
                     onTap: () => context.pushTo(
                       AppRoutes.offerDetail.replaceFirst(':id', offer.id),
                       extra: offer,

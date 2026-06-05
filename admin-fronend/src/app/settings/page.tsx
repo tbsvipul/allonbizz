@@ -135,7 +135,7 @@ const roleDefaultPermissions: Record<string, string[]> = {
     PERMISSIONS.offersApprove,
     PERMISSIONS.routesView,
     PERMISSIONS.reviewsView,
-    PERMISSIONS.loyaltyView,
+
     PERMISSIONS.journeysView,
     PERMISSIONS.journeysDelete,
     PERMISSIONS.moderationView,
@@ -171,7 +171,7 @@ const roleDefaultPermissions: Record<string, string[]> = {
     PERMISSIONS.shopsView,
     PERMISSIONS.offersView,
     PERMISSIONS.routesView,
-    PERMISSIONS.loyaltyView,
+
   ],
 };
 

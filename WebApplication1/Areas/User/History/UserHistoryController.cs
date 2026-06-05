@@ -43,14 +43,7 @@ public class UserHistoryController : ControllerBase
         return Ok(ApiResponse<List<RedemptionHistoryDto>>.Ok(result));
     }
 
-    /// <summary>GET /api/v1/user/loyalty/wallet — Loyalty points and tier.</summary>
-    [HttpGet("loyalty/wallet")]
-    public async Task<IActionResult> GetLoyaltyWallet()
-    {
-        var userId = User.GetUserId();
-        var result = await _historyService.GetLoyaltyWalletAsync(userId);
-        return Ok(ApiResponse<LoyaltySummaryDto>.Ok(result));
-    }
+
 
     /// <summary>GET /api/v1/user/savings — Total savings summary.</summary>
     [HttpGet("savings")]

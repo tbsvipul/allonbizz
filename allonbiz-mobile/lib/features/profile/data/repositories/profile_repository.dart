@@ -79,13 +79,4 @@ class ProfileRepository {
       throw DatabaseFailure(e.message);
     }
   }
-
-  Future<Map<String, dynamic>> getWallet() async {
-    try {
-      final response = await _apiClient.get('/user/loyalty/wallet');
-      return response['data'] ?? {};
-    } on ServerFailure catch (e) {
-      throw DatabaseFailure(e.message);
-    }
-  }
 }

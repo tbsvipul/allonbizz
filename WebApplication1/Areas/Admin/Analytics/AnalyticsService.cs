@@ -500,7 +500,6 @@ public class AnalyticsService : IAnalyticsService
             {
                 IncrementMetric(rowMetrics, "count", 1);
                 IncrementMetric(rowMetrics, "total_savings", redemption.SavedAmount ?? 0);
-                IncrementMetric(rowMetrics, "loyalty_points", redemption.LoyaltyPointsEarned);
             });
     }
 

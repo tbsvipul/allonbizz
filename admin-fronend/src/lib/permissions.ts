@@ -32,8 +32,7 @@ export const PERMISSIONS = {
   routesView: 'Routes.View',
   reviewsView: 'Reviews.View',
   reviewsReply: 'Reviews.Reply',
-  loyaltyView: 'Loyalty.View',
-  loyaltyEdit: 'Loyalty.Edit',
+
   rulesView: 'Rules.View',
   rulesEdit: 'Rules.Edit',
   journeysView: 'Journeys.View',

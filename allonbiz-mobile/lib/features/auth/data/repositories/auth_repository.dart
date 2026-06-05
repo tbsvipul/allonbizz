@@ -61,7 +61,10 @@ class AuthRepository {
   Future<void> _init() async {
     _apiClient.onAuthFailed.listen((_) {
       if (_storageService.backendAccessToken != null) {
-        _logAuthFlow('global-auth-failed', details: {'action': 'clearing session'});
+        _logAuthFlow(
+          'global-auth-failed',
+          details: {'action': 'clearing session'},
+        );
         _storageService.backendAccessToken = null;
         _storageService.backendRefreshToken = null;
         _updateState(null);

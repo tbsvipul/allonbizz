@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_dimensions.dart';
+import 'app_glass.dart';
 
 /// A reusable section header with title, optional icon, and optional action.
 class AppSectionHeader extends StatelessWidget {
@@ -33,16 +34,11 @@ class AppSectionHeader extends StatelessWidget {
           if (icon != null) ...[
             Container(
               padding: const EdgeInsets.all(AppDimensions.xs),
-              decoration: BoxDecoration(
-                color: (iconColor ?? colorScheme.primary).withValues(
-                  alpha: 0.12,
-                ),
-                borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-              ),
-              child: Icon(
-                icon,
-                size: AppDimensions.iconMd,
+              child: PremiumIconBadge(
+                icon: icon!,
                 color: iconColor ?? colorScheme.primary,
+                size: 38,
+                iconSize: 20,
               ),
             ),
             const SizedBox(width: AppDimensions.sm),
@@ -50,7 +46,13 @@ class AppSectionHeader extends StatelessWidget {
           Expanded(
             child: Semantics(
               header: true,
-              child: Text(title, style: textTheme.titleMedium),
+              child: Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
+              ),
             ),
           ),
           if (onActionPressed != null && actionLabel != null)

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_glass.dart';
 import '../controllers/auth_controller.dart';
 
 /// Animated splash screen with logo and route line animation.
@@ -47,10 +48,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     });
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+      backgroundColor: Colors.transparent,
+      body: GradientBackground(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -82,8 +81,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             Text(
                   'allonbiz',
                   style: AppTextStyles.displaySmall.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 1.5,
                   ),
                 )
@@ -97,7 +96,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             Text(
               'Navigate smarter. Discover deals.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.white.withValues(alpha: 0.85),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
               ),
             ).animate().fadeIn(delay: 700.ms, duration: 500.ms),
 

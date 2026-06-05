@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/navigate/presentation/controllers/navigation_controller.dart';
+
 import '../../features/home/presentation/widgets/interests_dialog_widget.dart';
+import '../../features/navigate/presentation/controllers/navigation_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/app_glass.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_dimensions.dart';
 
 class CustomNavBar extends ConsumerWidget {
   final int currentIndex;
@@ -20,7 +23,7 @@ class CustomNavBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     if (l10n == null) return const SizedBox.shrink();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     final isJourneyActive = ref.watch(
       navigationControllerProvider.select(
@@ -28,128 +31,139 @@ class CustomNavBar extends ConsumerWidget {
       ),
     );
 
-    return Container(
-      height:
-          110, // Increased height to accommodate the floating button within bounds
-      color: Colors.transparent,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: [
-          RepaintBoundary(
-            child: Container(
-              height: 90,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? AppColors.grey800 : AppColors.grey200,
-                    width: 1,
-                  ),
-                ),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, -5),
-                        ),
-                      ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _NavBarItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: l10n.navHome,
-                      isActive: currentIndex == 0,
-                      onTap: () => onTap(0),
-                    ),
-                    _NavBarItem(
-                      icon: Icons.location_on_outlined,
-                      activeIcon: Icons.location_on_rounded,
-                      label: l10n.navNavigate,
-                      isActive: currentIndex == 1,
-                      onTap: () {
-                        onTap(1);
-                        ref.read(mapRecenterTriggerProvider.notifier).state++;
-                      },
-                    ),
-                    const SizedBox(width: 60), // Space for center button
-                    _NavBarItem(
-                      icon: Icons.search_outlined,
-                      activeIcon: Icons.search_rounded,
-                      label: l10n.navDiscover,
-                      isActive: currentIndex == 2,
-                      onTap: () => onTap(2),
-                    ),
-                    _NavBarItem(
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person_rounded,
-                      label: l10n.navMe,
-                      isActive: currentIndex == 3,
-                      onTap: () => onTap(3),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Center floating button
-          Positioned(
-            top: 0, // Top of the 110h container
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                if (isJourneyActive) {
-                  ref.read(navigationControllerProvider.notifier).clearRoute();
-                } else {
-                  _showInterestsDialog(context);
-                }
-              },
-              child: Semantics(
-                label: isJourneyActive ? 'Close Journey' : 'Start Journey',
-                button: true,
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: isJourneyActive
-                        ? AppColors.error
-                        : AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark ? AppColors.surfaceDark : AppColors.white,
-                      width: 4,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            (isJourneyActive
-                                    ? AppColors.error
-                                    : AppColors.primary)
-                                .withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimensions.md,
+          0,
+          AppDimensions.md,
+          AppDimensions.sm,
+        ),
+        child: SizedBox(
+          height: 92,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: GlassmorphicContainer(
+                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+                  borderRadius: BorderRadius.circular(30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _NavBarItem(
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: l10n.navHome,
+                        isActive: currentIndex == 0,
+                        onTap: () => onTap(0),
+                      ),
+                      _NavBarItem(
+                        icon: Icons.location_on_outlined,
+                        activeIcon: Icons.location_on_rounded,
+                        label: l10n.navNavigate,
+                        isActive: currentIndex == 1,
+                        onTap: () {
+                          onTap(1);
+                          ref.read(mapRecenterTriggerProvider.notifier).state++;
+                        },
+                      ),
+                      const SizedBox(width: 72),
+                      _NavBarItem(
+                        icon: Icons.search_outlined,
+                        activeIcon: Icons.search_rounded,
+                        label: l10n.navDiscover,
+                        isActive: currentIndex == 2,
+                        onTap: () => onTap(2),
+                      ),
+                      _NavBarItem(
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person_rounded,
+                        label: l10n.navMe,
+                        isActive: currentIndex == 3,
+                        onTap: () => onTap(3),
                       ),
                     ],
                   ),
-                  child: Icon(
-                    isJourneyActive
-                        ? Icons.close_rounded
-                        : Icons.navigation_rounded,
-                    color: AppColors.white,
-                    size: 32,
+                ),
+              ),
+              Positioned(
+                top: -2,
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    if (isJourneyActive) {
+                      ref
+                          .read(navigationControllerProvider.notifier)
+                          .clearRoute();
+                    } else {
+                      _showInterestsDialog(context);
+                    }
+                  },
+                  child: Semantics(
+                    label: isJourneyActive ? 'Close Journey' : 'Start Journey',
+                    button: true,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      width: 66,
+                      height: 66,
+                      decoration: BoxDecoration(
+                        gradient: isJourneyActive
+                            ? LinearGradient(
+                                colors: [
+                                  colorScheme.error,
+                                  colorScheme.error.withValues(alpha: 0.74),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : LinearGradient(
+                                colors: [
+                                  AppColors.accentLight,
+                                  AppColors.accent,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colorScheme.surface.withValues(alpha: 0.86),
+                          width: 5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                (isJourneyActive
+                                        ? colorScheme.error
+                                        : AppColors.accent)
+                                    .withValues(alpha: 0.18),
+                            blurRadius: 18,
+                            spreadRadius: -6,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isJourneyActive
+                            ? Icons.close_rounded
+                            : Icons.navigation_rounded,
+                        color: isJourneyActive
+                            ? colorScheme.onError
+                            : AppColors.white,
+                        size: 32,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -179,42 +193,56 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isActive
-        ? AppColors.primary
-        : (isDark ? AppColors.grey400 : AppColors.grey600);
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = isActive ? colorScheme.primary : colorScheme.onSurfaceVariant;
 
-    return InkResponse(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      containedInkWell: true,
-      highlightShape: BoxShape.rectangle,
-      borderRadius: BorderRadius.circular(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? AppColors.primary.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+    return Expanded(
+      child: InkResponse(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        containedInkWell: true,
+        highlightShape: BoxShape.rectangle,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              decoration: BoxDecoration(
+                gradient: isActive
+                    ? LinearGradient(
+                        colors: [
+                          colorScheme.primary.withValues(alpha: 0.22),
+                          colorScheme.primary.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      )
+                    : null,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+              ),
+              child: Icon(
+                isActive ? activeIcon : icon,
+                color: color,
+                size: isActive ? 26 : 24,
+              ),
             ),
-            child: Icon(isActive ? activeIcon : icon, color: color, size: 26),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            const SizedBox(height: 3),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

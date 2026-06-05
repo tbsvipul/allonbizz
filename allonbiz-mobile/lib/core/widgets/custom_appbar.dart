@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/widgets/app_glass.dart';
+
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? title;
   final List<Widget>? actions;
@@ -20,13 +22,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      title: title,
-      actions: actions,
-      leading: leading,
-      backgroundColor: backgroundColor,
-      elevation: elevation,
-      centerTitle: centerTitle,
+    return GlassmorphicContainer(
+      borderRadius: BorderRadius.zero,
+      child: AppBar(
+        title: title,
+        actions: actions,
+        leading: leading,
+        backgroundColor: backgroundColor ?? Colors.transparent,
+        elevation: elevation ?? 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: centerTitle,
+      ),
     );
   }
 
@@ -66,13 +73,15 @@ class CustomSliverAppBar extends StatelessWidget {
       title: title,
       actions: actions,
       leading: leading,
-      backgroundColor: backgroundColor,
+      backgroundColor: backgroundColor ?? Colors.transparent,
       expandedHeight: expandedHeight,
       floating: floating,
       snap: snap,
       pinned: pinned,
       flexibleSpace: flexibleSpace,
-      elevation: elevation,
+      elevation: elevation ?? 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
     );
   }
 }

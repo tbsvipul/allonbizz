@@ -13,6 +13,9 @@ import '../../../../core/services/current_location_provider.dart';
 import '../../../../core/services/discovery_service.dart';
 import '../../../../core/services/places_service.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_glass.dart';
+import '../../../../shared/widgets/app_loader.dart';
 import '../controllers/navigation_controller.dart';
 import '../controllers/search_controller.dart';
 import '../widgets/search_input_fields.dart';
@@ -116,7 +119,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       Text(
                         'Add your interests',
                         style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,fontSize: 20
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
                         ),
                       ),
                       IconButton(
@@ -462,8 +466,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
+      backgroundColor: Colors.transparent,
+      body: GradientBackground(
+        safeArea: true,
         child: Column(
           children: [
             Expanded(
@@ -569,7 +574,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             );
                           },
                           loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+                              const Center(child: AppLoader.inline()),
                           error: (e, _) => const SizedBox.shrink(),
                         ),
                     const SizedBox(height: AppDimensions.xl),
@@ -577,58 +582,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
             ),
-            Container(
+            GlassmorphicContainer(
               padding: const EdgeInsets.all(AppDimensions.lg),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                boxShadow: [
-                  if (!isDark)
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                ],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
               ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: searchState.isStartingJourney
-                      ? null
-                      : _startJourney,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppDimensions.radiusLg,
-                      ),
-                    ),
-                    disabledBackgroundColor: colorScheme.primary.withValues(
-                      alpha: 0.5,
-                    ),
-                  ),
-                  child: searchState.isStartingJourney
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(
-                              colorScheme.onPrimary,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          'Start Journey',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
+              child: AppButton.primary(
+                onPressed: searchState.isStartingJourney ? null : _startJourney,
+                isLoading: searchState.isStartingJourney,
+                icon: Icons.navigation_rounded,
+                label: 'Start Journey',
               ),
             ),
           ],

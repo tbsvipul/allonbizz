@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_glass.dart';
 
 /// 4-page swipeable onboarding experience.
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -63,15 +64,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pages = _getPages(l10n);
     final isLast = _currentPage == pages.length - 1;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.backgroundDark
-          : AppColors.backgroundLight,
-      body: SafeArea(
+      backgroundColor: Colors.transparent,
+      body: GradientBackground(
+        safeArea: true,
         child: Column(
           children: [
             Align(
@@ -95,27 +94,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 itemBuilder: (context, index) {
                   final page = pages[index];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                              padding: const EdgeInsets.all(40),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    page.color.withValues(alpha: 0.15),
-                                    page.color.withValues(alpha: 0.05),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                        GlassmorphicContainer(
+                              padding: const EdgeInsets.all(34),
+                              borderRadius: BorderRadius.circular(42),
+                              child: Container(
+                                padding: const EdgeInsets.all(40),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      page.color.withValues(alpha: 0.18),
+                                      AppColors.secondary.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
                                 ),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                page.icon,
-                                size: 80,
-                                color: page.color,
+                                child: Icon(
+                                  page.icon,
+                                  size: 80,
+                                  color: page.color,
+                                ),
                               ),
                             )
                             .animate(key: ValueKey(index))
@@ -129,7 +134,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         const SizedBox(height: 48),
                         Text(
                               page.title,
-                              style: AppTextStyles.headlineMedium,
+                              style: AppTextStyles.headlineMedium.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                letterSpacing: -0.4,
+                              ),
                               textAlign: TextAlign.center,
                             )
                             .animate(key: ValueKey('title_$index'))
@@ -138,8 +146,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         Text(
                               page.description,
                               style: AppTextStyles.bodyLarge.copyWith(
-                                color: AppColors.grey600,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 height: 1.6,
+                                fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
                             )

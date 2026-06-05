@@ -14,12 +14,13 @@ abstract final class AppDecorations {
 
   static BoxDecoration statusBanner({
     required Color color,
-    double alpha = 0.1,
+    double alpha = 0.12,
     double radius = AppDimensions.radiusMd,
   }) {
     return BoxDecoration(
       color: color.withValues(alpha: alpha),
       borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: color.withValues(alpha: 0.18)),
     );
   }
 
@@ -50,18 +51,18 @@ abstract final class AppDecorations {
   }
 
   static const LinearGradient offerPlaceholderGradient = LinearGradient(
-    colors: [Color(0xFFFFF3E0), Color(0xFFFFB74D)],
+    colors: [Color(0xFFE8EEF8), Color(0xFF5A6DBA)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const BoxDecoration pulseDot = BoxDecoration(
-    color: Color(0xFF00C853),
+    color: AppColors.primaryLight,
     shape: BoxShape.circle,
   );
 
   static const BoxDecoration emptyCircle = BoxDecoration(
-    color: AppColors.grey100,
+    color: AppColors.champagne,
     shape: BoxShape.circle,
   );
 }

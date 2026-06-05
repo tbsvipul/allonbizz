@@ -32,7 +32,6 @@ public class HomeSummaryDto
 {
     public int TotalTrips { get; set; }
     public decimal TotalSaved { get; set; }
-    public int LoyaltyPoints { get; set; }
     public bool HasActiveJourney { get; set; }
     public Guid? ActiveJourneyId { get; set; }
     public string? ActiveJourneyType { get; set; }

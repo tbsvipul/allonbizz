@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'app_button.dart';
+import 'app_glass.dart';
 
 enum AppDialogVariant { confirm, info, error, custom }
 
@@ -74,13 +75,12 @@ class _AppDialogWidget extends StatelessWidget {
         break;
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-      ),
-      backgroundColor: AppColors.white,
-      elevation: AppDimensions.elevationLg,
-      child: Padding(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: GlassmorphicContainer(
         padding: const EdgeInsets.all(AppDimensions.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -89,14 +89,16 @@ class _AppDialogWidget extends StatelessWidget {
             const SizedBox(height: AppDimensions.md),
             Text(
               title,
-              style: AppTextStyles.titleLarge,
+              style: AppTextStyles.titleLarge.copyWith(
+                color: colorScheme.onSurface,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimensions.sm),
             Text(
               message,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.grey700,
+                color: colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
