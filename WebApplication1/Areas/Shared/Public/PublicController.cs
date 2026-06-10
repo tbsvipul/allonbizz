@@ -61,12 +61,19 @@ public class PublicController : ControllerBase
         return CreatedAtAction(nameof(GetPublicTags), ApiResponse<TagDetailDto>.Ok(result));
     }
 
-    /// <summary>GET /api/v1/reviews — Get reviews.</summary>
     [HttpGet("reviews")]
     public async Task<IActionResult> GetReviews([FromQuery] Guid? shopId, [FromQuery] Guid? offerId, [FromQuery] PaginationParams paging)
     {
         var result = await _reviewService.GetReviewsAsync(shopId, offerId, paging, publishedOnly: true);
         return Ok(ApiResponse<PagedResponse<ReviewDto>>.Ok(result));
+    }
+
+    /// <summary>GET /api/v1/reviews/stats — Get review statistics.</summary>
+    [HttpGet("reviews/stats")]
+    public async Task<IActionResult> GetReviewStats([FromQuery] Guid? shopId)
+    {
+        var result = await _reviewService.GetReviewStatsAsync(shopId);
+        return Ok(ApiResponse<ReviewStatsDto>.Ok(result));
     }
 
     /// <summary>GET /api/v1/places/search — General place search.</summary>

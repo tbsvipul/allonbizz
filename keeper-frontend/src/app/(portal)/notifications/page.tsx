@@ -18,6 +18,7 @@ import {
   Trash2,
   Power,
   PowerOff,
+  Upload,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -303,6 +304,25 @@ export default function NotificationsPage() {
           .notif-card-row > :nth-child(4),
           .notif-card-row > :nth-child(5) { display: none; }
         }
+        .upload-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.4rem 0.8rem;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: rgba(99,102,241,0.1);
+          color: #6366f1;
+          border: 1px solid rgba(99,102,241,0.2);
+          transition: all 0.2s ease;
+        }
+        .upload-btn:hover {
+          background: rgba(99,102,241,0.2);
+          border-color: rgba(99,102,241,0.4);
+          transform: translateY(-1px);
+        }
       `}} />
 
       <PageHeader
@@ -505,13 +525,8 @@ export default function NotificationsPage() {
                     <ImageIcon size={13} />
                     Attach Image <span style={{ fontSize: '0.85em', opacity: 0.6 }}>(optional)</span>
                   </span>
-                  <label style={{ 
-                    cursor: 'pointer', 
-                    fontSize: '0.75rem', 
-                    color: '#6366f1', 
-                    fontWeight: 700,
-                    textDecoration: 'underline'
-                  }}>
+                  <label className="upload-btn">
+                    <Upload size={12} />
                     Upload New
                     <input 
                       type="file" 

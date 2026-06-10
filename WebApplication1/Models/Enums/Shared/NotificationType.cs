@@ -4,7 +4,6 @@ public enum NotificationType
 {
     OfferAlert,
     RouteUpdate,
-    Redemption,
 
     SystemMessage,
     Chat,

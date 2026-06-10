@@ -34,14 +34,6 @@ public class UserHistoryController : ControllerBase
         return Ok(ApiResponse<List<RouteResponseDto>>.Ok(result));
     }
 
-    /// <summary>GET /api/v1/user/history/redemptions — Redeemed offers history.</summary>
-    [HttpGet("history/redemptions")]
-    public async Task<IActionResult> GetRedemptionHistory()
-    {
-        var userId = User.GetUserId();
-        var result = await _historyService.GetRedemptionHistoryAsync(userId);
-        return Ok(ApiResponse<List<RedemptionHistoryDto>>.Ok(result));
-    }
 
 
 

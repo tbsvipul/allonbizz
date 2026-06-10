@@ -17,7 +17,7 @@ import { useToast } from '@/context/ToastContext';
 interface AuthContextValue {
   user: SessionUser | null;
   loading: boolean;
-  login: (accessToken: string, refreshToken: string) => Promise<void>;
+  login: (accessToken: string, refreshToken: string, fallbackUser?: Partial<UserProfile>) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<SessionUser | null>;
 }
@@ -40,10 +40,8 @@ async function fetchSessionUser() {
   try {
     const keeperResponse = await api.get('/keeper/profile');
     keeperProfile = unwrapApiData<KeeperProfile>(keeperResponse);
-  } catch (error) {
-    if (String(userProfile.role || '').toLowerCase() === 'keeper') {
-      throw error;
-    }
+  } catch {
+    keeperProfile = null;
   }
 
   return composeSessionUser(userProfile, keeperProfile);
@@ -105,9 +103,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = async (accessToken: string, refreshToken: string) => {
+  const login = async (accessToken: string, refreshToken: string, fallbackUser?: Partial<UserProfile>) => {
     setStoredSession(accessToken, refreshToken);
-    const nextUser = await refreshUser();
+    let nextUser: SessionUser | null = null;
+
+    try {
+      nextUser = await refreshUser();
+    } catch {
+      if (!fallbackUser?.userId || String(fallbackUser.role || '').trim().toLowerCase() !== 'keeper') {
+        throw new Error('Unable to load keeper profile.');
+      }
+
+      nextUser = composeSessionUser({
+        userId: fallbackUser.userId,
+        email: fallbackUser.email || '',
+        phoneNumber: fallbackUser.phoneNumber || '',
+        firstName: fallbackUser.firstName || 'Keeper',
+        lastName: fallbackUser.lastName || '',
+        profilePhotoUrl: fallbackUser.profilePhotoUrl,
+        role: fallbackUser.role || 'keeper',
+      }, null);
+      setUser(nextUser);
+      setStoredUser(nextUser);
+    }
+
     showToast(`Welcome back, ${nextUser?.firstName || 'keeper'}.`, 'success');
     startTransition(() => {
       router.replace('/dashboard');

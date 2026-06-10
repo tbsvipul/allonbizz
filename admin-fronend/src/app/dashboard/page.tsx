@@ -22,7 +22,6 @@ interface TopShop {
   name: string;
   category: string;
   offersCount: number;
-  redemptionsCount: number;
   isActive: boolean;
 }
 
@@ -41,7 +40,6 @@ interface DashboardStats {
   pendingOffers: number;
   pendingModeration: number;
   totalPlatformSavings: number;
-  totalRedemptions: number;
   newUsersLast30Days: number;
   newShopsLast30Days: number;
   newOffersLast30Days: number;
@@ -119,7 +117,6 @@ export default function DashboardPage() {
     { label: 'New Users (30d)', value: stats?.newUsersLast30Days || 0, icon: ArrowUpRight, color: '#6366f1' },
     { label: 'New Shops (30d)', value: stats?.newShopsLast30Days || 0, icon: ArrowUpRight, color: '#10b981' },
     { label: 'New Offers (30d)', value: stats?.newOffersLast30Days || 0, icon: ArrowUpRight, color: '#f59e0b' },
-    { label: 'Redemptions', value: stats?.totalRedemptions || 0, icon: CheckCircle2, color: '#8b5cf6' },
   ];
 
   return (

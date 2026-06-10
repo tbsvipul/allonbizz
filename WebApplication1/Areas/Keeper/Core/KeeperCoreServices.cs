@@ -701,7 +701,6 @@ public class KeeperOfferService : IKeeperOfferService
             ImageUrl = ImageConversionHelper.ToBase64DataUrl(offer.ImageData),
             Tags = offer.Tags ?? new List<string>(),
             Status = offer.Status,
-            RedemptionCount = offer.CurrentRedemptions,
             CreatedAt = offer.CreatedAt
         };
     }
@@ -745,51 +744,15 @@ public class KeeperDashboardService : IKeeperDashboardService
                 offer.StartDate <= now &&
                 offer.EndDate >= now);
 
-        var totalRedemptions = await _db.Redemptions
-            .CountAsync(redemption =>
-                redemption.Status == RedemptionStatus.Redeemed &&
-                redemption.Offer != null &&
-                redemption.Offer.KeeperId == keeperId);
-
         var totalReviews = await _db.Reviews
             .CountAsync(review => 
                 (review.Shop != null && review.Shop.KeeperId == keeperId) || 
                 (review.Offer != null && review.Offer.KeeperId == keeperId));
 
-        var totalSalesValue = await _db.Redemptions
-            .Where(redemption =>
-                redemption.Status == RedemptionStatus.Redeemed &&
-                redemption.Offer != null &&
-                redemption.Offer.KeeperId == keeperId)
-            .SumAsync(redemption => redemption.SavedAmount ?? redemption.Offer!.DiscountAmount ?? 0);
-
-        var rangeStart = DateTime.UtcNow.Date.AddDays(-6);
-        var trendDb = await _db.Redemptions
-            .Where(redemption =>
-                redemption.Status == RedemptionStatus.Redeemed &&
-                redemption.Offer != null &&
-                redemption.Offer.KeeperId == keeperId &&
-                redemption.RedeemedAt >= rangeStart)
-            .GroupBy(redemption => redemption.RedeemedAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var trend = Enumerable.Range(0, 7)
-            .Select(offset => rangeStart.AddDays(offset))
-            .Select(date => new RedemptionTrendDto
-            {
-                Date = date,
-                Count = trendDb.FirstOrDefault(t => t.Date == date)?.Count ?? 0
-            })
-            .ToList();
-
         return new KeeperDashboardDto 
         { 
             ActiveOffersCount = activeOffersCount,
-            TotalRedemptions = totalRedemptions,
-            TotalSalesValue = totalSalesValue,
-            TotalReviews = totalReviews,
-            RedemptionTrend = trend
+            TotalReviews = totalReviews
         };
     }
 
@@ -888,58 +851,17 @@ public class KeeperDashboardService : IKeeperDashboardService
             .ToListAsync();
 
         var shopAnalytics = new List<KeeperShopAnalyticsDto>();
-        var totalSavings = 0m;
-        var totalRedemptions = 0;
-
-        var redemptionsByShop = await _db.Redemptions
-            .Where(redemption =>
-                redemption.Status == RedemptionStatus.Redeemed &&
-                redemption.Offer != null &&
-                redemption.Offer.KeeperId == keeperId)
-            .GroupBy(redemption => redemption.ShopId)
-            .Select(g => new { 
-                ShopId = g.Key, 
-                RedemptionCount = g.Count(), 
-                Savings = g.Sum(r => r.SavedAmount ?? r.Offer!.DiscountAmount ?? 0) 
-            })
-            .ToListAsync();
 
         foreach (var shop in shopIds)
         {
-            var rData = redemptionsByShop.FirstOrDefault(r => r.ShopId == shop.ShopId);
-            var sCount = rData?.RedemptionCount ?? 0;
-            var sSavings = rData?.Savings ?? 0m;
             shopAnalytics.Add(new KeeperShopAnalyticsDto
             {
                 ShopId = shop.ShopId,
                 ShopName = shop.Name,
                 OfferCount = offers.Count(o => o.ShopId == shop.ShopId),
-                RedemptionCount = sCount,
-                Savings = sSavings
+                Savings = 0m
             });
-            totalRedemptions += sCount;
-            totalSavings += sSavings;
         }
-
-        var rangeStart = DateTime.UtcNow.Date.AddDays(-29);
-        var trendDb = await _db.Redemptions
-            .Where(redemption =>
-                redemption.Status == RedemptionStatus.Redeemed &&
-                redemption.Offer != null &&
-                redemption.Offer.KeeperId == keeperId &&
-                redemption.RedeemedAt >= rangeStart)
-            .GroupBy(redemption => redemption.RedeemedAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var trend = Enumerable.Range(0, 30)
-            .Select(offset => rangeStart.AddDays(offset))
-            .Select(date => new RedemptionTrendDto
-            {
-                Date = date,
-                Count = trendDb.FirstOrDefault(t => t.Date == date)?.Count ?? 0
-            })
-            .ToList();
 
         return new KeeperAnalyticsDto
         {
@@ -947,9 +869,6 @@ public class KeeperDashboardService : IKeeperDashboardService
             ActiveShops = shopIds.Count(item => item.IsActive),
             TotalOffers = offers.Count,
             ActiveOffers = offers.Count(item => item.IsActive && item.Status == OfferStatus.Active && item.StartDate <= now && item.EndDate >= now),
-            TotalRedemptions = totalRedemptions,
-            TotalSavings = totalSavings,
-            RedemptionTrend = trend,
             Shops = shopAnalytics
         };
     }

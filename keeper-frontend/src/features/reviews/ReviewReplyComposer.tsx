@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { CornerDownRight, Edit2 } from 'lucide-react';
 
 export function ReviewReplyComposer({
   initialReply,
@@ -14,7 +15,7 @@ export function ReviewReplyComposer({
   onSubmit: (reply: string) => Promise<void>;
 }) {
   const [reply, setReply] = useState(() => initialReply || '');
-  const [expanded, setExpanded] = useState(() => !initialReply);
+  const [expanded, setExpanded] = useState(false);
   const remainingCharacters = 500 - reply.length;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -30,17 +31,27 @@ export function ReviewReplyComposer({
 
   if (!expanded) {
     return (
-      <div className="review-composer-collapsed">
-        <div className="review-composer-collapsed-copy">
-          <strong>{initialReply ? 'Reply published' : 'Respond to this review'}</strong>
-          <p className="muted-text tiny-text">
-            {initialReply
-              ? 'You can reopen this response and refine the message anytime.'
-              : 'Post a short, helpful reply directly from your keeper workspace.'}
-          </p>
-        </div>
-        <button type="button" className="button-secondary" disabled={disabled || busy} onClick={() => setExpanded(true)}>
-          {initialReply ? 'Edit reply' : 'Respond'}
+      <div className="review-composer-collapsed" style={{ border: 'none', background: 'transparent', padding: 0, marginTop: '0.75rem' }}>
+        <button
+          type="button"
+          disabled={disabled || busy}
+          onClick={() => setExpanded(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: 'transparent',
+            border: 'none',
+            color: 'hsl(var(--primary))',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            cursor: disabled || busy ? 'not-allowed' : 'pointer',
+            padding: '0.25rem 0',
+            opacity: disabled || busy ? 0.6 : 1,
+          }}
+        >
+          {initialReply ? <Edit2 size={16} /> : <CornerDownRight size={16} />}
+          {initialReply ? 'Edit reply' : 'Reply'}
         </button>
       </div>
     );

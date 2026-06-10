@@ -21,7 +21,6 @@ public class UserService : IUserService
 {
     private readonly AppDbContext _db;
     private readonly IRepository<User> _userRepo;
-    private readonly IRepository<Redemption> _redemptionRepo;
     private readonly IRepository<Review> _reviewRepo;
     private readonly IRepository<Notification> _notificationRepo;
     private readonly IRepository<Journey> _journeyRepo;
@@ -33,7 +32,6 @@ public class UserService : IUserService
     public UserService(
         AppDbContext db,
         IRepository<User> userRepo,
-        IRepository<Redemption> redemptionRepo,
         IRepository<Review> reviewRepo,
         IRepository<Notification> notificationRepo,
         IRepository<Journey> journeyRepo,
@@ -44,7 +42,6 @@ public class UserService : IUserService
     {
         _db = db;
         _userRepo = userRepo;
-        _redemptionRepo = redemptionRepo;
         _reviewRepo = reviewRepo;
         _notificationRepo = notificationRepo;
         _journeyRepo = journeyRepo;
@@ -94,7 +91,7 @@ public class UserService : IUserService
                 CreatedAt = u.CreatedAt,
                 LastLoginAt = u.LastLoginAt,
                 LastLoginIp = u.LastLoginIp,
-                TotalOrders = _db.Redemptions.Count(r => r.UserId == u.UserId),
+                TotalOrders = 0,
                 TotalReviews = _db.Reviews.Count(r => r.UserId == u.UserId),
                 WarningCount = _db.Notifications.Count(n => n.UserId == u.UserId && n.Type == NotificationType.SystemMessage)
             })
@@ -173,19 +170,7 @@ public class UserService : IUserService
             })
             .ToListAsync(ct);
 
-        var recentRedemptions = await _redemptionRepo.Query()
-            .AsNoTracking()
-            .Include(r => r.Offer)
-            .Where(r => r.UserId == userId)
-            .OrderByDescending(r => r.RedeemedAt)
-            .Take(10)
-            .Select(r => new ActivityItemDto
-            {
-                Type = "redemption",
-                Description = $"Redeemed offer {(r.Offer != null ? r.Offer.Title : r.OfferId.ToString())}",
-                Timestamp = r.RedeemedAt
-            })
-            .ToListAsync(ct);
+
 
         var recentReviews = await _reviewRepo.Query()
             .AsNoTracking()
@@ -200,12 +185,11 @@ public class UserService : IUserService
             })
             .ToListAsync(ct);
 
-        var totalOrders = await _redemptionRepo.Query().CountAsync(r => r.UserId == userId, ct);
+        var totalOrders = 0;
         var totalReviews = await _reviewRepo.Query().CountAsync(r => r.UserId == userId, ct);
         var totalReports = await _reportRepo.Query().CountAsync(r => r.ReportedBy == userId, ct);
 
         var recentActivities = recentJourneys
-            .Concat(recentRedemptions)
             .Concat(recentReviews)
             .OrderByDescending(activity => activity.Timestamp)
             .Take(20)
@@ -570,7 +554,7 @@ public class UserService : IUserService
 
     private async Task<UserDetailDto> BuildUserDetailAsync(User user, CancellationToken ct)
     {
-        var totalOrders = await _redemptionRepo.Query().CountAsync(r => r.UserId == user.UserId, ct);
+        var totalOrders = 0;
         var totalReviews = await _reviewRepo.Query().CountAsync(r => r.UserId == user.UserId, ct);
         var warningCount = await _notificationRepo.Query().CountAsync(n =>
             n.UserId == user.UserId &&
@@ -625,25 +609,7 @@ public class UserService : IUserService
             })
             .ToListAsync(ct);
 
-        var redemptions = await _redemptionRepo.Query()
-            .AsNoTracking()
-            .Include(r => r.Offer)
-            .Include(r => r.Shop)
-            .Where(r => r.UserId == user.UserId)
-            .OrderByDescending(r => r.RedeemedAt)
-            .Take(20)
-            .Select(r => new UserRedemptionSummaryDto
-            {
-                RedemptionId = r.RedemptionId,
-                OfferId = r.OfferId,
-                ShopId = r.ShopId,
-                OfferTitle = r.Offer != null ? r.Offer.Title : "Unknown offer",
-                ShopName = r.Shop != null ? r.Shop.Name : "Unknown shop",
-                Status = r.Status.ToString(),
-                SavedAmount = r.SavedAmount,
-                RedeemedAt = r.RedeemedAt
-            })
-            .ToListAsync(ct);
+
 
         var reviews = await _reviewRepo.Query()
             .AsNoTracking()
@@ -674,7 +640,6 @@ public class UserService : IUserService
         return new CustomerUserProfileDto
         {
             Journeys = journeys,
-            Redemptions = redemptions,
             Reviews = reviews
         };
     }
@@ -727,7 +692,6 @@ public class UserService : IUserService
                 KeeperName = keeper.BusinessName,
                 ShopName = o.Shop != null ? o.Shop.Name : "Unknown",
                 Status = o.Status.ToString(),
-                Redemptions = o.CurrentRedemptions,
                 StartDate = o.StartDate,
                 EndDate = o.EndDate,
                 CreatedAt = o.CreatedAt

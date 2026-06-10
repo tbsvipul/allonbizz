@@ -22,6 +22,7 @@ public class AuthService : IAuthService
     private const string AccountTypeUser = "user";
     private const string ChallengeTypeOtp = "otp";
     private const string ChallengeTypePasswordReset = "password_reset";
+    private const string KeeperRegistrationSubmissionIntent = "submit-register";
     private const int MaxFailedLoginAttempts = 5;
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
@@ -294,6 +295,11 @@ public class AuthService : IAuthService
 
     public async Task<UserLoginResponseDto> RegisterKeeperAsync(KeeperRegisterRequestDto dto, string? ipAddress = null)
     {
+        if (!string.Equals(dto.SubmissionIntent?.Trim(), KeeperRegistrationSubmissionIntent, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Keeper registration must be submitted from the final Submit & Register action.");
+        }
+
         var normalizedEmail = AdminAccountHelper.NormalizeEmail(dto.Email);
         AdminAccountHelper.ValidatePassword(dto.Password);
 

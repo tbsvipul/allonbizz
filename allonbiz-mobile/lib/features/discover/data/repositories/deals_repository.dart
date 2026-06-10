@@ -127,22 +127,7 @@ class DealsRepository {
     return watchOffers(category: category);
   }
 
-  /// Redeems an offer for a user.
-  Future<void> redeemOffer(String userId, Offer offer) async {
-    try {
-      final response = await _apiClient.post('/user/offer/${offer.id}/redeem');
 
-      if (response == null || response['success'] != true) {
-        throw const ServerFailure('Redemption failed', 500);
-      }
-
-      await _invalidateOfferCaches(offer.id);
-    } on ServerFailure catch (error) {
-      throw DatabaseFailure(error.message);
-    } catch (error) {
-      throw UnknownFailure(error.toString());
-    }
-  }
 
   Future<void> _invalidateOfferCaches(String offerId) async {
     await Future.wait([

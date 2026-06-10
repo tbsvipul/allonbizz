@@ -41,7 +41,7 @@ public class KeeperDashboardController : ControllerBase
         return Ok(ApiResponse<KeeperTrafficDto>.Ok(result));
     }
 
-    /// <summary>GET /api/v1/keeper/analytics — Redemption analytics & reports.</summary>
+    /// <summary>GET /api/v1/keeper/analytics — Shop analytics & reports.</summary>
     [HttpGet("analytics")]
     public async Task<IActionResult> GetAnalytics()
     {

@@ -50,7 +50,6 @@ public class AdminOfferService : IAdminOfferService
                 KeeperName = o.Keeper != null ? o.Keeper.BusinessName : "Unknown",
                 ShopName = o.Shop != null ? o.Shop.Name : "Unknown",
                 Status = o.Status.ToString(),
-                Redemptions = o.CurrentRedemptions,
                 StartDate = o.StartDate,
                 EndDate = o.EndDate,
                 CreatedAt = o.CreatedAt

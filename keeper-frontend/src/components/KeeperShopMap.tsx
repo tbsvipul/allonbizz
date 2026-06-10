@@ -303,6 +303,7 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
   const infoWindowRef = useRef<any>(null);
   const markersRef = useRef<Array<{ shopId: string; marker: any }>>([]);
   const currentLocationMarkerRef = useRef<any>(null);
+  const overlayClassesRef = useRef<{ CurrentLocationOverlay: any; ShopMarkerOverlay: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
@@ -408,7 +409,9 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
         document.head.appendChild(style);
       }
 
-      const { CurrentLocationOverlay, ShopMarkerOverlay } = createOverlayClasses(win.google.maps);
+      if (!overlayClassesRef.current) {
+        overlayClassesRef.current = createOverlayClasses(win.google.maps);
+      }
 
       locationButton.addEventListener('click', () => {
         if (!navigator.geolocation) {
@@ -430,7 +433,8 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
             if (currentLocationMarkerRef.current) {
               currentLocationMarkerRef.current.updatePosition(pos);
             } else {
-              currentLocationMarkerRef.current = new CurrentLocationOverlay(pos);
+              const OverlayClass = overlayClassesRef.current!.CurrentLocationOverlay;
+              currentLocationMarkerRef.current = new OverlayClass(pos);
               currentLocationMarkerRef.current.setMap(mapRef.current);
             }
           },
@@ -476,6 +480,11 @@ export function KeeperShopMap({ shops }: KeeperShopMapProps) {
     const bounds = new googleMaps.LatLngBounds();
 
 
+
+    if (!overlayClassesRef.current) {
+      overlayClassesRef.current = createOverlayClasses(win.google.maps);
+    }
+    const { ShopMarkerOverlay } = overlayClassesRef.current;
 
     mappableShops.forEach((shop) => {
       const isSelected = shop.id === selectedShopId;

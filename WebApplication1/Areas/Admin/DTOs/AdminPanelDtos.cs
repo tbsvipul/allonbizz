@@ -23,7 +23,6 @@ public class AdminDashboardSummaryDto
 
     // Revenue / savings
     public decimal TotalPlatformSavings { get; set; }
-    public int TotalRedemptions { get; set; }
 
     // Growth (last 30 days)
     public int NewUsersLast30Days { get; set; }
@@ -51,7 +50,6 @@ public class TopShopDto
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public int OffersCount { get; set; }
-    public int RedemptionsCount { get; set; }
     public bool IsActive { get; set; }
 }
 

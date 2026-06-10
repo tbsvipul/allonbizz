@@ -8,7 +8,8 @@ class BaseApi {
   static const String _backendFallbackWeb = 'http://localhost:5247/api/v1';
   static const String _backendFallbackNative = 'http://10.0.2.2:5247/api/v1';
   static const String _placesFallbackNative = 'http://10.0.2.2:5000/api/v1';
-  static const String _photonFallback = 'https://photon.komoot.io';
+  static const String _nominatimFallback =
+      'https://nominatim.openstreetmap.org';
   static const String _osrmFallback = 'https://router.project-osrm.org';
   static const String _lightTileFallback =
       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
@@ -30,14 +31,14 @@ class BaseApi {
     return urls.where((url) => url.isNotEmpty).toList(growable: false);
   }
 
-  static String get photonBaseUrl => resolveExternalUrl(
-    dotenv.env['PHOTON_BASE_URL'],
-    fallbackUrl: _photonFallback,
+  static String get nominatimBaseUrl => resolveExternalUrl(
+    dotenv.env['NOMINATIM_BASE_URL'],
+    fallbackUrl: _nominatimFallback,
   );
 
-  static String get photonSearchUrl => '$photonBaseUrl/api';
+  static String get nominatimSearchUrl => '$nominatimBaseUrl/search';
 
-  static String get photonReverseUrl => '$photonBaseUrl/reverse';
+  static String get nominatimReverseUrl => '$nominatimBaseUrl/reverse';
 
   static String get osrmBaseUrl => resolveExternalUrl(
     dotenv.env['OSRM_BASE_URL'],

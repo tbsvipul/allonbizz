@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -59,11 +60,16 @@ class ProfileScreen extends ConsumerWidget {
                         backgroundColor: AppColors.white.withValues(
                           alpha: 0.22,
                         ),
-                        child: Icon(
-                          Icons.person_rounded,
-                          size: 50,
-                          color: AppColors.secondaryLight,
-                        ),
+                        backgroundImage: user?.photoUrl != null && user!.photoUrl!.startsWith('data:image')
+                            ? MemoryImage(base64Decode(user.photoUrl!.split(',').last)) as ImageProvider
+                            : null,
+                        child: (user?.photoUrl == null || !user!.photoUrl!.startsWith('data:image'))
+                            ? Icon(
+                                Icons.person_rounded,
+                                size: 50,
+                                color: AppColors.secondaryLight,
+                              )
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       Text(

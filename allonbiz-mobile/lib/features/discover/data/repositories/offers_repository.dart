@@ -63,14 +63,7 @@ class OffersRepository {
     }
   }
 
-  Future<void> redeemOffer(String offerId) async {
-    try {
-      await _apiClient.post('/user/offer/$offerId/redeem');
-      await _invalidateOfferCaches(offerId);
-    } on ServerFailure catch (error) {
-      throw DatabaseFailure(error.message);
-    }
-  }
+
 
   Future<void> rateOffer(String offerId, int rating, String? comment) async {
     try {

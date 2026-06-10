@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using AspNetCoreRateLimit;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -162,6 +163,14 @@ builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection(
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
+var keysFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "keys");
+if (!Directory.Exists(keysFolder))
+{
+    Directory.CreateDirectory(keysFolder);
+}
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder));
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -267,6 +276,8 @@ builder.Services.AddScoped<IKeeperOfferService, KeeperOfferService>();
 builder.Services.AddScoped<IKeeperDashboardService, KeeperDashboardService>();
 builder.Services.AddScoped<IKeeperContextService, KeeperContextService>();
 
+builder.Services.AddHostedService<allonbiz.AdminAPI.Infrastructure.BackgroundJobs.OfferExpiryService>();
+
 var app = builder.Build();
 
 try
@@ -350,7 +361,7 @@ app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();
 

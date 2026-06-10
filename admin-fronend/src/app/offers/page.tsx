@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -11,10 +11,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  MoreVertical,
-  ArrowUpRight,
-  Filter,
-  Activity
+  Trash2,
+  Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
@@ -29,7 +27,6 @@ interface Offer {
   keeperName: string;
   shopName: string;
   status: string;
-  redemptions: number;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -46,7 +43,7 @@ export default function OffersPage() {
   const [totalOffers, setTotalOffers] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOffers = async () => {
+  const fetchOffers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -63,23 +60,13 @@ export default function OffersPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleUpdateStatus = async (id: string, status: string) => {
-    try {
-      await api.put(`/admin/offers/${id}/status`, { status });
-      fetchOffers();
-    } catch (err) {
-      console.error('Update failed', err);
-      setError(getApiErrorMessage(err, 'Failed to update offer status.'));
-    }
-  };
+  }, [page, search, statusFilter]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this offer permanently?')) return;
     try {
       await api.delete(`/admin/offers/${id}`);
-      fetchOffers();
+      await fetchOffers();
     } catch (err) {
       console.error('Delete failed', err);
       setError(getApiErrorMessage(err, 'Failed to delete offer.'));
@@ -87,8 +74,8 @@ export default function OffersPage() {
   };
 
   useEffect(() => {
-    fetchOffers();
-  }, [search, statusFilter, page]);
+    void fetchOffers();
+  }, [fetchOffers]);
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -174,16 +161,22 @@ export default function OffersPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                  <div style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                     <p style={{ fontSize: '0.7rem', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.025em', marginBottom: '0.25rem' }}>Redemptions</p>
-                     <p style={{ fontWeight: 700, fontSize: '1.125rem' }}>{offer.redemptions}</p>
-                  </div>
-                  <div style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                     <p style={{ fontSize: '0.7rem', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.025em', marginBottom: '0.25rem' }}>Expires In</p>
-                     <p style={{ fontWeight: 700, fontSize: '1.125rem' }}>{Math.ceil((new Date(offer.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d</p>
-                  </div>
-                </div>
+                {(() => {
+                  const days = Math.ceil((new Date(offer.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                  const isExpired = days < 0;
+                  return (
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
+                      <div style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                         <p style={{ fontSize: '0.7rem', color: isExpired ? '#ef4444' : 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.025em', marginBottom: '0.25rem' }}>
+                           {isExpired ? 'Expired' : 'Expires In'}
+                         </p>
+                         <p style={{ fontWeight: 700, fontSize: '1.125rem', color: isExpired ? '#ef4444' : 'inherit' }}>
+                           {isExpired ? `${Math.abs(days)} days ago` : `${days}d`}
+                         </p>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'hsl(var(--muted-foreground))', fontSize: '0.75rem', marginBottom: '1.25rem' }}>
                   <Calendar size={14} />
@@ -191,61 +184,28 @@ export default function OffersPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  {hasPermission(PERMISSIONS.offersEdit) && (offer.status.toLowerCase() === 'active' ? (
-                    <button 
-                      onClick={() => handleUpdateStatus(offer.id, 'Expired')}
-                      style={{ 
-                        flex: 1, padding: '0.5rem', borderRadius: 'var(--radius)', 
-                        background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', 
-                        fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' 
-                      }}
-                    >
-                      <Clock size={16} /> Expire Now
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleUpdateStatus(offer.id, 'Active')}
-                      style={{ 
-                        flex: 1, padding: '0.5rem', borderRadius: 'var(--radius)', 
-                        background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: '#10b981', 
-                        fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' 
-                      }}
-                    >
-                      <CheckCircle2 size={16} /> Activate
-                    </button>
-                  ))}
                   {hasPermission(PERMISSIONS.offersDelete) && (
-                    <div style={{ position: 'relative' }}>
-                      <button 
-                        onClick={() => {
-                          const menu = document.getElementById(`menu-${offer.id}`);
-                          if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                        }}
-                        style={{ 
-                          padding: '0.5rem', borderRadius: 'var(--radius)', 
-                          background: 'hsl(var(--secondary))', border: 'none', color: 'hsl(var(--foreground))',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                      <div 
-                        id={`menu-${offer.id}`}
-                        style={{ 
-                          display: 'none', position: 'absolute', bottom: '100%', right: 0, 
-                          background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', 
-                          borderRadius: 'var(--radius)', minWidth: '120px', zIndex: 10, boxShadow: 'var(--shadow-lg)',
-                          marginBottom: '0.5rem'
-                        }}
-                      >
-                        <button 
-                          onClick={() => handleDelete(offer.id)}
-                          style={{ width: '100%', padding: '0.6rem 1rem', textAlign: 'left', background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer' }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
+                    <button
+                      onClick={() => handleDelete(offer.id)}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        borderRadius: 'var(--radius)',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: 'none',
+                        color: '#ef4444',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
                   )}
                 </div>
               </motion.div>

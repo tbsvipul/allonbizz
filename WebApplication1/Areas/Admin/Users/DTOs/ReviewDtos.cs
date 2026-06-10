@@ -36,3 +36,17 @@ public class ReviewReplyDto
     [StringLength(500)]
     public string Reply { get; set; } = string.Empty;
 }
+
+public class ReviewStatsDto
+{
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+}
+
+public class ShopStatsDto
+{
+    public Guid ShopId { get; set; }
+    public string ShopName { get; set; } = string.Empty;
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+}

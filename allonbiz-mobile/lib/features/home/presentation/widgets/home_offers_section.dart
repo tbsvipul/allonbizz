@@ -5,6 +5,7 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_error_widget.dart';
 import '../../../../shared/widgets/app_loader.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../data/repositories/home_repository.dart';
 import 'deal_section_widget.dart';
 
@@ -17,6 +18,25 @@ class HomeOffersSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    final user = ref.watch(authControllerProvider).user;
+
+    if (user == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: AppDimensions.lg),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.lg),
+          child: Center(
+            child: Text(
+              'No offers available right now',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return ref
         .watch(homeOffersProvider)

@@ -28,11 +28,12 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { getKeeperStatusMessage } from '@/lib/keeper';
+import { resolveMediaSource } from '@/lib/media';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Daily performance and traffic' },
   { href: '/shops', label: 'Shops', icon: Store, description: 'Locations and storefront details' },
-  { href: '/offers', label: 'Offers', icon: BadgeDollarSign, description: 'Campaigns and redemptions' },
+  { href: '/offers', label: 'Offers', icon: BadgeDollarSign, description: 'Campaigns' },
   { href: '/notifications', label: 'Notifications', icon: Bell, description: 'Send alerts to nearby users' },
   { href: '/reviews', label: 'Reviews', icon: MessageSquareReply, description: 'Customer sentiment and replies' },
   { href: '/profile', label: 'Profile', icon: UserRound, description: 'Business identity and approval' },
@@ -72,6 +73,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const businessName = user.keeper?.businessName || 'Business Workspace';
   const contactLine = [user.email, user.keeper?.contactPhone].filter(Boolean).join(' | ');
   const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.trim() || user.email?.[0]?.toUpperCase() || 'K';
+  const isKeeperAccount = String(user.role || '').toLowerCase() === 'keeper';
 
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -205,12 +207,16 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   <strong>{businessName}</strong>
                   <span>{contactLine}</span>
                 </div>
-                <div className="portal-profile-avatar">{initials}</div>
+                <div className="portal-profile-avatar" style={{ overflow: 'hidden' }}>
+                  {user.profilePhotoUrl ? (
+                    <img src={resolveMediaSource(user.profilePhotoUrl)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : initials}
+                </div>
               </Link>
             </div>
           </header>
 
-          {!user.canManage && user.keeper ? (
+          {!user.canManage && isKeeperAccount ? (
             <div className="status-banner">
               <ShieldAlert size={20} />
               <div style={{ display: 'grid', gap: '0.3rem' }}>

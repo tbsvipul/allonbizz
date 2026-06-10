@@ -26,6 +26,12 @@ class DealSectionWidget extends ConsumerWidget {
   final List<Offer> deals;
   final AppLocalizations l10n;
 
+
+
+
+
+
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocation = ref.watch(currentLocationProvider).position;
@@ -59,38 +65,50 @@ class DealSectionWidget extends ConsumerWidget {
             onActionPressed: () => context.goTo(AppRoutes.discover),
           ),
           const SizedBox(height: AppDimensions.sm),
-          SizedBox(
-            height: 240,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.lg),
-              itemCount: deals.length,
-              separatorBuilder: (context, i2) =>
-                  const SizedBox(width: AppDimensions.sm),
-              itemBuilder: (context, index) {
-                final offer = deals[index];
-                return RepaintBoundary(
-                  child: OfferCard(
-                    title: offer.title,
-                    shopName: offer.shopName,
-                    category: offer.category,
-                    discountPercent: offer.discountPercent,
-                    distance: formatDistance(
-                      offer.latitude,
-                      offer.longitude,
-                      offer.distance,
-                    ),
-                    imageUrl: offer.imageUrl,
-                    shopProfileImage: offer.shopProfileImage,
-                    onTap: () => context.pushTo(
-                      AppRoutes.offerDetail.replaceFirst(':id', offer.id),
-                      extra: offer,
+          deals.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(AppDimensions.lg),
+                  child: Center(
+                    child: Text(
+                      'No offers available right now',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
+                )
+              : SizedBox(
+                  height: 240,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: AppDimensions.lg),
+                    itemCount: deals.length,
+                    separatorBuilder: (context, i2) =>
+                        const SizedBox(width: AppDimensions.sm),
+                    itemBuilder: (context, index) {
+                      final offer = deals[index];
+                      return RepaintBoundary(
+                        child: OfferCard(
+                          title: offer.title,
+                          shopName: offer.shopName,
+                          category: offer.category,
+                          discountPercent: offer.discountPercent,
+                          distance: formatDistance(
+                            offer.latitude,
+                            offer.longitude,
+                            offer.distance,
+                          ),
+                          imageUrl: offer.imageUrl,
+                          shopProfileImage: offer.shopProfileImage,
+                          onTap: () => context.pushTo(
+                            AppRoutes.offerDetail.replaceFirst(':id', offer.id),
+                            extra: offer,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ],
       ),
     );

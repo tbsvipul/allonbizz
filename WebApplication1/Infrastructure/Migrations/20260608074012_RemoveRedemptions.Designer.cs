@@ -4,18 +4,21 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using allonbiz.AdminAPI.Data;
 
 #nullable disable
 
-namespace allonbiz.AdminAPI.Migrations
+namespace allonbiz.AdminAPI.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260608074012_RemoveRedemptions")]
+    partial class RemoveRedemptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1632,15 +1635,6 @@ namespace allonbiz.AdminAPI.Migrations
 
                     b.Property<DateTime?>("SuspendedUntil")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<double>("TotalKm")
-                        .HasColumnType("double precision");
-
-                    b.Property<double>("TotalSaved")
-                        .HasColumnType("double precision");
-
-                    b.Property<int>("TotalTrips")
-                        .HasColumnType("integer");
 
                     b.Property<string>("TotpSecret")
                         .HasColumnType("text");

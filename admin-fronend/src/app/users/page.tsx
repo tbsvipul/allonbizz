@@ -281,7 +281,13 @@ export default function UsersPage() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 10 }}
                       transition={{ delay: index * 0.05 }}
-                      style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius)', cursor: 'pointer' }}
+                      style={{ 
+                        position: 'relative',
+                        zIndex: activeMenu === user.userId ? 50 : 1,
+                        background: 'rgba(255,255,255,0.03)', 
+                        borderRadius: 'var(--radius)', 
+                        cursor: 'pointer' 
+                      }}
                     >
                       <td style={{ padding: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

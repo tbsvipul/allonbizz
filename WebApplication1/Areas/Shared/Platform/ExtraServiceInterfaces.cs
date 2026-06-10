@@ -11,6 +11,8 @@ public interface IReviewService
     Task<PagedResponse<ReviewDto>> GetReviewsAsync(Guid? shopId, Guid? offerId, PaginationParams paging, bool publishedOnly = false, Guid? keeperId = null);
     Task ReplyToReviewAsync(Guid reviewId, ReviewReplyDto dto, Guid? keeperId = null);
     Task SubmitReviewAsync(Guid userId, SubmitReviewDto dto);
+    Task<ReviewStatsDto> GetReviewStatsAsync(Guid? shopId = null, Guid? keeperId = null);
+    Task<List<ShopStatsDto>> GetShopsReviewStatsAsync(Guid? keeperId = null);
 }
 
 

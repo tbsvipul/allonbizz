@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../shared/models/app_user.dart';
@@ -51,10 +52,13 @@ class ProfileRepository {
 
   Future<String> uploadPhoto(List<int> bytes, String fileName) async {
     try {
+      final ext = fileName.split('.').last.toLowerCase();
+      final mimeType = ext == 'png' ? 'png' : (ext == 'webp' ? 'webp' : 'jpeg');
       final file = http.MultipartFile.fromBytes(
         'file',
         bytes,
         filename: fileName,
+        contentType: MediaType('image', mimeType),
       );
       final response = await _apiClient.postMultipart(
         '/user/profile/photo',

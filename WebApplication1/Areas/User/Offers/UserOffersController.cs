@@ -53,13 +53,6 @@ public class UserOffersController : ControllerBase
         return Ok(ApiResponse<OfferDetailDto>.Ok(result));
     }
 
-    [HttpPost("offer/{offerId:guid}/redeem")]
-    public async Task<IActionResult> RedeemOffer(Guid offerId)
-    {
-        var userId = User.GetUserId();
-        var redemptionId = await _offerService.RedeemOfferAsync(offerId, userId);
-        return Ok(ApiResponse<object>.Ok(new { redemptionId }, "Offer redeemed successfully"));
-    }
 
     [HttpPost("offer/{offerId:guid}/save")]
     public async Task<IActionResult> SaveOffer(Guid offerId)

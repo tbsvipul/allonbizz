@@ -110,6 +110,58 @@ public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleS
         await _db.SaveChangesAsync();
     }
 
+    public async Task<ReviewStatsDto> GetReviewStatsAsync(Guid? shopId = null, Guid? keeperId = null)
+    {
+        var query = _db.Reviews.AsNoTracking().Where(r => r.Status == ReviewStatus.Published);
+
+        if (keeperId.HasValue)
+        {
+            query = query.Where(review =>
+                (review.ShopId.HasValue && review.Shop != null && review.Shop.KeeperId == keeperId.Value) ||
+                (review.OfferId.HasValue && review.Offer != null && review.Offer.KeeperId == keeperId.Value));
+        }
+
+        if (shopId.HasValue)
+        {
+            query = query.Where(r => r.ShopId == shopId.Value);
+        }
+
+        var totalReviews = await query.CountAsync();
+        var averageRating = totalReviews > 0 ? await query.AverageAsync(r => r.Rating) : 0;
+
+        return new ReviewStatsDto
+        {
+            TotalReviews = totalReviews,
+            AverageRating = Math.Round(averageRating, 1)
+        };
+    }
+
+    public async Task<List<ShopStatsDto>> GetShopsReviewStatsAsync(Guid? keeperId = null)
+    {
+        var query = _db.Reviews
+            .Include(r => r.Shop)
+            .AsNoTracking()
+            .Where(r => r.Status == ReviewStatus.Published && r.ShopId != null);
+            
+        if (keeperId.HasValue)
+        {
+            query = query.Where(r => r.Shop != null && r.Shop.KeeperId == keeperId.Value);
+        }
+
+        var stats = await query
+            .GroupBy(r => new { ShopId = r.ShopId!.Value, ShopName = r.Shop!.Name })
+            .Select(g => new ShopStatsDto
+            {
+                ShopId = g.Key.ShopId,
+                ShopName = g.Key.ShopName,
+                AverageRating = Math.Round(g.Average(r => r.Rating), 1),
+                TotalReviews = g.Count()
+            })
+            .ToListAsync();
+            
+        return stats;
+    }
+
 
 
     public async Task<AdminDashboardSummaryDto> GetDashboardSummaryAsync()
@@ -134,8 +186,7 @@ public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleS
         var pendingModeration = await _db.ModerationQueueItems.CountAsync(m => m.Status == "pending");
 
         // Revenue
-        var totalSavings = await _db.Redemptions.SumAsync(r => r.SavedAmount ?? 0);
-        var totalRedemptions = await _db.Redemptions.CountAsync();
+        var totalSavings = 0m;
 
         // Growth (last 30 days)
         var newUsersLast30 = await _db.Users.CountAsync(u => u.CreatedAt >= thirtyDaysAgo);
@@ -174,7 +225,6 @@ public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleS
                 Name = s.Name,
                 Category = s.Category != null ? s.Category.Name : "Uncategorized",
                 OffersCount = s.Offers.Count,
-                RedemptionsCount = 0,
                 IsActive = s.IsActive
             }).ToListAsync();
 
@@ -194,7 +244,6 @@ public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleS
             PendingOffers = pendingOffers,
             PendingModeration = pendingModeration,
             TotalPlatformSavings = totalSavings,
-            TotalRedemptions = totalRedemptions,
             NewUsersLast30Days = newUsersLast30,
             NewShopsLast30Days = newShopsLast30,
             NewOffersLast30Days = newOffersLast30,
@@ -318,13 +367,13 @@ public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleS
             .Include(o => o.Shop)
             .AsNoTracking()
             .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
-            .OrderByDescending(o => o.CurrentRedemptions)
+            .OrderByDescending(o => o.CreatedAt)
             .Select(o => new TrendingOfferDto 
             { 
                 OfferId = o.OfferId, 
                 Title = o.Title, 
                 ShopName = o.Shop != null ? o.Shop.Name : "Unknown",
-                PopularityScore = o.CurrentRedemptions
+                PopularityScore = 0
             })
             .Take(10)
             .ToListAsync();

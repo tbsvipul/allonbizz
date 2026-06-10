@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
@@ -91,6 +93,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    // Compress by limiting quality to 50
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      if (mounted) {
+        await ref.read(profileControllerProvider.notifier).uploadPhoto(bytes.toList(), pickedFile.name);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(profileControllerProvider);
@@ -106,6 +120,34 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               padding: const EdgeInsets.all(AppDimensions.lg),
               child: Column(
                 children: [
+                  GestureDetector(
+                    onTap: _pickAndUploadImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: AppColors.grey200,
+                          backgroundImage: ref.read(authControllerProvider).user?.photoUrl != null 
+                              && ref.read(authControllerProvider).user!.photoUrl!.startsWith('data:image')
+                            ? MemoryImage(base64Decode(ref.read(authControllerProvider).user!.photoUrl!.split(',').last)) as ImageProvider
+                            : null,
+                          child: (ref.read(authControllerProvider).user?.photoUrl == null || !ref.read(authControllerProvider).user!.photoUrl!.startsWith('data:image')) 
+                              ? const Icon(Icons.person, size: 50, color: AppColors.grey500) 
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.primary,
+                            child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.xl),
                   AppTextField.regular(
                     controller: _firstNameController,
                     label: 'First Name',

@@ -50,14 +50,30 @@ function PersonalProfileForm({
   initialState,
   email,
   busy,
+  profilePhotoUrl,
+  onPhotoUpload,
   onSubmit,
 }: {
   initialState: UserFormState;
   email: string;
   busy: boolean;
+  profilePhotoUrl?: string;
+  onPhotoUpload?: (file: File) => Promise<void>;
   onSubmit: (state: UserFormState) => Promise<void>;
 }) {
   const [form, setForm] = useState(initialState);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files || e.target.files.length === 0 || !onPhotoUpload) return;
+    setUploadingImage(true);
+    try {
+      await onPhotoUpload(e.target.files[0]);
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,6 +82,30 @@ function PersonalProfileForm({
 
   return (
     <form className="form-stack" onSubmit={handleSubmit}>
+      <div className="field" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {profilePhotoUrl ? (
+            <img src={getFullImageUrl(profilePhotoUrl)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          )}
+        </div>
+        <div>
+          <label htmlFor="profilePhotoInput" className="button-secondary" style={{ cursor: 'pointer', display: 'inline-block' }}>
+            {uploadingImage ? 'Uploading...' : 'Change Photo'}
+          </label>
+          <input
+            id="profilePhotoInput"
+            type="file"
+            accept="image/jpeg, image/png, image/webp"
+            style={{ display: 'none' }}
+            onChange={handleImageChange}
+            disabled={uploadingImage || busy}
+          />
+          <p className="muted-text tiny-text" style={{ marginTop: '0.5rem' }}>JPG, PNG or WEBP. Max 5MB.</p>
+        </div>
+      </div>
+
       <div className="field-grid">
         <div className="field">
           <label htmlFor="firstName">First name</label>
@@ -323,6 +363,17 @@ export default function ProfilePage() {
   const [deletingDocumentId, setDeletingDocumentId] = useState('');
   const [markingMessagesRead, setMarkingMessagesRead] = useState(false);
   const [documentForm, setDocumentForm] = useState<DocumentFormState>(emptyDocumentForm);
+  const [activePreviewImage, setActivePreviewImage] = useState<string | null>(null);
+
+  function openImagePreview(image: string | null | undefined) {
+    if (image) {
+      setActivePreviewImage(getFullImageUrl(image));
+    }
+  }
+
+  function closeImagePreview() {
+    setActivePreviewImage(null);
+  }
 
   if (!user) {
     return null;
@@ -376,6 +427,65 @@ export default function ProfilePage() {
       setError(getApiErrorMessage(err, 'Unable to update the personal profile.'));
     } finally {
       setSavingUser(false);
+    }
+  }
+
+  async function handlePhotoUpload(file: File) {
+    setError('');
+    try {
+      // Compress the image before uploading using Canvas
+      const compressedFile = await new Promise<File>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target?.result as string;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            // output as webp
+            canvas.toBlob((blob) => {
+              if (blob) {
+                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' }));
+              } else {
+                resolve(file); // fallback
+              }
+            }, 'image/webp', 0.8);
+          };
+          img.onerror = () => resolve(file); // fallback
+        };
+        reader.onerror = () => resolve(file); // fallback
+      });
+
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+      await api.post('/user/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      await refreshUser();
+      showToast('Profile photo updated.', 'success');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to upload profile photo.'));
     }
   }
 
@@ -512,6 +622,8 @@ export default function ProfilePage() {
             }}
             email={sessionUser.email}
             busy={savingUser}
+            profilePhotoUrl={sessionUser.profilePhotoUrl || undefined}
+            onPhotoUpload={handlePhotoUpload}
             onSubmit={handleUserSave}
           />
         </SectionCard>
@@ -688,10 +800,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.identityProofImage)} alt="Identity Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.identityProofImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.identityProofImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -704,10 +816,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.businessLicenseImage)} alt="Business License" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.businessLicenseImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.businessLicenseImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -720,10 +832,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.gstCertificateImage)} alt="GST Certificate" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.gstCertificateImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.gstCertificateImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -736,10 +848,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.panCardImage)} alt="PAN Card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.panCardImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.panCardImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -752,10 +864,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.addressProofImage)} alt="Address Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.addressProofImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.addressProofImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -768,10 +880,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.shopFrontImage)} alt="Shop Front View" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.shopFrontImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.shopFrontImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -784,10 +896,10 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border))' }}>
                   <img src={getFullImageUrl(sessionUser.keeper.shopInsideImage)} alt="Shop Inside View" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <a href={getFullImageUrl(sessionUser.keeper.shopInsideImage)} target="_blank" rel="noreferrer" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600 }} className="hover-overlay">
+                  <button type="button" onClick={() => openImagePreview(sessionUser.keeper?.shopInsideImage)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} className="hover-overlay">
                     View Full Image
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -833,6 +945,16 @@ export default function ProfilePage() {
           <EmptyState title="No admin history yet" message="Request-for-info notes, hold notices, and related admin comments will show up here." />
         )}
       </SectionCard>
+      
+      {/* Lightbox / Modals */}
+      {activePreviewImage ? (
+        <div className="media-lightbox" onClick={closeImagePreview} style={{ zIndex: 9999 }}>
+          <div className="media-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="media-lightbox-close" onClick={closeImagePreview}>&times;</button>
+            <img src={activePreviewImage} alt="Enlarged preview" className="media-lightbox-image" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

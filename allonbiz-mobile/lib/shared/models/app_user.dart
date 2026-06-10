@@ -15,7 +15,6 @@ final class AppUser extends Equatable {
     this.totalTrips = 0,
 
     this.savedOfferIds = const [],
-    this.redeemedOfferIds = const [],
     this.fcmToken,
     this.safetyMode = false,
     this.languageCode = 'en',
@@ -31,7 +30,6 @@ final class AppUser extends Equatable {
   final int totalTrips;
 
   final List<String> savedOfferIds;
-  final List<String> redeemedOfferIds;
   final String? fcmToken;
   final bool safetyMode;
   final String languageCode;
@@ -74,9 +72,6 @@ final class AppUser extends Equatable {
       savedOfferIds: List<String>.from(
         json['savedOfferIds'] ?? json['SavedOfferIds'] as Iterable? ?? [],
       ),
-      redeemedOfferIds: List<String>.from(
-        json['redeemedOfferIds'] ?? json['RedeemedOfferIds'] as Iterable? ?? [],
-      ),
       fcmToken: json['fcmToken'] ?? json['FcmToken'] as String?,
       safetyMode: json['safetyMode'] ?? json['SafetyMode'] as bool? ?? false,
       languageCode:
@@ -97,7 +92,6 @@ final class AppUser extends Equatable {
     'totalTrips': totalTrips,
 
     'savedOfferIds': savedOfferIds,
-    'redeemedOfferIds': redeemedOfferIds,
     if (fcmToken != null) 'fcmToken': fcmToken,
     'safetyMode': safetyMode,
     'languageCode': languageCode,
@@ -116,7 +110,6 @@ final class AppUser extends Equatable {
     int? totalTrips,
 
     List<String>? savedOfferIds,
-    List<String>? redeemedOfferIds,
     String? fcmToken,
     bool? safetyMode,
     String? languageCode,
@@ -134,7 +127,6 @@ final class AppUser extends Equatable {
       totalTrips: totalTrips ?? this.totalTrips,
 
       savedOfferIds: savedOfferIds ?? this.savedOfferIds,
-      redeemedOfferIds: redeemedOfferIds ?? this.redeemedOfferIds,
       fcmToken: fcmToken ?? this.fcmToken,
       safetyMode: safetyMode ?? this.safetyMode,
       languageCode: languageCode ?? this.languageCode,
@@ -164,7 +156,6 @@ final class AppUser extends Equatable {
     totalTrips,
 
     savedOfferIds,
-    redeemedOfferIds,
     fcmToken,
     safetyMode,
     languageCode,

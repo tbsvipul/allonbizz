@@ -37,6 +37,8 @@ export default function ReviewsPage() {
   const [error, setError] = useState('');
   const [shops, setShops] = useState<ShopSummary[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [stats, setStats] = useState<{ averageRating: number; totalReviews: number } | null>(null);
+  const [shopsStats, setShopsStats] = useState<{ shopId: string; shopName: string; averageRating: number; totalReviews: number }[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [shopId, setShopId] = useState('');
   const [page, setPage] = useState(1);
@@ -49,7 +51,7 @@ export default function ReviewsPage() {
       setError('');
 
       try {
-        const [shopsResponse, reviewsResponse] = await Promise.all([
+        const [shopsResponse, reviewsResponse, statsResponse, shopsStatsResponse] = await Promise.all([
           api.get('/keeper/shops'),
           api.get('/keeper/reviews', {
             params: {
@@ -58,6 +60,10 @@ export default function ReviewsPage() {
               pageSize: 10,
             },
           }),
+          api.get('/keeper/reviews/stats', {
+            params: { shopId: shopId || undefined }
+          }),
+          api.get('/keeper/reviews/shops-stats')
         ]);
 
         if (!active) {
@@ -68,6 +74,8 @@ export default function ReviewsPage() {
         const paged = unwrapPagedResponse<ReviewItem>(reviewsResponse);
         setReviews(paged.data);
         setPagination(paged.pagination);
+        setStats(unwrapApiData(statsResponse));
+        setShopsStats(unwrapApiData(shopsStatsResponse));
       } catch (err) {
         if (active) {
           setError(getApiErrorMessage(err, 'Unable to load reviews.'));
@@ -119,7 +127,9 @@ export default function ReviewsPage() {
         title="Reviews"
         description="See what customers are saying and answer reviews directly from the keeper workspace."
         actions={
-          <div className="reviews-filter-card">
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            
+            <div className="reviews-filter-card">
             <div className="field">
               <label htmlFor="reviewShopFilter" style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block', color: 'hsl(var(--muted-foreground))' }}>Filter by shop</label>
               <CustomSelect
@@ -140,8 +150,28 @@ export default function ReviewsPage() {
               />
             </div>
           </div>
+          </div>
         }
       />
+
+      {shopsStats.length > 0 && (
+        <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'thin' }}>
+          {shopsStats
+            .filter(shop => !shopId || shop.shopId === shopId)
+            .map(shop => (
+            <div key={shop.shopId} className="reviews-filter-card" style={{ padding: '1rem', minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text)' }}>{shop.shopName}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#f59e0b' }}>
+                  <Star size={16} className="review-star-filled" fill="currentColor" />
+                  <strong style={{ fontSize: '1rem', color: 'var(--text)' }}>{shop.averageRating.toFixed(1)}</strong>
+                </div>
+                <span className="muted-text tiny-text">{shop.totalReviews} review{shop.totalReviews === 1 ? '' : 's'}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error ? <InlineNotice tone="error" message={error} /> : null}
 
@@ -178,7 +208,9 @@ export default function ReviewsPage() {
                 </div>
               </div>
 
-              <p className="review-comment">{review.comment || 'No written comment was left with this rating.'}</p>
+              <div className="review-comment" style={{ border: '1px dashed var(--field-border)', borderRadius: '18px', background: 'var(--soft-surface)', padding: '1rem' }}>
+                {review.comment || 'No written comment was left with this rating.'}
+              </div>
 
               {review.reply ? (
                 <div className="review-inline-response">

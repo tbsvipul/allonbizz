@@ -21,6 +21,9 @@ public class User
     public DateTime? StatusChangedAt { get; set; }
     public double? LastLatitude { get; set; }
     public double? LastLongitude { get; set; }
+    public double TotalSaved { get; set; }
+    public double TotalKm { get; set; }
+    public int TotalTrips { get; set; }
     public string? PasswordHash { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

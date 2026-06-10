@@ -249,18 +249,36 @@ public class JourneyService : IJourneyService
 
     public async Task<bool> EndJourneyAsync(Guid journeyId, EndJourneyDto dto)
     {
-        var journey = await _db.Journeys.FindAsync(journeyId);
+        var journey = await _db.Journeys.Include(j => j.User).FirstOrDefaultAsync(j => j.JourneyId == journeyId);
         if (journey != null)
         {
             var completedAt = DateTime.UtcNow;
             var effectiveEndName = !string.IsNullOrWhiteSpace(dto.EndName)
                 ? dto.EndName
                 : (!string.IsNullOrWhiteSpace(journey.EndName) ? journey.EndName : journey.StartName) ?? "Destination";
+
+            var realEndLat = dto.EndLat;
+            var realEndLng = dto.EndLng;
+
+            if ((realEndLat == 0 && realEndLng == 0) && !string.IsNullOrEmpty(journey.PathJson))
+            {
+                var path = JsonSerializer.Deserialize<List<double[]>>(journey.PathJson);
+                if (path != null && path.Count > 0)
+                {
+                    var lastPoint = path.Last();
+                    if (lastPoint.Length >= 2)
+                    {
+                        realEndLat = lastPoint[0];
+                        realEndLng = lastPoint[1];
+                    }
+                }
+            }
+
             var effectiveDistance = ResolveJourneyDistanceMeters(
                 journey,
                 dto.Distance,
-                dto.EndLat,
-                dto.EndLng);
+                realEndLat,
+                realEndLng);
             var effectiveDuration = ResolveJourneyDurationSeconds(
                 journey,
                 dto.Duration,
@@ -269,14 +287,20 @@ public class JourneyService : IJourneyService
 
             journey.Status = "completed";
             journey.EndName = effectiveEndName;
-            journey.EndLat = dto.EndLat;
-            journey.EndLng = dto.EndLng;
+            journey.EndLat = realEndLat;
+            journey.EndLng = realEndLng;
             journey.Distance = effectiveDistance;
             journey.Duration = effectiveDuration;
             journey.ShopsJson = JsonSerializer.Serialize(mergedShops);
             journey.EndTime = completedAt;
 
-            AppendPathPoint(journey, dto.EndLat, dto.EndLng);
+            AppendPathPoint(journey, realEndLat, realEndLng);
+
+            if (journey.User != null)
+            {
+                journey.User.TotalKm += (effectiveDistance / 1000.0);
+                journey.User.TotalTrips += 1;
+            }
 
             await _db.SaveChangesAsync();
             await _firestore.SyncJourneyAsync(journey);
@@ -446,22 +470,22 @@ public class JourneyService : IJourneyService
         double? endLat,
         double? endLng)
     {
+        if (endLat.HasValue && endLng.HasValue && (endLat.Value != 0 || endLng.Value != 0))
+        {
+            return CalculateDistance(journey.StartLat, journey.StartLng, endLat.Value, endLng.Value) * 1000.0;
+        }
+
+        if (journey.EndLat.HasValue && journey.EndLng.HasValue && (journey.EndLat.Value != 0 || journey.EndLng.Value != 0))
+        {
+            return CalculateDistance(journey.StartLat, journey.StartLng, journey.EndLat.Value, journey.EndLng.Value) * 1000.0;
+        }
+
         if (candidateDistance > 0)
         {
             return candidateDistance;
         }
 
-        if (journey.Distance > 0)
-        {
-            return journey.Distance;
-        }
-
-        if (endLat.HasValue && endLng.HasValue)
-        {
-            return CalculateDistance(journey.StartLat, journey.StartLng, endLat.Value, endLng.Value) * 1000;
-        }
-
-        return 0;
+        return journey.Distance;
     }
 
     private static long ResolveJourneyDurationSeconds(

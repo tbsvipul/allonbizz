@@ -16,7 +16,6 @@ public class AnalyticsService : IAnalyticsService
     private readonly IRepository<Shop> _shopRepo;
     private readonly IRepository<Offer> _offerRepo;
     private readonly IRepository<Journey> _journeyRepo;
-    private readonly IRepository<Redemption> _redemptionRepo;
     private readonly IRepository<ModerationQueueItem> _moderationRepo;
 
     public AnalyticsService(
@@ -25,7 +24,6 @@ public class AnalyticsService : IAnalyticsService
         IRepository<Shop> shopRepo,
         IRepository<Offer> offerRepo,
         IRepository<Journey> journeyRepo,
-        IRepository<Redemption> redemptionRepo,
         IRepository<ModerationQueueItem> moderationRepo)
     {
         _userRepo = userRepo;
@@ -33,7 +31,6 @@ public class AnalyticsService : IAnalyticsService
         _shopRepo = shopRepo;
         _offerRepo = offerRepo;
         _journeyRepo = journeyRepo;
-        _redemptionRepo = redemptionRepo;
         _moderationRepo = moderationRepo;
     }
 
@@ -177,7 +174,7 @@ public class AnalyticsService : IAnalyticsService
 
     public async Task<RevenueAnalyticsDto> GetRevenueAnalyticsAsync(AnalyticsRangeQueryDto? query, CancellationToken ct = default)
     {
-        var totalSavings = await _redemptionRepo.Query().SumAsync(r => r.SavedAmount ?? 0, ct);
+        var totalSavings = 0m;
         return new RevenueAnalyticsDto
         {
             TotalPlatformSavings = totalSavings,
@@ -202,13 +199,12 @@ public class AnalyticsService : IAnalyticsService
         return await _offerRepo.Query()
             .AsNoTracking()
             .Include(offer => offer.Shop)
-            .OrderByDescending(offer => offer.CurrentRedemptions)
+            .OrderByDescending(offer => offer.CreatedAt)
             .Take(10)
             .Select(offer => new TrendingAdminOfferDto
             {
                 OfferId = offer.OfferId,
                 Title = offer.Title,
-                CurrentRedemptions = offer.CurrentRedemptions,
                 ShopName = offer.Shop != null ? offer.Shop.Name : "Unknown"
             })
             .ToListAsync(ct);
@@ -274,7 +270,7 @@ public class AnalyticsService : IAnalyticsService
             "keepers" => await BuildKeeperReportAsync(dto, metrics, groupBy, ct),
             "shops" => await BuildShopReportAsync(dto, metrics, groupBy, ct),
             "journeys" => await BuildJourneyReportAsync(dto, metrics, groupBy, ct),
-            "redemptions" or "revenue" => await BuildRedemptionReportAsync(dto, metrics, groupBy, ct),
+            "revenue" => throw new NotSupportedException("Revenue dataset is not supported."),
             _ => throw new NotSupportedException($"Custom analytics dataset '{dto.Dataset}' is not supported.")
         };
     }
@@ -312,7 +308,7 @@ public class AnalyticsService : IAnalyticsService
 
     public async Task<AdminDashboardSummaryDto> GetFullDashboardAsync(CancellationToken ct = default)
     {
-        var totalSavings = await _redemptionRepo.Query().SumAsync(r => r.SavedAmount ?? 0, ct);
+        var totalSavings = 0m;
         var totalUsers = await _userRepo.Query().CountAsync(ct);
         var totalKeepers = await _keeperRepo.Query().CountAsync(ct);
         var totalShops = await _shopRepo.Query().CountAsync(ct);
@@ -324,8 +320,7 @@ public class AnalyticsService : IAnalyticsService
             TotalKeepers = totalKeepers,
             TotalShops = totalShops,
             PendingModeration = pendingModeration,
-            TotalPlatformSavings = totalSavings,
-            TotalRedemptions = await _redemptionRepo.Query().CountAsync(ct)
+            TotalPlatformSavings = totalSavings
         };
     }
 
@@ -366,9 +361,7 @@ public class AnalyticsService : IAnalyticsService
             dashboard.TotalUsers,
             dashboard.TotalKeepers,
             dashboard.TotalShops,
-            dashboard.PendingModeration,
-            dashboard.TotalPlatformSavings,
-            dashboard.TotalRedemptions
+            dashboard.TotalPlatformSavings
         };
     }
 
@@ -476,32 +469,7 @@ public class AnalyticsService : IAnalyticsService
             });
     }
 
-    private async Task<CustomAnalyticsReportDto> BuildRedemptionReportAsync(GenerateCustomReportDto dto, List<string> metrics, string? groupBy, CancellationToken ct)
-    {
-        var redemptions = await _redemptionRepo.Query()
-            .AsNoTracking()
-            .Include(redemption => redemption.Shop)
-            .ToListAsync(ct);
 
-        redemptions = redemptions
-            .Where(redemption => !dto.DateFrom.HasValue || redemption.RedeemedAt >= dto.DateFrom.Value)
-            .Where(redemption => !dto.DateTo.HasValue || redemption.RedeemedAt <= dto.DateTo.Value)
-            .Where(redemption => !TryGetFilter(dto.Filters, "status", out var status) || redemption.Status.ToString().Equals(status, StringComparison.OrdinalIgnoreCase))
-            .Where(redemption => !TryGetFilter(dto.Filters, "shop", out var shopName) || (redemption.Shop?.Name ?? "unknown").Equals(shopName, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        return BuildReport(
-            dto,
-            metrics,
-            groupBy,
-            redemptions,
-            redemption => ResolveRedemptionLabel(redemption, groupBy),
-            (rowMetrics, redemption) =>
-            {
-                IncrementMetric(rowMetrics, "count", 1);
-                IncrementMetric(rowMetrics, "total_savings", redemption.SavedAmount ?? 0);
-            });
-    }
 
     private static CustomAnalyticsReportDto BuildReport<TItem>(
         GenerateCustomReportDto dto,
@@ -591,17 +559,7 @@ public class AnalyticsService : IAnalyticsService
         };
     }
 
-    private static string ResolveRedemptionLabel(Redemption redemption, string? groupBy)
-    {
-        return groupBy switch
-        {
-            "status" => redemption.Status.ToString(),
-            "shop" => redemption.Shop?.Name ?? "unknown",
-            "day" => redemption.RedeemedAt.ToString("yyyy-MM-dd"),
-            "month" => redemption.RedeemedAt.ToString("yyyy-MM"),
-            _ => "all"
-        };
-    }
+
 
     private static string ResolveShopStatus(Shop shop)
     {

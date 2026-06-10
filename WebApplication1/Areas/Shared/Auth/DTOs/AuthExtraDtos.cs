@@ -104,6 +104,8 @@ public class KeeperRegisterRequestDto
     [StringLength(200)]
     public string BusinessName { get; set; } = string.Empty;
 
+    public string? SubmissionIntent { get; set; }
+
     [StringLength(200)]
     public string? BusinessLicense { get; set; }
 

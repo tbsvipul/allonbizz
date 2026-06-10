@@ -219,14 +219,11 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
       {isEditing && offer ? (
         <SectionCard
           title="Offer performance"
-          description="Live status and redemption context for this offer."
+          description="Live status and context for this offer."
           action={<StatusPill status={offer.status} />}
         >
           <div className="list-grid">
-            <div className="list-item">
-              <strong>{offer.redemptionCount}</strong>
-              <p className="muted-text tiny-text">Total redemptions so far</p>
-            </div>
+
             <div className="list-item">
               <strong>{offer.shopName}</strong>
               <p className="muted-text tiny-text">Assigned shop</p>

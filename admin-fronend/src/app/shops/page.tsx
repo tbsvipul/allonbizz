@@ -619,47 +619,7 @@ export default function ShopsPage() {
           />
 
           <div className="shops-hero-grid" style={{ position: 'relative' }}>
-            <div
-              style={{
-                padding: '1.1rem 1.2rem',
-                borderRadius: '22px',
-                border: '1px solid rgba(99, 102, 241, 0.14)',
-                background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%)',
-                minHeight: '118px',
-              }}
-            >
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.75rem', borderRadius: '999px', background: 'rgba(99, 102, 241, 0.14)', color: 'hsl(var(--primary))', fontWeight: 800, fontSize: '0.78rem', marginBottom: '1rem' }}>
-                <ShieldCheck size={15} />
-                Shop operations workspace
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <h1 style={{ fontSize: '1.95rem', fontWeight: 800, letterSpacing: '-0.03em' }}>Shop Directory</h1>
-                  <p style={{ marginTop: '0.5rem', color: 'hsl(var(--muted-foreground))', lineHeight: 1.6, maxWidth: '720px' }}>
-                    Review live shops, catch verification blockers quickly, and keep operational status changes clear for the rest of the admin team.
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '16px',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(148, 163, 184, 0.14)',
-                    color: 'hsl(var(--muted-foreground))',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  <Activity size={15} />
-                  Page {page} of {totalPages}
-                </div>
-              </div>
-            </div>
+            
 
             <SummaryCard
               label="Matching Shops"

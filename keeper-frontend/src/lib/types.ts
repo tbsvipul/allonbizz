@@ -66,17 +66,9 @@ export interface SessionUser extends UserProfile {
   canManage: boolean;
 }
 
-export interface RedemptionTrendPoint {
-  date: string;
-  count: number;
-}
-
 export interface KeeperDashboard {
   activeOffersCount: number;
-  totalRedemptions: number;
-  totalSalesValue: number;
   totalReviews: number;
-  redemptionTrend: RedemptionTrendPoint[];
 }
 
 export interface TrafficPoint {
@@ -93,8 +85,6 @@ export interface KeeperShopAnalytics {
   shopId: string;
   shopName: string;
   offerCount: number;
-  redemptionCount: number;
-  savings: number;
 }
 
 export interface KeeperAnalytics {
@@ -102,9 +92,6 @@ export interface KeeperAnalytics {
   activeShops: number;
   totalOffers: number;
   activeOffers: number;
-  totalRedemptions: number;
-  totalSavings: number;
-  redemptionTrend: RedemptionTrendPoint[];
   shops: KeeperShopAnalytics[];
 }
 
@@ -173,7 +160,6 @@ export interface OfferDetail {
   endDate: string;
   termsAndConditions?: string | null;
   status: string;
-  redemptionCount: number;
   imageUrl?: string | null;
   tags: string[];
   createdAt: string;
@@ -210,16 +196,6 @@ export interface CategoryTree {
   children: CategoryTree[];
 }
 
-export interface BulkOfferUploadRowError {
-  rowNumber: number;
-  message: string;
-}
-
-export interface BulkOfferUploadResult {
-  importedCount: number;
-  failedRowCount: number;
-  failedRows: BulkOfferUploadRowError[];
-}
 
 export interface KeeperNotification {
   notificationId: string;

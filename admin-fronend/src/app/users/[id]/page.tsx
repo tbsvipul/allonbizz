@@ -91,17 +91,7 @@ interface CustomerReview {
   createdAt: string;
 }
 
-interface RedemptionSummary {
-  redemptionId: string;
-  offerId: string;
-  shopId: string;
-  offerTitle: string;
-  shopName: string;
-  status: string;
-  savedAmount?: number | null;
 
-  redeemedAt: string;
-}
 
 interface KeeperDocument {
   id: string;
@@ -129,7 +119,6 @@ interface OfferSummary {
   keeperName: string;
   shopName: string;
   status: string;
-  redemptions: number;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -149,7 +138,6 @@ interface KeeperReview {
 
 interface CustomerProfile {
   journeys: JourneyHistoryItem[];
-  redemptions: RedemptionSummary[];
   reviews: CustomerReview[];
 }
 
@@ -190,7 +178,7 @@ interface AdminUserProfile {
 const getFullImageUrl = (path?: string | null) => {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
-  
+
   if (path.length > 200 && !path.includes('.')) {
     try {
       // The backend may have serialized the ASCII bytes of a PostgreSQL hex string 
@@ -213,7 +201,7 @@ const getFullImageUrl = (path?: string | null) => {
     // If it's a raw base64 string from a byte[] property
     return `data:image/png;base64,${path}`;
   }
-  
+
   try {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5247/api/v1';
     const origin = new URL(apiBaseUrl).origin;
@@ -297,7 +285,32 @@ function EmptyState({ message }: { message: string }) {
         fontSize: '0.875rem',
       }}
     >
-      {message}
+    </div>
+  );
+}
+
+function PaginationControls({ currentPage, totalItems, pageSize, onPageChange }: { currentPage: number, totalItems: number, pageSize: number, onPageChange: (p: number) => void }) {
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (totalPages <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+      <button
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        style={{ padding: '0.4rem 0.8rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, color: 'inherit' }}
+      >
+        Previous
+      </button>
+      <span style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>
+        Page {currentPage} of {totalPages}
+      </span>
+      <button
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        style={{ padding: '0.4rem 0.8rem', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, color: 'inherit' }}
+      >
+        Next
+      </button>
     </div>
   );
 }
@@ -312,6 +325,11 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<AdminUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [activityPage, setActivityPage] = useState(1);
+  const [journeyPage, setJourneyPage] = useState(1);
+  const [loginPage, setLoginPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   const fetchProfile = useCallback(async () => {
     if (!userId) {
@@ -541,7 +559,7 @@ export default function UserProfilePage() {
                 <EmptyState message="No recent activity recorded for this account." />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  {activity.recentActivities.map((item, index) => (
+                  {activity.recentActivities.slice((activityPage - 1) * PAGE_SIZE, activityPage * PAGE_SIZE).map((item, index) => (
                     <div
                       key={`${item.type}-${item.timestamp}-${index}`}
                       style={{
@@ -563,6 +581,7 @@ export default function UserProfilePage() {
                       </p>
                     </div>
                   ))}
+                  <PaginationControls currentPage={activityPage} totalItems={activity.recentActivities.length} pageSize={PAGE_SIZE} onPageChange={setActivityPage} />
                 </div>
               )}
             </motion.div>
@@ -577,7 +596,7 @@ export default function UserProfilePage() {
                     <EmptyState message="No journeys found for this customer." />
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      {customer.journeys.map((journey) => (
+                      {customer.journeys.slice((journeyPage - 1) * PAGE_SIZE, journeyPage * PAGE_SIZE).map((journey) => (
                         <div key={journey.journeyId} style={{ padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                             <div>
@@ -620,41 +639,12 @@ export default function UserProfilePage() {
                           )}
                         </div>
                       ))}
+                      <PaginationControls currentPage={journeyPage} totalItems={customer.journeys.length} pageSize={PAGE_SIZE} onPageChange={setJourneyPage} />
                     </div>
                   )}
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card" style={{ padding: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Ticket size={18} /> Redemptions
-                  </h3>
-                  {customer.redemptions.length === 0 ? (
-                    <EmptyState message="No offer redemptions recorded." />
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      {customer.redemptions.map((redemption) => (
-                        <div key={redemption.redemptionId} style={{ padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.03)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div>
-                              <p style={{ fontWeight: 700 }}>{redemption.offerTitle}</p>
-                              <p style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.25rem' }}>{redemption.shopName}</p>
-                            </div>
-                            <span style={{ padding: '0.3rem 0.7rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, ...getStatusStyle(redemption.status) }}>
-                              {redemption.status}
-                            </span>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
-                            <div>
-                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Redeemed at</p>
-                              <p style={{ fontWeight: 600 }}>{formatDateTime(redemption.redeemedAt)}</p>
-                            </div>
 
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card" style={{ padding: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -695,7 +685,8 @@ export default function UserProfilePage() {
             {keeper && (
               <>
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card" style={{ padding: '1.5rem' }}>
-                  <style dangerouslySetInnerHTML={{ __html: `
+                  <style dangerouslySetInnerHTML={{
+                    __html: `
                     .hover-overlay {
                       opacity: 0 !important;
                       transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -945,10 +936,7 @@ export default function UserProfilePage() {
                               <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>End date</p>
                               <p style={{ fontWeight: 600 }}>{formatDate(offer.endDate)}</p>
                             </div>
-                            <div>
-                              <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>Redemptions</p>
-                              <p style={{ fontWeight: 600 }}>{offer.redemptions}</p>
-                            </div>
+
                           </div>
                         </div>
                       ))}
@@ -1037,7 +1025,7 @@ export default function UserProfilePage() {
                 <EmptyState message="No login history entries are available." />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  {loginHistory.map((entry, index) => (
+                  {loginHistory.slice((loginPage - 1) * PAGE_SIZE, loginPage * PAGE_SIZE).map((entry, index) => (
                     <div key={`${entry.loginAt}-${entry.ipAddress}-${index}`} style={{ padding: '0.95rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.03)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                         <p style={{ fontWeight: 700 }}>{formatDateTime(entry.loginAt)}</p>
@@ -1054,6 +1042,7 @@ export default function UserProfilePage() {
                       )}
                     </div>
                   ))}
+                  <PaginationControls currentPage={loginPage} totalItems={loginHistory.length} pageSize={PAGE_SIZE} onPageChange={setLoginPage} />
                 </div>
               )}
             </motion.div>

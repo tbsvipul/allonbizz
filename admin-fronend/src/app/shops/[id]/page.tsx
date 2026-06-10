@@ -428,7 +428,8 @@ export default function ShopDetailsPage() {
   }
 
   return (
-    <DashboardLayout>
+    <>
+      <DashboardLayout>
       <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
         
         {/* CSS Embedded Styles */}
@@ -1159,6 +1160,8 @@ export default function ShopDetailsPage() {
             </motion.div>
           </div>
         </div>
+      </div>
+    </DashboardLayout>
 
         {/* Fullscreen Base64 Gallery Lightbox Modal */}
         <AnimatePresence>
@@ -1209,17 +1212,17 @@ export default function ShopDetailsPage() {
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.96 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                onClick={(e) => e.stopPropagation()}
                 style={{ 
                   width: '100%', 
                   height: '100%', 
-                  padding: '5rem 2rem 2rem 2rem',
+                  padding: '2rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
                 <img 
+                  onClick={(e) => e.stopPropagation()}
                   src={activeLightboxImage} 
                   alt="Shop Preview Panel" 
                   style={{ 
@@ -1340,8 +1343,6 @@ export default function ShopDetailsPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-      </div>
-    </DashboardLayout>
+    </>
   );
 }

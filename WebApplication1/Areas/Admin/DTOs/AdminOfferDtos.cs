@@ -15,7 +15,6 @@ public class AdminOfferListItemDto
     public string KeeperName { get; set; } = string.Empty;
     public string ShopName { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
-    public int Redemptions { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public DateTime CreatedAt { get; set; }

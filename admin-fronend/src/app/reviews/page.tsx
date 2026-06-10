@@ -4,6 +4,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
+import CustomSelect from '@/components/CustomSelect';
 import { useAuth } from '@/context/AuthContext';
 import { Star, XCircle, CheckCircle2, User, Store } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +47,8 @@ function statusColor(status: string) {
 export default function ReviewsPage() {
   const { hasPermission } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState<{ averageRating: number; totalReviews: number } | null>(null);
+  const [shopsStats, setShopsStats] = useState<{ shopId: string; shopName: string; averageRating: number; totalReviews: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [notice, setNotice] = useState<Notice>(null);
@@ -54,10 +57,20 @@ export default function ReviewsPage() {
   const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/admin/reviews', {
-        params: { status: statusFilter || undefined, pageNumber: 1, pageSize: 100 },
-      });
-      setReviews(unwrapPagedResponse<Review>(response).data);
+      const [reviewsResponse, statsResponse, shopsStatsResponse] = await Promise.all([
+        api.get('/admin/reviews', {
+          params: { status: statusFilter || undefined, pageNumber: 1, pageSize: 100 },
+        }),
+        api.get('/admin/reviews/stats'),
+        api.get('/admin/reviews/shops-stats')
+      ]);
+      setReviews(unwrapPagedResponse<Review>(reviewsResponse).data);
+      if (statsResponse.data?.data) {
+        setStats(statsResponse.data.data);
+      }
+      if (shopsStatsResponse.data?.data) {
+        setShopsStats(shopsStatsResponse.data.data);
+      }
     } catch (err) {
       console.error('Failed to fetch reviews', err);
       setNotice({ tone: 'error', message: getApiErrorMessage(err, 'Failed to fetch reviews.') });
@@ -107,17 +120,46 @@ export default function ReviewsPage() {
               Reviews publish immediately. Use this page to hide or restore visibility when moderation is needed.
             </p>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            className="glass-card"
-            style={{ padding: '0.75rem 1.25rem', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', fontWeight: 600, outline: 'none' }}
-          >
-            <option value="">All Reviews</option>
-            <option value="Published">Published</option>
-            <option value="Hidden">Hidden</option>
-          </select>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {stats && (
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1.25rem', minWidth: '120px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#f59e0b' }}>
+                  <Star size={18} fill="currentColor" />
+                  <strong style={{ fontSize: '1.15rem' }}>{stats.averageRating.toFixed(1)}</strong>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>{stats.totalReviews} total review{stats.totalReviews === 1 ? '' : 's'}</span>
+              </div>
+            )}
+            <div style={{ minWidth: '160px' }}>
+              <CustomSelect
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value)}
+                options={[
+                  { value: '', label: 'All Reviews' },
+                  { value: 'Published', label: 'Published' },
+                  { value: 'Hidden', label: 'Hidden' }
+                ]}
+              />
+            </div>
+          </div>
         </div>
+
+        {shopsStats.length > 0 && (
+          <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'thin' }}>
+            {shopsStats.map(shop => (
+              <div key={shop.shopId} className="glass-card" style={{ padding: '1rem', minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shop.shopName}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#f59e0b' }}>
+                    <Star size={16} fill="currentColor" />
+                    <strong style={{ fontSize: '1rem' }}>{shop.averageRating.toFixed(1)}</strong>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>{shop.totalReviews} review{shop.totalReviews === 1 ? '' : 's'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {notice && (
           <div

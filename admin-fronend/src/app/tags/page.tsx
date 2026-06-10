@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, X, Check, XCircle, Hash, Upload, Tag as TagIcon, Store, Settings } from 'lucide-react';
+import { Plus, X, Check, XCircle, Hash, Upload, Tag as TagIcon, Store, Settings, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { unwrapApiData } from '@/lib/api-response';
@@ -46,7 +46,12 @@ export default function TagsPage() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 12;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchTags = async () => {
     setLoading(true);
@@ -150,8 +155,14 @@ export default function TagsPage() {
 
   const canSaveTag = currentTag ? hasPermission(PERMISSIONS.tagsEdit) : hasPermission(PERMISSIONS.tagsCreate);
 
-  const totalPages = Math.ceil(tags.length / itemsPerPage);
-  const currentTags = tags.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredTags = tags.filter((tag) => {
+    const search = searchQuery.toLowerCase();
+    const nameMatch = tag.name ? tag.name.toLowerCase().includes(search) : false;
+    const typeMatch = tag.type ? tag.type.toLowerCase().includes(search) : false;
+    return nameMatch || typeMatch;
+  });
+  const totalPages = Math.ceil(filteredTags.length / itemsPerPage);
+  const currentTags = filteredTags.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <DashboardLayout>
@@ -161,12 +172,32 @@ export default function TagsPage() {
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>Tag Management</h1>
             <p style={{ color: 'hsl(var(--muted-foreground))' }}>Manage offer and shop tags used for discovery and filtering.</p>
           </div>
-          {hasPermission(PERMISSIONS.tagsCreate) && (
-            <button onClick={() => openEditor()} className="premium-gradient" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', color: 'white', padding: '0.75rem 1.5rem', fontWeight: 600 }}>
-              <Plus size={18} />
-              Add Tag
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--muted-foreground))' }} />
+              <input 
+                type="text" 
+                placeholder="Search tags..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  padding: '0.75rem 1rem 0.75rem 2.8rem',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid hsl(var(--border))',
+                  background: 'rgba(255,255,255,0.03)',
+                  outline: 'none',
+                  minWidth: '260px',
+                  color: 'var(--foreground)'
+                }}
+              />
+            </div>
+            {hasPermission(PERMISSIONS.tagsCreate) && (
+              <button onClick={() => openEditor()} className="premium-gradient" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', color: 'white', padding: '0.75rem 1.5rem', fontWeight: 600, borderRadius: 'var(--radius)' }}>
+                <Plus size={18} />
+                Add Tag
+              </button>
+            )}
+          </div>
         </div>
 
         {notice && (
@@ -231,9 +262,11 @@ export default function TagsPage() {
             </motion.div>
           ))}
 
-          {tags.length === 0 && !loading && (
-            <div className="flex-center glass-card" style={{ padding: '4rem', gridColumn: '1 / -1' }}>
-              <p style={{ color: 'hsl(var(--muted-foreground))' }}>No tags found.</p>
+          {filteredTags.length === 0 && !loading && (
+            <div className="flex-center glass-card" style={{ padding: '4rem', gridColumn: '1 / -1', textAlign: 'center' }}>
+              <p style={{ color: 'hsl(var(--muted-foreground))' }}>
+                {tags.length === 0 ? 'No tags found.' : 'No tags match your search query.'}
+              </p>
             </div>
           )}
 

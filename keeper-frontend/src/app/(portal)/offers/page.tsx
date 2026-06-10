@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChangeEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { InlineNotice } from '@/components/InlineNotice';
@@ -9,19 +9,16 @@ import { SectionCard } from '@/components/SectionCard';
 import { StatusPill } from '@/components/StatusPill';
 import api from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
-import { BulkOfferUploadResult, OfferDetail, ShopSummary } from '@/lib/types';
+import { OfferDetail, ShopSummary } from '@/lib/types';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
 import { useAuth } from '@/context/AuthContext';
 
 export default function OffersPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [offers, setOffers] = useState<OfferDetail[]>([]);
   const [shops, setShops] = useState<ShopSummary[]>([]);
-  const [file, setFile] = useState<File | null>(null);
-  const [uploadResult, setUploadResult] = useState<BulkOfferUploadResult | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -57,46 +54,11 @@ export default function OffersPage() {
     };
   }, []);
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    setFile(event.target.files?.[0] || null);
-  }
-
-  async function handleUpload() {
-    if (!file) {
-      setError('Choose a CSV file before uploading.');
-      return;
-    }
-
-    setUploading(true);
-    setError('');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await api.post('/keeper/offer/bulk', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setUploadResult(unwrapApiData<BulkOfferUploadResult>(response));
-
-      const refreshed = await api.get('/keeper/offers');
-      setOffers(unwrapApiData<OfferDetail[]>(refreshed));
-      setFile(null);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Bulk upload failed.'));
-    } finally {
-      setUploading(false);
-    }
-  }
-
   return (
     <div className="field-stack">
       <PageHeader
         title="Offers"
-        description="Create campaigns, assign them to the right shop, and bulk-load seasonal promotions when needed."
+        description="Create campaigns and assign them to the right shop."
         actions={
           loading ? undefined : user?.canManage && shops.length > 0 ? (
             <Link href="/offers/new" className="button">
@@ -114,63 +76,22 @@ export default function OffersPage() {
 
       {error ? <InlineNotice tone="error" message={error} /> : null}
 
-      {user?.canManage && shops.length > 0 ? (
-        <SectionCard title="Bulk upload CSV" description="Expected columns: title, description, discountPercentage, discountAmount, startDate, endDate, shopId, termsAndConditions (optional).">
-          <div className="button-row">
-            <input type="file" accept=".csv" onChange={handleFileChange} />
-            <button type="button" className="button-secondary" onClick={() => void handleUpload()} disabled={uploading || !file}>
-              {uploading ? 'Uploading...' : 'Upload CSV'}
-            </button>
-          </div>
-
-          {uploadResult ? (
-            <div className="field-stack" style={{ marginTop: '1rem' }}>
-              <InlineNotice
-                tone={uploadResult.failedRowCount > 0 ? 'info' : 'success'}
-                message={`Imported ${uploadResult.importedCount} offer(s). ${uploadResult.failedRowCount} row(s) failed validation.`}
-              />
-
-              {uploadResult.failedRows.length > 0 ? (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Row</th>
-                        <th>Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {uploadResult.failedRows.map((row) => (
-                        <tr key={`${row.rowNumber}-${row.message}`}>
-                          <td>{row.rowNumber}</td>
-                          <td>{row.message}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </SectionCard>
-      ) : null}
-
       {loading ? (
         <p className="muted-text">Loading offers...</p>
       ) : user?.canManage && shops.length === 0 ? (
         <SectionCard
           title="Create a shop before creating offers"
-          description="Offers must belong to one of your shops so redemption and analytics stay linked to a real location."
+          description="Offers must belong to one of your shops so analytics stay linked to a real location."
           action={
             <Link href="/shops/new" className="button">
               Create shop
             </Link>
           }
         >
-          <EmptyState title="No shops yet" message="Add your first shop, then return here to launch offers and bulk uploads." />
+          <EmptyState title="No shops yet" message="Add your first shop, then return here to launch offers." />
         </SectionCard>
       ) : offers.length === 0 ? (
-        <EmptyState title="No offers yet" message="Launch the first campaign to start generating redemptions and dashboard activity." />
+        <EmptyState title="No offers yet" message="Launch the first campaign to start generating dashboard activity." />
       ) : (
         <section className="table-card">
           <div className="table-wrap">
@@ -181,7 +102,6 @@ export default function OffersPage() {
                   <th>Shop</th>
                   <th>Status</th>
                   <th>Window</th>
-                  <th>Redemptions</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -204,7 +124,6 @@ export default function OffersPage() {
                         <span className="muted-text tiny-text">to {formatDateTime(offer.endDate)}</span>
                       </div>
                     </td>
-                    <td>{offer.redemptionCount}</td>
                     <td>
                       <Link href={`/offers/${offer.offerId}`} className="button-ghost">
                         Edit offer

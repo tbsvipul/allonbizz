@@ -26,7 +26,6 @@ public class AppDbContext : DbContext
     public DbSet<KeeperReviewMessage> KeeperReviewMessages { get; set; } = null!;
     public DbSet<KeeperAuditSchedule> KeeperAuditSchedules { get; set; } = null!;
     public DbSet<Offer> Offers { get; set; } = null!;
-    public DbSet<Redemption> Redemptions { get; set; } = null!;
     public DbSet<RouteRecord> Routes { get; set; } = null!;
     public DbSet<Favourite> Favourites { get; set; } = null!;
     public DbSet<Review> Reviews { get; set; } = null!;

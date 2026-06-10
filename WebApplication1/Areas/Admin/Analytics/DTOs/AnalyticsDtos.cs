@@ -32,7 +32,6 @@ public class TrendingAdminOfferDto
 {
     public Guid OfferId { get; set; }
     public string Title { get; set; } = string.Empty;
-    public int CurrentRedemptions { get; set; }
     public string ShopName { get; set; } = string.Empty;
 }
 

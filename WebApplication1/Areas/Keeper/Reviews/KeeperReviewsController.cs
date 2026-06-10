@@ -33,6 +33,24 @@ public class KeeperReviewsController : ControllerBase
         return Ok(ApiResponse<PagedResponse<ReviewDto>>.Ok(result));
     }
 
+    /// <summary>GET /api/v1/keeper/reviews/stats — Get average rating for my shops.</summary>
+    [HttpGet("reviews/stats")]
+    public async Task<IActionResult> GetMyReviewStats([FromQuery] Guid? shopId)
+    {
+        var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
+        var result = await _reviewService.GetReviewStatsAsync(shopId, keeperId: keeper.KeeperId);
+        return Ok(ApiResponse<ReviewStatsDto>.Ok(result));
+    }
+
+    /// <summary>GET /api/v1/keeper/reviews/shops-stats — Get average rating for each of my shops.</summary>
+    [HttpGet("reviews/shops-stats")]
+    public async Task<IActionResult> GetMyShopsReviewStats()
+    {
+        var keeper = await _keeperContextService.GetRequiredKeeperAsync(User.GetUserId(), HttpContext.RequestAborted);
+        var result = await _reviewService.GetShopsReviewStatsAsync(keeperId: keeper.KeeperId);
+        return Ok(ApiResponse<List<ShopStatsDto>>.Ok(result));
+    }
+
     /// <summary>POST /api/v1/keeper/review/{reviewId}/reply — Reply to a review.</summary>
     [HttpPost("review/{reviewId:guid}/reply")]
     public async Task<IActionResult> ReplyToReview(Guid reviewId, [FromBody] ReviewReplyDto dto)

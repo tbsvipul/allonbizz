@@ -36,16 +36,7 @@ public class KeeperProfileDto
 public class KeeperDashboardDto
 {
     public int ActiveOffersCount { get; set; }
-    public int TotalRedemptions { get; set; }
-    public decimal TotalSalesValue { get; set; } // Estimated
     public int TotalReviews { get; set; }
-    public List<RedemptionTrendDto> RedemptionTrend { get; set; } = new();
-}
-
-public class RedemptionTrendDto
-{
-    public DateTime Date { get; set; }
-    public int Count { get; set; }
 }
 
 public class KeeperTrafficDto
@@ -66,9 +57,6 @@ public class KeeperAnalyticsDto
     public int ActiveShops { get; set; }
     public int TotalOffers { get; set; }
     public int ActiveOffers { get; set; }
-    public int TotalRedemptions { get; set; }
-    public decimal TotalSavings { get; set; }
-    public List<RedemptionTrendDto> RedemptionTrend { get; set; } = new();
     public List<KeeperShopAnalyticsDto> Shops { get; set; } = new();
 }
 
@@ -77,6 +65,5 @@ public class KeeperShopAnalyticsDto
     public Guid ShopId { get; set; }
     public string ShopName { get; set; } = string.Empty;
     public int OfferCount { get; set; }
-    public int RedemptionCount { get; set; }
     public decimal Savings { get; set; }
 }

@@ -40,12 +40,4 @@ public class OfferDetailDto
     public List<string> Tags { get; set; } = new();
 }
 
-public class RedemptionHistoryDto
-{
-    public Guid RedemptionId { get; set; }
-    public string OfferTitle { get; set; } = string.Empty;
-    public string ShopName { get; set; } = string.Empty;
-    public decimal SavedAmount { get; set; }
-    public DateTime RedeemedAt { get; set; }
-}
 

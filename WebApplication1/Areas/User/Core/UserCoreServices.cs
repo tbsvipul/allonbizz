@@ -26,25 +26,9 @@ public class UserProfileService : IUserProfileService
         return savedAmount ?? offerDiscountAmount ?? 0m;
     }
 
-    private IQueryable<UserSavingsRow> BuildUserSavingsQuery(Guid userId)
+    private Task<decimal> GetTotalSavedAsync(Guid userId)
     {
-        return
-            from redemption in _db.Redemptions.AsNoTracking()
-            join offer in _db.Offers.AsNoTracking()
-                on redemption.OfferId equals offer.OfferId into offerGroup
-            from offer in offerGroup.DefaultIfEmpty()
-            where redemption.UserId == userId
-            select new UserSavingsRow
-            {
-                SavedAmount = redemption.SavedAmount,
-                OfferDiscountAmount = offer != null ? offer.DiscountAmount : null
-            };
-    }
-
-    private async Task<decimal> GetTotalSavedAsync(Guid userId)
-    {
-        var savingsRows = await BuildUserSavingsQuery(userId).ToListAsync();
-        return savingsRows.Sum(item => ResolveSavings(item.SavedAmount, item.OfferDiscountAmount));
+        return Task.FromResult(0m);
     }
 
     public async Task<UserProfileDto> GetProfileAsync(Guid userId)
@@ -105,12 +89,13 @@ public class UserProfileService : IUserProfileService
 
     public async Task<UserHomeDto> GetHomeDataAsync(Guid userId, double? lat, double? lng)
     {
+        var now = DateTime.UtcNow;
         var trendingOffers = await _db.Offers
             .AsNoTracking()
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
-            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
+            .Where(o => o.IsActive && o.Status == OfferStatus.Active && o.StartDate <= now && o.EndDate >= now && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .ToListAsync();
@@ -151,7 +136,7 @@ public class UserProfileService : IUserProfileService
                     .Where(s => s.IsActive && s.IsVerified && s.Latitude.HasValue && s.Longitude.HasValue && s.NotificationRadius.HasValue)
                     .ToListAsync();
 
-                var now = DateTime.UtcNow;
+                // var now = DateTime.UtcNow; // defined at start of method
                 var cutoff = now.AddHours(-24);
 
                 foreach (var s in shopsInRange) 
@@ -358,12 +343,13 @@ public class RouteService : IRouteService
 
     public async Task<List<OfferSummaryDto>> GetOffersAlongRouteAsync(Guid routeId)
     {
+        var now = DateTime.UtcNow;
         var offers = await _db.Offers
             .AsNoTracking()
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
-            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
+            .Where(o => o.IsActive && o.Status == OfferStatus.Active && o.StartDate <= now && o.EndDate >= now && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified)
             .Take(100)
             .ToListAsync();
 
@@ -425,12 +411,13 @@ public class UserOfferService : IOfferService
 
     public async Task<List<OfferSummaryDto>> GetNearbyOffersAsync(double? lat, double? lng, double? radiusKm = null, string? category = null, IReadOnlyCollection<string>? tags = null)
     {
+        var now = DateTime.UtcNow;
         var query = _db.Offers
             .AsNoTracking()
             .Include(o => o.Shop)
             .ThenInclude(shop => shop!.Category)
             .Include(o => o.Category)
-            .Where(o => o.IsActive && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified);
+            .Where(o => o.IsActive && o.Status == OfferStatus.Active && o.StartDate <= now && o.EndDate >= now && o.Shop != null && o.Shop.IsActive && o.Shop.IsVerified);
             
         if (!string.IsNullOrEmpty(category))
         {
@@ -563,55 +550,7 @@ public class UserOfferService : IOfferService
         };
     }
 
-    public async Task<Guid> RedeemOfferAsync(Guid offerId, Guid userId)
-    {
-        var offer = await _db.Offers
-            .Include(item => item.Shop)
-            .FirstOrDefaultAsync(item => item.OfferId == offerId)
-            ?? throw new KeyNotFoundException($"Offer {offerId} not found.");
-        var now = DateTime.UtcNow;
 
-        if (!offer.IsActive || offer.Status != OfferStatus.Active)
-        {
-            throw new InvalidOperationException("This offer is not active.");
-        }
-
-        if (offer.StartDate > now)
-        {
-            throw new InvalidOperationException("This offer is not available yet.");
-        }
-
-        if (offer.EndDate < now)
-        {
-            throw new InvalidOperationException("This offer has expired.");
-        }
-
-        if (offer.Shop == null || !offer.Shop.IsActive || !offer.Shop.IsVerified)
-        {
-            throw new InvalidOperationException("This shop is not available for redemption.");
-        }
-
-        if (offer.MaxRedemptions > 0 && offer.CurrentRedemptions >= offer.MaxRedemptions)
-        {
-            throw new InvalidOperationException("This offer has reached its redemption limit.");
-        }
-
-        var redemption = new Redemption 
-        { 
-            UserId = userId, 
-            OfferId = offerId, 
-            ShopId = offer.ShopId,
-            SavedAmount = offer.DiscountAmount,
-            RedeemedAt = now,
-            Status = Models.Enums.RedemptionStatus.Redeemed
-        };
-
-        offer.CurrentRedemptions += 1;
-        offer.UpdatedAt = now;
-        _db.Redemptions.Add(redemption);
-        await _db.SaveChangesAsync();
-        return redemption.RedemptionId;
-    }
 
     public async Task SaveOfferAsync(Guid offerId, Guid userId)
     {
@@ -650,48 +589,12 @@ public class UserHistoryService : IUserHistoryService
     private readonly AppDbContext _db;
     public UserHistoryService(AppDbContext db) => _db = db;
 
-    private static decimal ResolveSavings(decimal? savedAmount, decimal? offerDiscountAmount)
+    public Task<UserSavingsSummaryDto> GetSavingsSummaryAsync(Guid userId)
     {
-        return savedAmount ?? offerDiscountAmount ?? 0m;
-    }
-
-    public async Task<List<RedemptionHistoryDto>> GetRedemptionHistoryAsync(Guid userId)
-    {
-        return await _db.Redemptions
-            .AsNoTracking()
-            .Include(r => r.Offer)
-            .Where(r => r.UserId == userId)
-            .OrderByDescending(r => r.RedeemedAt)
-            .Select(r => new RedemptionHistoryDto { RedemptionId = r.RedemptionId, OfferTitle = r.Offer != null ? r.Offer.Title : "Unknown Offer" })
-            .ToListAsync();
-    }
-
-    public async Task<UserSavingsSummaryDto> GetSavingsSummaryAsync(Guid userId)
-    {
-        var savingsRows = await (
-            from redemption in _db.Redemptions.AsNoTracking()
-            join offer in _db.Offers.AsNoTracking()
-                on redemption.OfferId equals offer.OfferId into offerGroup
-            from offer in offerGroup.DefaultIfEmpty()
-            where redemption.UserId == userId
-            select new
-            {
-                redemption.SavedAmount,
-                OfferDiscountAmount = offer != null ? offer.DiscountAmount : null
-            }
-        ).ToListAsync();
-        var totalRedemptions = await _db.Redemptions
-            .AsNoTracking()
-            .CountAsync(r => r.UserId == userId);
-
-        var totalSaved = savingsRows.Sum(item =>
-            ResolveSavings(item.SavedAmount, item.OfferDiscountAmount));
-
-        return new UserSavingsSummaryDto
+        return Task.FromResult(new UserSavingsSummaryDto
         {
-            TotalSaved = totalSaved,
-            TotalRedemptions = totalRedemptions
-        };
+            TotalSaved = 0
+        });
     }
 }
 

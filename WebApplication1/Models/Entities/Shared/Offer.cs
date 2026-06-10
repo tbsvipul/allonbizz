@@ -23,14 +23,11 @@ public class Offer
     public List<string> Tags { get; set; } = new();
 
     public bool IsFlashSale { get; set; }
-    public string? RedemptionInstructions { get; set; }
     public int? StockQuantity { get; set; }
     public TimeSpan? AvailableFromTime { get; set; }
     public TimeSpan? AvailableToTime { get; set; }
     public Guid? CategoryId { get; set; }
     public OfferStatus Status { get; set; } = OfferStatus.Active;
-    public int MaxRedemptions { get; set; }
-    public int CurrentRedemptions { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public bool IsActive { get; set; } = true;

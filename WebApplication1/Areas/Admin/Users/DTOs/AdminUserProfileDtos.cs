@@ -16,7 +16,6 @@ public class AdminUserProfileDto
 public class CustomerUserProfileDto
 {
     public List<JourneyHistoryDto> Journeys { get; set; } = new();
-    public List<UserRedemptionSummaryDto> Redemptions { get; set; } = new();
     public List<ReviewDto> Reviews { get; set; } = new();
 }
 
@@ -36,15 +35,3 @@ public class KeeperUserProfileDto
     public List<AdminReviewSummaryDto> ShopReviews { get; set; } = new();
 }
 
-public class UserRedemptionSummaryDto
-{
-    public Guid RedemptionId { get; set; }
-    public Guid OfferId { get; set; }
-    public Guid ShopId { get; set; }
-    public string OfferTitle { get; set; } = string.Empty;
-    public string ShopName { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-    public decimal? SavedAmount { get; set; }
-
-    public DateTime RedeemedAt { get; set; }
-}

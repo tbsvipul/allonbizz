@@ -5,6 +5,7 @@ using allonbiz.AdminAPI.Services.Interfaces;
 using allonbiz.AdminAPI.Filters;
 using allonbiz.AdminAPI.Constants;
 using allonbiz.AdminAPI.DTOs.Admin;
+using allonbiz.AdminAPI.DTOs.Users;
 
 namespace allonbiz.AdminAPI.Controllers;
 
@@ -14,7 +15,12 @@ namespace allonbiz.AdminAPI.Controllers;
 public class AdminReviewsController : ControllerBase
 {
     private readonly IAdminReviewService _reviewService;
-    public AdminReviewsController(IAdminReviewService reviewService) => _reviewService = reviewService;
+    private readonly IReviewService _platformReviewService;
+    public AdminReviewsController(IAdminReviewService reviewService, IReviewService platformReviewService)
+    {
+        _reviewService = reviewService;
+        _platformReviewService = platformReviewService;
+    }
 
     [HttpGet]
     [RequirePermission(Permissions.ModerationView)]
@@ -22,6 +28,22 @@ public class AdminReviewsController : ControllerBase
     {
         var result = await _reviewService.GetReviewsAsync(query);
         return Ok(ApiResponse<PagedResponse<AdminReviewSummaryDto>>.Ok(result));
+    }
+
+    [HttpGet("stats")]
+    [RequirePermission(Permissions.ModerationView)]
+    public async Task<IActionResult> GetReviewStats([FromQuery] Guid? shopId)
+    {
+        var result = await _platformReviewService.GetReviewStatsAsync(shopId);
+        return Ok(ApiResponse<ReviewStatsDto>.Ok(result));
+    }
+
+    [HttpGet("shops-stats")]
+    [RequirePermission(Permissions.ModerationView)]
+    public async Task<IActionResult> GetShopsReviewStats()
+    {
+        var result = await _platformReviewService.GetShopsReviewStatsAsync();
+        return Ok(ApiResponse<List<ShopStatsDto>>.Ok(result));
     }
 
     [HttpPut("{reviewId:guid}/status")]

@@ -159,58 +159,16 @@ public static class DatabaseMigrationBootstrapper
             """,
             ct);
 
-        var normalizedRedemptionSavings = await db.Database.ExecuteSqlRawAsync(
-            """
-            UPDATE "Redemptions" AS r
-            SET "SavedAmount" = o."DiscountAmount"
-            FROM "Offers" AS o
-            WHERE r."OfferId" = o."OfferId"
-              AND r."SavedAmount" IS NULL
-              AND o."DiscountAmount" IS NOT NULL;
-            """,
-            ct);
-
-        var synchronizedOfferRedemptions = await db.Database.ExecuteSqlRawAsync(
-            """
-            UPDATE "Offers" AS o
-            SET "CurrentRedemptions" = COALESCE(redemption_counts."RedeemedCount", 0)
-            FROM (
-                SELECT "OfferId", COUNT(*)::integer AS "RedeemedCount"
-                FROM "Redemptions"
-                WHERE "Status" = 1
-                GROUP BY "OfferId"
-            ) AS redemption_counts
-            WHERE o."OfferId" = redemption_counts."OfferId"
-              AND o."CurrentRedemptions" <> redemption_counts."RedeemedCount";
-            """,
-            ct);
-
-        synchronizedOfferRedemptions += await db.Database.ExecuteSqlRawAsync(
-            """
-            UPDATE "Offers" AS o
-            SET "CurrentRedemptions" = 0
-            WHERE o."CurrentRedemptions" <> 0
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM "Redemptions" AS r
-                  WHERE r."OfferId" = o."OfferId"
-                    AND r."Status" = 1
-              );
-            """,
-            ct);
-
-        if (repairedSuperAdmins > 0 || mediaRepair.NormalizedColumns > 0 || mediaRepair.FallbackRows > 0 || repairedNotifications > 0 || publishedReviews > 0 || normalizedShopArrays > 0 || normalizedRedemptionSavings > 0 || synchronizedOfferRedemptions > 0)
+        if (repairedSuperAdmins > 0 || mediaRepair.NormalizedColumns > 0 || mediaRepair.FallbackRows > 0 || repairedNotifications > 0 || publishedReviews > 0 || normalizedShopArrays > 0)
         {
             logger?.LogWarning(
-                "Repaired legacy runtime data. Super admins fixed: {SuperAdminsFixed}, media columns normalized: {NormalizedColumns}, binary fallback rows: {FallbackRows}, notifications fixed: {NotificationsFixed}, pending reviews published: {PublishedReviews}, shop array columns normalized: {NormalizedShopArrays}, redemption savings normalized: {NormalizedRedemptionSavings}, offer redemption counters synchronized: {SynchronizedOfferRedemptions}.",
+                "Repaired legacy runtime data. Super admins fixed: {SuperAdminsFixed}, media columns normalized: {NormalizedColumns}, binary fallback rows: {FallbackRows}, notifications fixed: {NotificationsFixed}, pending reviews published: {PublishedReviews}, shop array columns normalized: {NormalizedShopArrays}.",
                 repairedSuperAdmins,
                 mediaRepair.NormalizedColumns,
                 mediaRepair.FallbackRows,
                 repairedNotifications,
                 publishedReviews,
-                normalizedShopArrays,
-                normalizedRedemptionSavings,
-                synchronizedOfferRedemptions);
+                normalizedShopArrays);
         }
     }
 

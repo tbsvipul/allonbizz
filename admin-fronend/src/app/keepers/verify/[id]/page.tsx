@@ -363,17 +363,17 @@ function ImagePreviewModal({ image, onClose }: { image: ImagePreview; onClose: (
           initial={{ scale: 0.96 }}
           animate={{ scale: 1 }}
           exit={{ scale: 0.96 }}
-          onClick={(event) => event.stopPropagation()}
           style={{
             width: '100%',
             height: '100%',
-            padding: '5rem 2rem 2rem 2rem',
+            padding: '2rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
           <img
+            onClick={(event) => event.stopPropagation()}
             src={image.src}
             alt={image.title}
             style={{
@@ -583,7 +583,8 @@ export default function KeeperVerificationDetailPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
+      <DashboardLayout>
       <style dangerouslySetInnerHTML={{ __html: '.keeper-image-overlay:hover, button:hover .keeper-image-overlay { opacity: 1 !important; }' }} />
 
       <div className="animate-fade-in">
@@ -1049,7 +1050,8 @@ export default function KeeperVerificationDetailPage() {
         )}
       </div>
 
+      </DashboardLayout>
       <ImagePreviewModal image={selectedImage} onClose={() => setSelectedImage(null)} />
-    </DashboardLayout>
+    </>
   );
 }

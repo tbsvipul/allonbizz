@@ -15,5 +15,4 @@ public class ChatThreadDto
 public class UserSavingsSummaryDto
 {
     public decimal TotalSaved { get; set; }
-    public int TotalRedemptions { get; set; }
 }

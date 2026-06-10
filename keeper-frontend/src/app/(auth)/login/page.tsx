@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-import api from '@/lib/api';
+import api, { clearStoredSession } from '@/lib/api';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -21,10 +21,12 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     setError('');
+    clearStoredSession();
 
     try {
+      const trimmedEmail = email.trim();
       const response = await api.post('/auth/user-login', {
-        email: email.trim(),
+        email: trimmedEmail,
         password,
       });
 
@@ -32,14 +34,21 @@ export default function LoginPage() {
         accessToken: string;
         refreshToken: string;
         role: string;
+        userId: string;
       }>(response);
 
-      if (String(payload.role || '').toLowerCase() !== 'keeper') {
+      if (String(payload.role || '').trim().toLowerCase() !== 'keeper') {
         setError('This sign-in is only for keeper accounts.');
         return;
       }
 
-      await login(payload.accessToken, payload.refreshToken);
+      await login(payload.accessToken, payload.refreshToken, {
+        userId: payload.userId,
+        email: trimmedEmail,
+        firstName: 'Keeper',
+        lastName: '',
+        role: payload.role,
+      });
       showToast('Signed in successfully.', 'success');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to sign in right now.'));
@@ -55,7 +64,7 @@ export default function LoginPage() {
         title="Run your local business with sharper daily visibility."
         description="Sign in to track shop activity, launch offers, and answer customer reviews."
         points={[
-          'See offer performance and redemptions in one dashboard.',
+          'See offer performance in one dashboard.',
           'Keep shop details updated without waiting on admin support.',
           'Respond to customer feedback before it turns into churn.',
         ]}

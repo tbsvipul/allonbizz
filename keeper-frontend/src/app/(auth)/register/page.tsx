@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
-import api from '@/lib/api';
-import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
-import { useAuth } from '@/context/AuthContext';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import api, { clearStoredSession } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/api-response';
 import { useToast } from '@/context/ToastContext';
 import { AuthHero } from '@/components/AuthHero';
 import { InlineNotice } from '@/components/InlineNotice';
@@ -69,7 +69,11 @@ function FileUploadField({
           id={id}
           type="file"
           accept="image/*"
-          onChange={(event) => onChange(event.target.files)}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            event.stopPropagation();
+            onChange(event.target.files);
+          }}
           style={{
             position: 'absolute',
             inset: 0,
@@ -107,8 +111,9 @@ function FileUploadField({
 }
 
 export default function RegisterPage() {
-  const { login } = useAuth();
+  const router = useRouter();
   const { showToast } = useToast();
+  const isRegisteringRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
@@ -185,6 +190,17 @@ export default function RegisterPage() {
     return true;
   }
 
+  function validateAllRegistrationSteps(): boolean {
+    for (const registrationStep of [1, 2, 3, 4]) {
+      if (!validateStep(registrationStep)) {
+        setStep(registrationStep);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   function nextStep() {
     if (validateStep(step)) {
       setStep((currentStep) => currentStep + 1);
@@ -196,12 +212,16 @@ export default function RegisterPage() {
     setStep((currentStep) => currentStep - 1);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (step < 4 || !validateStep(step)) {
+  async function handleRegisterClick() {
+    if (loading || isRegisteringRef.current) {
       return;
     }
 
+    if (step !== 4 || !validateAllRegistrationSteps()) {
+      return;
+    }
+
+    isRegisteringRef.current = true;
     setLoading(true);
     setError('');
 
@@ -212,6 +232,7 @@ export default function RegisterPage() {
       formData.append('email', form.email.trim());
       formData.append('password', form.password);
       formData.append('businessName', form.businessName.trim());
+      formData.append('submissionIntent', 'submit-register');
 
       if (form.businessLicense) {
         formData.append('businessLicense', form.businessLicense.trim());
@@ -257,22 +278,19 @@ export default function RegisterPage() {
         formData.append('shopInsideImage', form.shopInsideImage);
       }
 
-      const response = await api.post('/auth/register-keeper', formData, {
+      await api.post('/auth/register-keeper', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      const payload = unwrapApiData<{
-        accessToken: string;
-        refreshToken: string;
-      }>(response);
-
-      await login(payload.accessToken, payload.refreshToken);
-      showToast('Keeper account created successfully.', 'success');
+      clearStoredSession();
+      showToast('Keeper account created successfully. Please sign in to continue.', 'success');
+      router.replace('/login');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to create the keeper account.'));
     } finally {
+      isRegisteringRef.current = false;
       setLoading(false);
     }
   }
@@ -323,7 +341,15 @@ export default function RegisterPage() {
 
         {error ? <InlineNotice tone="error" message={error} /> : null}
 
-        <form className="form-stack" onSubmit={handleSubmit}>
+        <form
+          className="form-stack"
+          onSubmit={(event) => event.preventDefault()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+            }
+          }}
+        >
           {step === 1 ? (
             <div className="field-stack">
               <div className="field-grid">
@@ -473,7 +499,7 @@ export default function RegisterPage() {
                 Next Step
               </button>
             ) : (
-              <button type="submit" className="button" disabled={loading} style={{ flex: 2 }}>
+              <button type="button" className="button" disabled={loading} onClick={handleRegisterClick} style={{ flex: 2 }}>
                 {loading ? 'Submitting registration...' : 'Submit & Register'}
               </button>
             )}

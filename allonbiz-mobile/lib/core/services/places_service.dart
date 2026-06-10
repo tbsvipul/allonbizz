@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -41,23 +42,25 @@ class PlaceSuggestion {
     this.houseNumber,
   });
 
-  /// factory LocationModel.fromJson (Aligned with blueprint)
-  factory PlaceSuggestion.fromPhotonFeature(Map<String, dynamic> feature) {
-    final props = feature['properties'] as Map<String, dynamic>? ?? {};
-    final geometry = feature['geometry'] as Map<String, dynamic>? ?? {};
-    final coords = geometry['coordinates'] as List? ?? [0.0, 0.0];
+  factory PlaceSuggestion.fromNominatimJson(Map<String, dynamic> item) {
+    final lat = double.tryParse(item['lat']?.toString() ?? '0') ?? 0.0;
+    final lon = double.tryParse(item['lon']?.toString() ?? '0') ?? 0.0;
+    final address = item['address'] as Map<String, dynamic>? ?? {};
 
-    final lon = (coords[0] as num).toDouble();
-    final lat = (coords[1] as num).toDouble();
+    final street =
+        address['road']?.toString() ?? address['pedestrian']?.toString();
+    final houseNumber = address['house_number']?.toString();
 
-    final name = (props['name'] ?? '') as String;
+    final name = item['name']?.toString() ?? street ?? '';
     final city =
-        (props['city'] ?? props['county'] ?? props['state'] ?? '') as String;
-    final country = (props['country'] ?? '') as String;
-    final state = props['state'] as String?;
-    final postcode = props['postcode'] as String?;
-    final street = props['street'] as String?;
-    final houseNumber = props['housenumber'] as String?;
+        address['city']?.toString() ??
+        address['town']?.toString() ??
+        address['village']?.toString() ??
+        address['county']?.toString() ??
+        '';
+    final state = address['state']?.toString() ?? '';
+    final country = address['country']?.toString() ?? '';
+    final postcode = address['postcode']?.toString();
 
     final streetLine = [
       if (street != null) houseNumber != null ? '$street $houseNumber' : street,
@@ -70,28 +73,31 @@ class PlaceSuggestion {
         ? streetLine
         : city.isNotEmpty
         ? city
-        : 'Selected Location';
+        : item['display_name']?.toString()?.split(',').first ??
+              'Selected Location';
 
-    // Build description: "City, State (if any), Country"
     final secondaryParts = [
       if (city.isNotEmpty && city != name) city,
-      if (state != null && state != city) state,
+      if (state.isNotEmpty && state != city) state,
       country,
     ].where((s) => s.isNotEmpty).toList();
 
     final secondary = secondaryParts.join(', ');
 
     return PlaceSuggestion(
-      placeId:
-          '${props['osm_id'] ?? props['name']?.hashCode ?? feature.hashCode}',
+      placeId: '${item['place_id'] ?? item['osm_id'] ?? '$lat-$lon'}',
       name: mainName,
       city: city,
       country: country,
       lat: lat,
       lon: lon,
-      description: name.isNotEmpty ? '$name, $secondary' : secondary,
+      description: name.isNotEmpty && secondary.isNotEmpty
+          ? '$name, $secondary'
+          : (secondary.isNotEmpty
+                ? secondary
+                : (item['display_name']?.toString() ?? '')),
       isCurrentLocation: false,
-      state: state,
+      state: state.isNotEmpty ? state : null,
       postcode: postcode,
       street: street,
       houseNumber: houseNumber,
@@ -134,18 +140,18 @@ class PlacesService {
 
     // Fire network sources concurrently to minimize latency
     final results = await Future.wait([
-      _fetchPhotonSuggestions(query),
+      _fetchNominatimSuggestions(query),
       _fetchSuggestionsFromApis(query),
     ]);
 
-    final photonSuggestions = results[0];
+    final nominatimSuggestions = results[0];
     final apiSuggestions = results[1];
 
     final merged = <PlaceSuggestion>[];
     final seen = <String>{};
 
-    // Mix results (API first, then Photon)
-    for (final s in [...apiSuggestions, ...photonSuggestions]) {
+    // Mix results (API first, then Nominatim)
+    for (final s in [...apiSuggestions, ...nominatimSuggestions]) {
       final key = _dedupeKey(s);
       if (seen.add(key)) {
         merged.add(s);
@@ -277,7 +283,7 @@ class PlacesService {
         return features
             .whereType<Map>()
             .map(
-              (feature) => PlaceSuggestion.fromPhotonFeature(
+              (feature) => PlaceSuggestion.fromNominatimJson(
                 Map<String, dynamic>.from(feature),
               ),
             )
@@ -336,10 +342,15 @@ class PlacesService {
     );
   }
 
-  Future<List<PlaceSuggestion>> _fetchPhotonSuggestions(String query) async {
-    final url = Uri.parse(
-      BaseApi.photonSearchUrl,
-    ).replace(queryParameters: {'q': query, 'limit': '8'});
+  Future<List<PlaceSuggestion>> _fetchNominatimSuggestions(String query) async {
+    final url = Uri.parse(BaseApi.nominatimSearchUrl).replace(
+      queryParameters: {
+        'q': query,
+        'format': 'jsonv2',
+        'addressdetails': '1',
+        'limit': '8',
+      },
+    );
 
     try {
       final response = await http
@@ -359,12 +370,12 @@ class PlacesService {
 
       final parsed = await runInBackground(() {
         final data = json.decode(response.body);
-        final features = data['features'] as List? ?? const [];
-        return features
+        final list = data as List? ?? const [];
+        return list
             .whereType<Map>()
             .map(
-              (feature) => PlaceSuggestion.fromPhotonFeature(
-                Map<String, dynamic>.from(feature),
+              (item) => PlaceSuggestion.fromNominatimJson(
+                Map<String, dynamic>.from(item),
               ),
             )
             .toList();
@@ -392,10 +403,12 @@ class PlacesService {
   }
 
   Future<PlaceSuggestion?> reverseGeocode(double lat, double lon) async {
-    final url = Uri.parse(BaseApi.photonReverseUrl).replace(
+    final url = Uri.parse(BaseApi.nominatimReverseUrl).replace(
       queryParameters: {
         'lat': lat.toStringAsFixed(6),
         'lon': lon.toStringAsFixed(6),
+        'format': 'jsonv2',
+        'addressdetails': '1',
       },
     );
 
@@ -414,28 +427,27 @@ class PlacesService {
       if (response.statusCode == 200) {
         return await runInBackground(() {
           final data = json.decode(response.body);
-          final features = data['features'] as List? ?? [];
-          if (features.isNotEmpty) {
-            return PlaceSuggestion.fromPhotonFeature(
-              features.first as Map<String, dynamic>,
-            );
+          if (data is Map<String, dynamic> && data.containsKey('place_id')) {
+            return PlaceSuggestion.fromNominatimJson(data);
           }
           return null;
         });
       }
     } catch (e) {
-      if (kIsWeb && e is http.ClientException) {
+      if (e is TimeoutException) {
+        AppLogger.warning('Nominatim reverse API timed out after 8 seconds. Falling back to generic label.');
+      } else if (kIsWeb && e is http.ClientException) {
         AppLogger.warning(
           'Reverse geocoding is unavailable in this browser session. Falling '
           'back to a generic location label.',
         );
       } else if (e.toString().contains('SocketException')) {
         AppLogger.error(
-          'Photon reverse API lookup failed. Check internet or DNS settings.',
+          'Nominatim reverse API lookup failed. Check internet or DNS settings.',
           error: e,
         );
       } else {
-        AppLogger.error('Photon reverse API error', error: e);
+        AppLogger.error('Nominatim reverse API error', error: e);
       }
     }
     return null;

@@ -53,7 +53,6 @@ public class StartChatResponseDto
 public class SavingsSummaryDto
 {
     public decimal TotalSaved { get; set; }
-    public int TotalRedemptions { get; set; }
     public string MostSavedCategory { get; set; } = string.Empty;
 }
 
