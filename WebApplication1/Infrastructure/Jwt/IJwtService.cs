@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface IJwtService
 {

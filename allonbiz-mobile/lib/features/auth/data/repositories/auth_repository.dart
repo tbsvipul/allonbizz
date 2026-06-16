@@ -45,6 +45,7 @@ class AuthRepository {
   final ProfileRepository? _profileRepository;
 
   final _authController = StreamController<AppUser?>.broadcast();
+  final _forcedLogoutController = StreamController<String>.broadcast();
   AppUser? _currentUser;
   bool _isInitialized = false;
 
@@ -55,19 +56,25 @@ class AuthRepository {
     yield* _authController.stream;
   }
 
+  Stream<String> get onForcedLogout => _forcedLogoutController.stream;
+
   AppUser? get currentUser => _currentUser;
   bool get isInitialized => _isInitialized;
 
   Future<void> _init() async {
-    _apiClient.onAuthFailed.listen((_) {
+    _apiClient.onAuthFailed.listen((reason) {
       if (_storageService.backendAccessToken != null) {
         _logAuthFlow(
           'global-auth-failed',
-          details: {'action': 'clearing session'},
+          details: {'action': 'clearing session', 'reason': reason},
         );
         _storageService.backendAccessToken = null;
         _storageService.backendRefreshToken = null;
         _updateState(null);
+
+        if (reason != null && (reason.toLowerCase().contains('banned') || reason.toLowerCase().contains('suspended'))) {
+          _forcedLogoutController.add('$reason\nPlease contact routentsupport@gmail.com for assistance.');
+        }
       }
     });
 
@@ -76,9 +83,22 @@ class AuthRepository {
     if (token != null) {
       try {
         await refreshProfile();
-      } catch (_) {
+      } catch (e) {
         _logAuthFlow('init-refresh-profile-failed');
-        _updateState(null);
+        if (e is ServerFailure && e.statusCode == 401) {
+          // Already handled in refreshProfile
+        } else if (e is NetworkFailure) {
+          // Keep user authenticated if offline
+          _logAuthFlow('init-refresh-profile-network-failure');
+          // If we had a cached profile, we could load it here.
+          // For now, if we have a token, we assume they are authenticated
+          // but we might not have the user object if they just started the app.
+          // Actually, if we couldn't fetch profile, they will be stuck in loading or unauthenticated?
+          // Since _currentUser is null, they will be unauthenticated.
+          _updateState(null); 
+        } else {
+          _updateState(null);
+        }
       }
     } else {
       _updateState(null);
@@ -112,9 +132,6 @@ class AuthRepository {
       return user;
     } catch (e) {
       _logAuthFlow('refresh-profile-failure', details: {'error': e.toString()});
-      if (e is ServerFailure && e.statusCode == 401) {
-        _updateState(null);
-      }
       rethrow;
     }
   }
@@ -155,7 +172,13 @@ class AuthRepository {
         details: {'statusCode': e.statusCode, 'message': e.message},
       );
       if (e.statusCode == 401) {
-        throw const AuthFailure('unauthorized', 'Invalid email or password');
+        String msg = e.message;
+        if (msg.toLowerCase().contains('banned') || msg.toLowerCase().contains('suspended')) {
+          msg = '$msg\nPlease contact routentsupport@gmail.com for assistance.';
+        } else if (msg == 'Unauthorized' || msg.isEmpty) {
+          msg = 'Invalid email or password';
+        }
+        throw AuthFailure('unauthorized', msg);
       }
       throw AuthFailure('error', e.message);
     } catch (e) {

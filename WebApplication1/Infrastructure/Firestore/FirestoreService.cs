@@ -1,8 +1,8 @@
 using Google.Cloud.Firestore;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class NoOpFirestoreService : IFirestoreService
 {

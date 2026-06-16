@@ -359,7 +359,7 @@ class PlacesService {
             headers: {
               'Accept': 'application/json',
               'User-Agent':
-                  'allonbiz App (https://github.com/techbrein/locator)',
+                  'routent App (https://github.com/techbrein/locator)',
             },
           )
           .timeout(const Duration(seconds: 8));
@@ -419,7 +419,7 @@ class PlacesService {
             headers: {
               'Accept': 'application/json',
               'User-Agent':
-                  'allonbiz App (https://github.com/techbrein/locator)',
+                  'routent App (https://github.com/techbrein/locator)',
             },
           )
           .timeout(const Duration(seconds: 8));

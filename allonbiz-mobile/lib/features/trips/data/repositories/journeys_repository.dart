@@ -3,6 +3,7 @@ import '../../../../core/models/api_response.dart';
 import '../../../../core/models/journey_model.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/app_logger.dart';
 
 final journeysRepositoryProvider = Provider<JourneysRepository>((ref) {
   return JourneysRepository(apiClient: ref.watch(apiClientProvider));
@@ -42,8 +43,12 @@ class JourneysRepository {
         throw const DatabaseFailure('Failed to start journey');
       }
       return data['journeyId'].toString();
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error starting journey', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error starting journey', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error starting journey');
     }
   }
 
@@ -64,8 +69,12 @@ class JourneysRepository {
           'duration': duration,
         },
       );
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error updating journey progress', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error updating journey progress', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error updating journey progress');
     }
   }
 
@@ -90,8 +99,12 @@ class JourneysRepository {
           'shopsEncountered': shopsEncountered ?? const [],
         },
       );
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error ending journey (destination)', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error ending journey', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error ending journey');
     }
   }
 
@@ -126,8 +139,12 @@ class JourneysRepository {
           hasPreviousPage: safePage > 1,
         ),
       );
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error getting journeys', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error getting journeys', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error getting journeys');
     }
   }
 
@@ -142,8 +159,12 @@ class JourneysRepository {
           decodeInBackground: true,
         ),
       );
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error getting journey history', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error getting journey history', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error getting journey history');
     }
   }
 
@@ -184,8 +205,12 @@ class JourneysRepository {
           decodeInBackground: true,
         ),
       );
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error getting journey detail', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error getting journey detail', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error getting journey detail');
     }
   }
 
@@ -199,8 +224,12 @@ class JourneysRepository {
         '/user/journeys/$journeyId/near?lat=$lat&lng=$lng',
       );
       return response['data'] ?? [];
-    } on ServerFailure catch (e) {
+    } on ServerFailure catch (e, stack) {
+      AppLogger.error('Error getting nearby shops', error: e, stackTrace: stack);
       throw DatabaseFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error getting nearby shops', error: e, stackTrace: stack);
+      throw const DatabaseFailure('Unexpected error getting nearby shops');
     }
   }
 }

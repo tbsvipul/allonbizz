@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using allonbiz.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Entities;
 
-namespace allonbiz.AdminAPI.Data.Configurations;
+namespace routent.AdminAPI.Data.Configurations;
 
 public class ShopConfiguration : IEntityTypeConfiguration<Shop>
 {
@@ -44,6 +44,6 @@ public class ShopConfiguration : IEntityTypeConfiguration<Shop>
             .HasDefaultValue("Pending")
             .HasMaxLength(50);
 
-        builder.ToTable(t => t.HasCheckConstraint("CK_Shops_VerifyStatus", "\"VerifyStatus\" IN ('Pending', 'Verified', 'Rejected')"));
+        builder.ToTable(t => t.HasCheckConstraint("CK_Shops_VerifyStatus", "\"VerifyStatus\" IN ('Pending', 'Verified', 'Rejected', 'Deactivated')"));
     }
 }

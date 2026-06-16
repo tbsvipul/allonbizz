@@ -1,15 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Services.Interfaces;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Helpers;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Helpers;
 
-namespace allonbiz.AdminAPI.Areas.Keeper.Controllers;
+namespace routent.AdminAPI.Areas.Keeper.Controllers;
 
 public class KeeperSendNotificationDto
 {
@@ -119,10 +119,17 @@ public class KeeperNotificationsController : ControllerBase
                 return BadRequest(ApiResponse<object>.Fail("OFFER_NOT_FOUND", "Offer not found or does not belong to your shop."));
         }
 
+        var targetShops = shops;
+        if (attachedOffer != null)
+        {
+            targetShops = shops.Where(s => s.ShopId == attachedOffer.ShopId).ToList();
+        }
+
         var now = DateTime.UtcNow;
         var totalRecipients = 0;
+        var notifiedUsers = new HashSet<Guid>();
 
-        foreach (var shop in shops)
+        foreach (var shop in targetShops)
         {
             var settings = await _db.ShopNotificationSettings.FirstOrDefaultAsync(s => s.ShopId == shop.ShopId);
             var radiusKm = settings != null && settings.RadiusKm > 0 ? (double)settings.RadiusKm : shop.NotificationRadius;
@@ -141,6 +148,7 @@ public class KeeperNotificationsController : ControllerBase
             var qualifiedUsers = usersInRange
                 .Where(u =>
                 {
+                    if (notifiedUsers.Contains(u.UserId)) return false;
                     var dist = GeoHelper.CalculateDistanceKm(
                         u.LastLatitude!.Value, u.LastLongitude!.Value,
                         shop.Latitude!.Value, shop.Longitude!.Value);
@@ -165,7 +173,7 @@ public class KeeperNotificationsController : ControllerBase
                 SenderId = userId,
                 ShopId = shop.ShopId,
                 OfferId = dto.OfferId,
-                ImageUrl = dto.ImageUrl ?? (attachedOffer?.ImageData != null ? ImageConversionHelper.ToBase64DataUrl(attachedOffer.ImageData) : null),
+                ImageUrl = dto.ImageUrl ?? (attachedOffer?.ImageData != null ? ImageConversionHelper.ToBase64DataUrl(attachedOffer.ImageData) : (shop.ImageUrl != null ? ImageConversionHelper.ToBase64DataUrl(shop.ImageUrl) : null)),
                 IsGlobal = false,
                 Status = NotificationStatus.Sent,
                 IsActive = true,
@@ -194,8 +202,14 @@ public class KeeperNotificationsController : ControllerBase
                         SentAt = now
                     });
                 }
-                totalRecipients += qualifiedUsers.Count;
             }
+            
+            foreach (var customer in qualifiedUsers)
+            {
+                notifiedUsers.Add(customer.UserId);
+            }
+            
+            totalRecipients += qualifiedUsers.Count;
         }
 
         await _db.SaveChangesAsync();

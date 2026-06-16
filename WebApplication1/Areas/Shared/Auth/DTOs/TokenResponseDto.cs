@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.DTOs.Auth;
+namespace routent.AdminAPI.DTOs.Auth;
 
 public class TokenResponseDto
 {

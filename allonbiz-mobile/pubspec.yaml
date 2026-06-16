@@ -1,5 +1,5 @@
-name: allonbiz_mobile
-description: "allonbiz premium navigation and proximity discovery app."
+name: routent_mobile
+description: "routent premium navigation and proximity discovery app."
 publish_to: 'none'
 version: 1.0.0+1
 environment:
@@ -56,6 +56,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/simplelogo.png"
 
 flutter:
   generate: true
@@ -63,6 +69,7 @@ flutter:
   assets:
     - .env
     - assets/images/location_marker/
+    - assets/images/tranperentlogo.png
    
   fonts:
     - family: Poppins

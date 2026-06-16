@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.Services.Interfaces;
 using System.Security.Claims;
 
-namespace allonbiz.AdminAPI.Areas.User.Controllers;
+namespace routent.AdminAPI.Areas.User.Controllers;
 
 [ApiController]
 [Route("api/v1/user/notifications")]

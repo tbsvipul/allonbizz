@@ -124,13 +124,31 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('server-status', { detail: 'online' }));
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error?.config as {
       _retry?: boolean;
       url?: string;
       headers?: Record<string, string>;
     };
+
+    if (
+      error.code === 'ERR_NETWORK' ||
+      (error.response && error.response.status >= 502 && error.response.status <= 504)
+    ) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('server-status', { detail: 'offline' }));
+      }
+    } else if (error.response) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('server-status', { detail: 'online' }));
+      }
+    }
 
     if (
       error.response?.status === 401 &&

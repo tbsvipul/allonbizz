@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.DTOs.Common;
 
-namespace allonbiz.AdminAPI.DTOs.Admin;
+namespace routent.AdminAPI.DTOs.Admin;
 
 public class NotificationSummaryDto
 {

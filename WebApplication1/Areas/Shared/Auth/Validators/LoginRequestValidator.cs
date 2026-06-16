@@ -1,7 +1,7 @@
 using FluentValidation;
-using allonbiz.AdminAPI.DTOs.Auth;
+using routent.AdminAPI.DTOs.Auth;
 
-namespace allonbiz.AdminAPI.Validators;
+namespace routent.AdminAPI.Validators;
 
 public class LoginRequestValidator : AbstractValidator<LoginRequestDto>
 {

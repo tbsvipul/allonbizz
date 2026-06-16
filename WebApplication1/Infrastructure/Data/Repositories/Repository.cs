@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.Data.Interfaces;
 using System.Linq.Expressions;
 
-namespace allonbiz.AdminAPI.Data.Repositories;
+namespace routent.AdminAPI.Data.Repositories;
 
 public class Repository<T> : IRepository<T> where T : class
 {

@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace allonbiz.AdminAPI.Models.Entities;
+namespace routent.AdminAPI.Models.Entities;
 
 public class NotificationLog
 {

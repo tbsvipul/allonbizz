@@ -1,6 +1,6 @@
-# Allonbiz Mobile Application - Screen Features
+# routent Mobile Application - Screen Features
 
-This document outlines the core functional features of each screen in the `allonbiz-mobile` application, focusing entirely on functionality and business logic rather than UI/UX representation.
+This document outlines the core functional features of each screen in the `routent-mobile` application, focusing entirely on functionality and business logic rather than UI/UX representation.
 
 ## Authentication & Onboarding
 *   **Splash Screen (`splash_screen.dart`)**

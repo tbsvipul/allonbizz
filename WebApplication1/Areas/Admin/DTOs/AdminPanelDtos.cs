@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Admin;
+namespace routent.AdminAPI.DTOs.Admin;
 
 public class AdminDashboardSummaryDto
 {

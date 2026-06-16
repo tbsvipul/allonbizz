@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.Models.Entities;
+namespace routent.AdminAPI.Models.Entities;
 
 public class RefreshToken
 {

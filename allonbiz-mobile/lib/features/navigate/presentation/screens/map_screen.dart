@@ -286,7 +286,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     ? BaseApi.darkTileUrl
                     : BaseApi.lightTileUrl,
                 subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName: 'com.allonbiz.locator',
+                userAgentPackageName: 'com.routent.locator',
                 maxZoom: 19,
                 retinaMode: RetinaMode.isHighDensity(context),
               ),

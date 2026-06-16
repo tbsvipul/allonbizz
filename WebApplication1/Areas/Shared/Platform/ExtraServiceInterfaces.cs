@@ -1,10 +1,10 @@
-using allonbiz.AdminAPI.DTOs.Public;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Keepers;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Public;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Keepers;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.DTOs.Common;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface IReviewService
 {

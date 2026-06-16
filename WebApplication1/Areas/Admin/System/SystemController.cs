@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Services.Interfaces;
-using allonbiz.AdminAPI.Filters;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.DTOs.System;
-using allonbiz.AdminAPI.Models.Entities;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Filters;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.DTOs.System;
+using routent.AdminAPI.Models.Entities;
 
-namespace allonbiz.AdminAPI.Controllers;
+namespace routent.AdminAPI.Controllers;
 
 [ApiController]
 [Route("api/v1/system")]
@@ -20,7 +20,7 @@ public class SystemController : ControllerBase
     [HttpGet("/api/v1/config")]
     [RequirePermission(Permissions.SystemView)]
     public async Task<IActionResult> GetConfig()
-        => Ok(ApiResponse<allonbiz.AdminAPI.DTOs.System.SystemConfigDto>.Ok(await _systemService.GetConfigAsync(HttpContext.RequestAborted)));
+        => Ok(ApiResponse<routent.AdminAPI.DTOs.System.SystemConfigDto>.Ok(await _systemService.GetConfigAsync(HttpContext.RequestAborted)));
 
     [HttpGet("health")]
     [RequirePermission(Permissions.SystemView)]

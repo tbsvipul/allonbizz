@@ -50,7 +50,7 @@ Future<void> main() async {
   ]);
 
   runApp(
-    UncontrolledProviderScope(container: container, child: const AllonbizApp()),
+    UncontrolledProviderScope(container: container, child: const routentApp()),
   );
 
   // Defer non-critical plugin setup until the first frame is visible.

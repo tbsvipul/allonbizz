@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Auth;
-using allonbiz.AdminAPI.DTOs.Users;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Auth;
+using routent.AdminAPI.DTOs.Users;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface IAuthService
 {

@@ -1,9 +1,9 @@
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Models.Enums;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class AdminAccountHelper
 {

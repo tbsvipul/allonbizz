@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.Models.Enums;
+namespace routent.AdminAPI.Models.Enums;
 
 public enum ReviewStatus
 {

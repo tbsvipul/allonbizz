@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Helpers;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Helpers;
 
 #nullable disable
 
-namespace allonbiz.AdminAPI.Migrations
+namespace routent.AdminAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260515123000_NormalizeStringMediaColumns")]

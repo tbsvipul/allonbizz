@@ -84,24 +84,18 @@ class CategoryModel {
   }
 
   IconData get icon {
-    // 1. First try the icon code from the database
+    // 1. Guess icon from label name first (more reliable than test DB data)
+    final l = label.toLowerCase();
+    if (l.contains('food') || l.contains('restaurant')) return Icons.restaurant_rounded;
+    if (l.contains('cafe') || l.contains('coffee') || l.contains('beverage')) return Icons.local_cafe_rounded;
+    if (l.contains('shopping') || l.contains('store')) return Icons.shopping_cart_rounded;
+    if (l.contains('health') || l.contains('pharmacy')) return Icons.local_hospital_rounded;
+    if (l.contains('gas') || l.contains('petrol')) return Icons.local_gas_station_rounded;
+    if (l.contains('hotel') || l.contains('stay') || l.contains('travel')) return Icons.hotel_rounded;
+
+    // 2. Fallback to the icon code from the database
     final fromDb = _iconRegistry[iconCode];
     if (fromDb != null) return fromDb;
-
-    // 2. Fallback: guess icon from label name
-    final l = label.toLowerCase();
-    if (l.contains('food') || l.contains('restaurant')) return Icons.restaurant;
-    if (l.contains('cafe') || l.contains('coffee')) return Icons.local_cafe;
-    if (l.contains('shopping') || l.contains('store')) {
-      return Icons.shopping_cart;
-    }
-    if (l.contains('health') || l.contains('pharmacy')) {
-      return Icons.local_hospital;
-    }
-    if (l.contains('gas') || l.contains('petrol')) {
-      return Icons.local_gas_station;
-    }
-    if (l.contains('hotel') || l.contains('stay')) return Icons.hotel;
 
     return Icons.category_rounded;
   }

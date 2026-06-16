@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Keepers;
+namespace routent.AdminAPI.DTOs.Keepers;
 
 public class ApproveKeeperDto
 {
@@ -62,7 +62,7 @@ public class SuspendKeeperDto
     public string Reason { get; set; } = string.Empty;
 }
 
-public class KeeperListQueryDto : allonbiz.AdminAPI.DTOs.Common.PaginationParams
+public class KeeperListQueryDto : routent.AdminAPI.DTOs.Common.PaginationParams
 {
     public string? Search { get; set; }
 }

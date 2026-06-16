@@ -65,6 +65,14 @@ class AuthController extends StateNotifier<AuthState> {
       _handleUpdate(user);
     });
 
+    _repo.onForcedLogout.listen((message) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: message,
+        clearUser: true,
+      );
+    });
+
     // 2. Manually check current repo state immediately to resolve the session faster if possible
     final currentUser = _repo.currentUser;
     if (currentUser != null || _repo.isInitialized) {

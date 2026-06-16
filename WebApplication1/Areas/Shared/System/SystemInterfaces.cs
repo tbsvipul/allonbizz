@@ -1,14 +1,14 @@
 using System.Security.Claims;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Shops;
-using allonbiz.AdminAPI.DTOs.Tags;
-using allonbiz.AdminAPI.DTOs.System;
-using allonbiz.AdminAPI.DTOs.Settings;
-using allonbiz.AdminAPI.DTOs.Users;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.DTOs.Tags;
+using routent.AdminAPI.DTOs.System;
+using routent.AdminAPI.DTOs.Settings;
+using routent.AdminAPI.DTOs.Users;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface ISystemService {
     Task<SystemHealthDto> GetHealthAsync(CancellationToken ct = default);
@@ -18,7 +18,7 @@ public interface ISystemService {
     Task<SystemAlertsDto> GetAlertsAsync(CancellationToken ct = default);
     Task<PagedResponse<AuditLog>> GetAuditLogsAsync(PaginationParams paging, CancellationToken ct = default);
     Task<MaintenanceModeStatusDto> ToggleMaintenanceModeAsync(ToggleMaintenanceModeDto dto, CancellationToken ct = default);
-    Task<allonbiz.AdminAPI.DTOs.System.SystemConfigDto> GetConfigAsync(CancellationToken ct = default);
+    Task<routent.AdminAPI.DTOs.System.SystemConfigDto> GetConfigAsync(CancellationToken ct = default);
 }
 
 public interface ISettingsService {

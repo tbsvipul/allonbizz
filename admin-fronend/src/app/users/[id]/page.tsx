@@ -175,6 +175,47 @@ interface AdminUserProfile {
   keeper?: KeeperProfile | null;
 }
 
+function ReasonDialog({
+  isOpen,
+  title,
+  actionLabel,
+  onConfirm,
+  onCancel
+}: {
+  isOpen: boolean;
+  title: string;
+  actionLabel: string;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+}) {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (isOpen) setReason('');
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem', backdropFilter: 'blur(4px)' }} onClick={onCancel}>
+      <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)', padding: '1.5rem' }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '1rem' }}>{title}</h3>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Enter reason..."
+          style={{ width: '100%', minHeight: '100px', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'rgba(255,255,255,0.05)', color: 'hsl(var(--foreground))', marginBottom: '1rem', resize: 'vertical' }}
+          autoFocus
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <button type="button" onClick={onCancel} style={{ padding: '0.5rem 1rem', borderRadius: 'var(--radius)', background: 'transparent', border: '1px solid hsl(var(--border))', cursor: 'pointer', color: 'hsl(var(--foreground))' }}>Cancel</button>
+          <button type="button" onClick={() => onConfirm(reason)} disabled={!reason.trim()} style={{ padding: '0.5rem 1rem', borderRadius: 'var(--radius)', background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', border: 'none', cursor: !reason.trim() ? 'not-allowed' : 'pointer', opacity: !reason.trim() ? 0.5 : 1 }}>{actionLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const getFullImageUrl = (path?: string | null) => {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
@@ -329,6 +370,13 @@ export default function UserProfilePage() {
   const [activityPage, setActivityPage] = useState(1);
   const [journeyPage, setJourneyPage] = useState(1);
   const [loginPage, setLoginPage] = useState(1);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    actionLabel: string;
+    actionType: 'activate' | 'deactivate' | 'suspend' | 'unsuspend' | 'ban' | 'unban' | null;
+  }>({ isOpen: false, title: '', actionLabel: '', actionType: null });
   const PAGE_SIZE = 5;
 
   const fetchProfile = useCallback(async () => {
@@ -353,6 +401,32 @@ export default function UserProfilePage() {
   useEffect(() => {
     void fetchProfile();
   }, [fetchProfile]);
+
+  const handleActionConfirm = async (reason: string) => {
+    if (!dialogConfig.actionType) return;
+    setActionLoading(true);
+    setDialogConfig({ ...dialogConfig, isOpen: false });
+    try {
+      if (dialogConfig.actionType === 'activate') {
+        await api.put(`/users/${userId}/status`, { status: 'Active', reason });
+      } else if (dialogConfig.actionType === 'deactivate') {
+        await api.put(`/users/${userId}/status`, { status: 'Inactive', reason });
+      } else if (dialogConfig.actionType === 'suspend') {
+        await api.post(`/users/${userId}/suspend`, { reason, durationDays: 7 });
+      } else if (dialogConfig.actionType === 'unsuspend') {
+        await api.post(`/users/${userId}/unsuspend`, { reason });
+      } else if (dialogConfig.actionType === 'ban') {
+        await api.post(`/users/${userId}/ban`, { reason, deleteContent: false });
+      } else if (dialogConfig.actionType === 'unban') {
+        await api.post(`/users/${userId}/unban`, { reason });
+      }
+      await fetchProfile();
+    } catch (err) {
+      alert(getApiErrorMessage(err, `Failed to ${dialogConfig.actionType} user.`));
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -385,6 +459,10 @@ export default function UserProfilePage() {
   }
 
   const { summary, activity, loginHistory, customer, keeper } = profile;
+
+  const isActive = summary.status.toLowerCase() === 'active';
+  const isSuspended = summary.status.toLowerCase() === 'suspended';
+  const isBanned = summary.status.toLowerCase() === 'banned';
 
   return (
     <DashboardLayout>
@@ -992,6 +1070,53 @@ export default function UserProfilePage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="glass-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Shield size={18} /> User Actions
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => setDialogConfig({
+                    isOpen: true,
+                    title: isActive ? 'Deactivate User' : 'Activate User',
+                    actionLabel: isActive ? 'Deactivate' : 'Activate',
+                    actionType: isActive ? 'deactivate' : 'activate'
+                  })}
+                  style={{ padding: '0.75rem', borderRadius: 'var(--radius)', background: isActive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: isActive ? '#ef4444' : '#10b981', border: `1px solid ${isActive ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.5 : 1 }}
+                >
+                  {isActive ? 'Deactivate User' : 'Activate User'}
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => setDialogConfig({
+                    isOpen: true,
+                    title: isSuspended ? 'Unsuspend User' : 'Suspend User',
+                    actionLabel: isSuspended ? 'Unsuspend' : 'Suspend',
+                    actionType: isSuspended ? 'unsuspend' : 'suspend'
+                  })}
+                  style={{ padding: '0.75rem', borderRadius: 'var(--radius)', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.5 : 1 }}
+                >
+                  {isSuspended ? 'Unsuspend User' : 'Suspend User'}
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => setDialogConfig({
+                    isOpen: true,
+                    title: isBanned ? 'Unban User' : 'Ban User',
+                    actionLabel: isBanned ? 'Unban' : 'Ban',
+                    actionType: isBanned ? 'unban' : 'ban'
+                  })}
+                  style={{ padding: '0.75rem', borderRadius: 'var(--radius)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.5 : 1 }}
+                >
+                  {isBanned ? 'Unban User' : 'Ban User'}
+                </button>
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 }} className="glass-card" style={{ padding: '1.5rem' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '1rem' }}>Account Snapshot</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
@@ -1049,6 +1174,13 @@ export default function UserProfilePage() {
           </div>
         </div>
       </div>
+      <ReasonDialog
+        isOpen={dialogConfig.isOpen}
+        title={dialogConfig.title}
+        actionLabel={dialogConfig.actionLabel}
+        onConfirm={handleActionConfirm}
+        onCancel={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
+      />
     </DashboardLayout>
   );
 }

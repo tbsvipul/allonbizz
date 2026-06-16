@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface IAuditService
 {

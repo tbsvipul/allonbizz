@@ -13,6 +13,18 @@ import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
 import { formatDateTime } from '@/lib/format';
 import { KeeperDocument, ReviewMessagesReadResult } from '@/lib/types';
 
+function DialogWrapper({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998, padding: '1rem', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={onClose} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'hsl(var(--foreground))', cursor: 'pointer', fontSize: '1.25rem', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>&times;</button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface UserFormState {
   firstName: string;
   lastName: string;
@@ -273,6 +285,88 @@ function BusinessProfileForm({
   );
 }
 
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { showToast } = useToast();
+  const [error, setError] = useState('');
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+      });
+      showToast('Password changed successfully.', 'success');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to change password.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="form-stack" onSubmit={handleSubmit}>
+      {error ? <InlineNotice tone="error" message={error} /> : null}
+      <div className="field">
+        <label htmlFor="currentPassword">Current password</label>
+        <input
+          id="currentPassword"
+          type="password"
+          value={currentPassword}
+          onChange={(event) => setCurrentPassword(event.target.value)}
+          required
+        />
+      </div>
+      <div className="field-grid">
+        <div className="field">
+          <label htmlFor="newPassword">New password</label>
+          <input
+            id="newPassword"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            required
+            minLength={8}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="confirmPassword">Confirm new password</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+            minLength={8}
+          />
+        </div>
+      </div>
+      <button type="submit" className="button" disabled={busy}>
+        {busy ? 'Changing password...' : 'Change password'}
+      </button>
+    </form>
+  );
+}
+
 function normalizeStatusValue(status?: string | null) {
   return String(status || '').trim().toLowerCase();
 }
@@ -364,6 +458,7 @@ export default function ProfilePage() {
   const [markingMessagesRead, setMarkingMessagesRead] = useState(false);
   const [documentForm, setDocumentForm] = useState<DocumentFormState>(emptyDocumentForm);
   const [activePreviewImage, setActivePreviewImage] = useState<string | null>(null);
+  const [activeDialog, setActiveDialog] = useState<'security' | 'status' | 'documents' | 'credentials' | 'messages' | null>(null);
 
   function openImagePreview(image: string | null | undefined) {
     if (image) {
@@ -603,11 +698,6 @@ export default function ProfilePage() {
 
   return (
     <div className="field-stack">
-      <PageHeader
-        title="Profile"
-        description="Keep both the person-level contact details and the business review profile current."
-        actions={<StatusPill status={sessionUser.keeper?.status} />}
-      />
 
       {error ? <InlineNotice tone="error" message={error} /> : null}
 
@@ -649,7 +739,51 @@ export default function ProfilePage() {
         </SectionCard>
       </div>
 
-      <div className="panel-grid">
+      <div className="panel-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        <button type="button" className="button" style={{ height: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }} onClick={() => setActiveDialog('security')}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Change Password
+        </button>
+        <button type="button" className="button" style={{ height: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }} onClick={() => setActiveDialog('status')}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          Application Status
+        </button>
+        <button type="button" className="button" style={{ height: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }} onClick={() => setActiveDialog('documents')}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Documents
+        </button>
+        {sessionUser.keeper && (
+          sessionUser.keeper.identityProofImage ||
+          sessionUser.keeper.businessLicenseImage ||
+          sessionUser.keeper.gstCertificateImage ||
+          sessionUser.keeper.panCardImage ||
+          sessionUser.keeper.addressProofImage ||
+          sessionUser.keeper.shopFrontImage ||
+          sessionUser.keeper.shopInsideImage
+        ) && (
+          <button type="button" className="button" style={{ height: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }} onClick={() => setActiveDialog('credentials')}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            Media Proofs
+          </button>
+        )}
+        <button type="button" className="button" style={{ height: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }} onClick={() => setActiveDialog('messages')}>
+          <div style={{ position: 'relative' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            {unreadMessageCount > 0 && (
+              <span style={{ position: 'absolute', top: -5, right: -10, background: 'hsl(var(--destructive))', color: 'white', borderRadius: '10px', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}>{unreadMessageCount}</span>
+            )}
+          </div>
+          Admin Messages
+        </button>
+      </div>
+
+      <DialogWrapper isOpen={activeDialog === 'security'} onClose={() => setActiveDialog(null)}>
+        <SectionCard title="Change Password" description="Change the password used to sign in to this portal.">
+          <ChangePasswordForm />
+        </SectionCard>
+      </DialogWrapper>
+
+      <DialogWrapper isOpen={activeDialog === 'status'} onClose={() => setActiveDialog(null)}>
         <SectionCard title="Application status" description="Read-only approval details from the keeper review workflow.">
           <div className="field-stack">
             <div className="list-item">
@@ -672,7 +806,9 @@ export default function ProfilePage() {
             </div>
           </div>
         </SectionCard>
+      </DialogWrapper>
 
+      <DialogWrapper isOpen={activeDialog === 'documents'} onClose={() => setActiveDialog(null)}>
         <SectionCard title="Documents" description="Attach or update the business document links used during admin verification.">
           <div className="field-stack">
             <form className="form-stack" onSubmit={handleDocumentSave}>
@@ -767,7 +903,7 @@ export default function ProfilePage() {
             )}
           </div>
         </SectionCard>
-      </div>
+      </DialogWrapper>
 
       {sessionUser.keeper && (
         sessionUser.keeper.identityProofImage ||
@@ -778,6 +914,7 @@ export default function ProfilePage() {
         sessionUser.keeper.shopFrontImage ||
         sessionUser.keeper.shopInsideImage
       ) && (
+        <DialogWrapper isOpen={activeDialog === 'credentials'} onClose={() => setActiveDialog(null)}>
         <SectionCard
           title="Verification Credentials & Media Proofs"
           description="The official registration documents and shop photos uploaded during onboarding."
@@ -905,8 +1042,10 @@ export default function ProfilePage() {
             )}
           </div>
         </SectionCard>
+        </DialogWrapper>
       )}
 
+      <DialogWrapper isOpen={activeDialog === 'messages'} onClose={() => setActiveDialog(null)}>
       <SectionCard
         title="Admin messages"
         description="Structured review history from the admin team."
@@ -945,6 +1084,7 @@ export default function ProfilePage() {
           <EmptyState title="No admin history yet" message="Request-for-info notes, hold notices, and related admin comments will show up here." />
         )}
       </SectionCard>
+      </DialogWrapper>
       
       {/* Lightbox / Modals */}
       {activePreviewImage ? (

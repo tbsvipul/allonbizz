@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace allonbiz.AdminAPI.Migrations
+namespace routent.AdminAPI.Migrations
 {
     /// <inheritdoc />
     public partial class PersistRuntimeWorkflowsAndRemoveDemoAuth : Migration

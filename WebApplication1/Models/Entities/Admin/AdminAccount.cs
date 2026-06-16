@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.Constants;
+using routent.AdminAPI.Constants;
 
-namespace allonbiz.AdminAPI.Models.Entities;
+namespace routent.AdminAPI.Models.Entities;
 
 public class AdminAccount
 {

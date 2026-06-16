@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Keepers;
+namespace routent.AdminAPI.DTOs.Keepers;
 
 public class UpdateKeeperProfileDto
 {

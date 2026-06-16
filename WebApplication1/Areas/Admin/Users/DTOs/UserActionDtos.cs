@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.DTOs.Users;
+namespace routent.AdminAPI.DTOs.Users;
 
 /// <summary>DTO for updating FCM device token.</summary>
 public class UpdateFcmTokenDto

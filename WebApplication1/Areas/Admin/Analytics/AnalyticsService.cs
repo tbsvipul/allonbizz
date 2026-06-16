@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Analytics;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Analytics;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class AnalyticsService : IAnalyticsService
 {

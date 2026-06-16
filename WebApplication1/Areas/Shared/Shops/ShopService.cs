@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Shops;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Services.Interfaces;
-using allonbiz.AdminAPI.Helpers;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class ShopService : IShopService
 {
@@ -273,13 +274,22 @@ public class ShopService : IShopService
                 }
                 shop.DeactivateReason = dto.Reason.Trim();
                 shop.IsVerified = false;
-                if (shop.VerifyStatus != "Rejected") shop.VerifyStatus = "Pending";
+                shop.VerifyStatus = "Deactivated";
             }
             shop.UpdatedAt = DateTime.UtcNow;
 
             _context.Shops.Update(shop);
             await _context.SaveChangesAsync(ct);
             
+            if (!shop.IsActive)
+            {
+                await NotifyKeeperAsync(shop.KeeperId, "Shop Deactivated", $"Your shop '{shop.Name}' has been deactivated. Reason: {shop.DeactivateReason}", ct);
+            }
+            else
+            {
+                await NotifyKeeperAsync(shop.KeeperId, "Shop Activated", $"Your shop '{shop.Name}' has been activated by an administrator.", ct);
+            }
+
             _logger.LogInformation("Shop {ShopId} status updated to {IsActive}. Reason: {Reason}", 
                 shopId, dto.IsActive, dto.Reason ?? "N/A");
         }
@@ -308,6 +318,7 @@ public class ShopService : IShopService
 
         _context.Shops.Update(shop);
         await _context.SaveChangesAsync(ct);
+        await NotifyKeeperAsync(shop.KeeperId, "Shop Verified", $"Your shop '{shop.Name}' has been successfully verified.", ct);
     }
 
     public async Task UnverifyShopAsync(Guid shopId, CancellationToken ct = default)
@@ -342,18 +353,21 @@ public class ShopService : IShopService
 
     public async Task RejectShopAsync(Guid shopId, RejectShopRequestDto dto, CancellationToken ct = default)
     {
-        var updated = await _context.Shops
-            .Where(shop => shop.ShopId == shopId)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(shop => shop.IsActive, false)
-                .SetProperty(shop => shop.IsVerified, false)
-                .SetProperty(shop => shop.VerifyStatus, "Rejected")
-                .SetProperty(shop => shop.RejectionReason, dto.Reason.Trim())
-                .SetProperty(shop => shop.UpdatedAt, DateTime.UtcNow), ct);
+        var shop = await _context.Shops.FirstOrDefaultAsync(s => s.ShopId == shopId, ct);
+        if (shop == null) throw new KeyNotFoundException($"Shop {shopId} not found.");
 
-        if (updated == 0)
+        var updated = await _context.Shops
+            .Where(s => s.ShopId == shopId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(s => s.IsActive, false)
+                .SetProperty(s => s.IsVerified, false)
+                .SetProperty(s => s.VerifyStatus, "Rejected")
+                .SetProperty(s => s.RejectionReason, dto.Reason.Trim())
+                .SetProperty(s => s.UpdatedAt, DateTime.UtcNow), ct);
+
+        if (updated > 0)
         {
-            throw new KeyNotFoundException($"Shop {shopId} not found.");
+            await NotifyKeeperAsync(shop.KeeperId, "Shop Rejected", $"Your shop '{shop.Name}' has been rejected. Reason: {dto.Reason.Trim()}", ct);
         }
     }
     
@@ -362,18 +376,20 @@ public class ShopService : IShopService
         var shop = await _context.Shops.FindAsync(new object[] { shopId }, ct);
         if (shop == null) throw new KeyNotFoundException($"Shop {shopId} not found.");
 
-        if (shop.VerifyStatus != "Rejected")
+        if (shop.VerifyStatus != "Rejected" && shop.VerifyStatus != "Deactivated" && (shop.IsActive || string.IsNullOrEmpty(shop.DeactivateReason)))
         {
-            throw new InvalidOperationException("Only rejected shops can be reapplied.");
+            throw new InvalidOperationException("Only rejected or deactivated shops can be reapplied.");
         }
 
         shop.IsVerified = false;
         shop.VerifyStatus = "Pending";
         shop.RejectionReason = null;
+        shop.DeactivateReason = null;
         shop.UpdatedAt = DateTime.UtcNow;
 
         _context.Shops.Update(shop);
         await _context.SaveChangesAsync(ct);
+        await NotifyAdminsAsync("Shop Reapplied", $"The shop '{shop.Name}' has been reapplied for verification by its keeper.", ct);
     }
 
     public async Task<List<ShopSummaryDto>> GetShopsByKeeperAsync(Guid keeperId, CancellationToken ct = default)
@@ -560,4 +576,76 @@ public class ShopService : IShopService
 
     Task IShopService.RejectShopAsync(Guid shopId, RejectShopRequestDto dto, CancellationToken ct)
         => RejectShopAsync(shopId, dto, ct);
+    private async Task NotifyKeeperAsync(Guid keeperId, string title, string message, CancellationToken ct)
+    {
+        var keeperUser = await _context.Keepers.FirstOrDefaultAsync(k => k.KeeperId == keeperId, ct);
+        if (keeperUser == null) return;
+
+        var notification = new Notification
+        {
+            NotificationId = Guid.NewGuid(),
+            Title = title,
+            Message = message,
+            Type = NotificationType.SystemMessage,
+            Priority = NotificationPriority.Normal,
+            TargetAudience = keeperUser.UserId.ToString(),
+            Status = NotificationStatus.Sent,
+            ScheduledAt = DateTime.UtcNow,
+            SentAt = DateTime.UtcNow,
+            SentById = Guid.Empty,
+            SenderType = "System",
+            RecipientCount = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _context.Notifications.Add(notification);
+
+        _context.UserNotifications.Add(new UserNotification
+        {
+            UserId = keeperUser.UserId,
+            NotificationId = notification.NotificationId,
+            IsRead = false,
+            IsDeleted = false,
+            DeliveryStatus = "Delivered",
+            SentAt = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync(ct);
+    }
+
+    private async Task NotifyAdminsAsync(string title, string message, CancellationToken ct)
+    {
+        var adminIds = await _context.Users.Where(u => u.Role == "admin" && u.IsActive).Select(u => u.UserId).ToListAsync(ct);
+        if (!adminIds.Any()) return;
+
+        var notification = new Notification
+        {
+            NotificationId = Guid.NewGuid(),
+            Title = title,
+            Message = message,
+            Type = NotificationType.SystemMessage,
+            Priority = NotificationPriority.Normal,
+            TargetAudience = "admins",
+            Status = NotificationStatus.Sent,
+            ScheduledAt = DateTime.UtcNow,
+            SentAt = DateTime.UtcNow,
+            SentById = Guid.Empty,
+            SenderType = "System",
+            RecipientCount = adminIds.Count,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _context.Notifications.Add(notification);
+
+        var userNotifications = adminIds.Select(id => new UserNotification
+        {
+            UserId = id,
+            NotificationId = notification.NotificationId,
+            IsRead = false,
+            IsDeleted = false,
+            DeliveryStatus = "Delivered",
+            SentAt = DateTime.UtcNow
+        });
+        await _context.UserNotifications.AddRangeAsync(userNotifications, ct);
+        await _context.SaveChangesAsync(ct);
+    }
 }

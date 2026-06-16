@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Moderation;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Moderation;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class ModerationService : IModerationService
 {

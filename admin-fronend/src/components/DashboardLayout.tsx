@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import AccessDenied from '@/components/AccessDenied';
 import { PERMISSIONS, pathPermission } from '@/lib/permissions';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard', permission: PERMISSIONS.systemView },
@@ -107,34 +108,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           zIndex: 50,
           display: 'flex',
           flexDirection: 'column',
-          transition: 'width 0.3s'
+          overflow: 'hidden'
         }}
       >
-        <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: isSidebarOpen ? 'space-between' : 'center' }}>
+        <div style={{ padding: 0, margin: 0, height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' }}>
           {isSidebarOpen ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div className="premium-gradient" style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                <ShieldCheck size={20} />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: '1.25rem' }}>allonbiz</span>
-            </div>
+            <img src="/h2logo.png" alt="ROUTENT" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '0.5rem' }} />
           ) : (
-            <div className="premium-gradient" style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-              <ShieldCheck size={20} />
-            </div>
-          )}
-          {isSidebarOpen && (
-            <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', color: 'hsl(var(--muted-foreground))' }}>
-              <X size={20} />
-            </button>
+            <img src="/simplelogo.png" alt="ROUTENT" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '0.5rem' }} />
           )}
         </div>
-
-        {!isSidebarOpen && (
-          <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', color: 'hsl(var(--muted-foreground))', margin: '0.5rem auto 1.5rem' }}>
-            <Menu size={20} />
-          </button>
-        )}
 
         <nav style={{ flex: 1, padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           {visibleItems.map((item) => {
@@ -190,7 +173,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Topbar */}
         <header className="glass-card" style={{
-          height: '70px',
+          height: '90px',
           borderRadius: 0,
           borderTop: 'none',
           borderLeft: 'none',
@@ -202,21 +185,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           zIndex: 40
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1 }}>
-            <div style={{ position: 'relative', width: '300px' }}>
-              <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--muted-foreground))' }} />
-              <input
-                placeholder="Search anything..."
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 1rem 0.5rem 2.75rem',
-                  borderRadius: '20px',
-                  border: '1px solid hsl(var(--border))',
-                  background: 'hsl(var(--secondary))',
-                  outline: 'none',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
+            <button
+              onClick={() => setSidebarOpen(!isSidebarOpen)}
+              style={{ background: 'none', border: 'none', color: 'hsl(var(--foreground))', display: 'flex', alignItems: 'center', cursor: 'pointer', padding: 0 }}
+            >
+              <Menu size={24} />
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
@@ -233,13 +207,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </button>
             <Link href="/support" style={{ background: 'none', border: 'none', color: 'hsl(var(--foreground))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Support Tickets">
-              <Bell size={20} />
+              <MessageCircle size={20} />
               {unreadCount > 0 && (
                 <span style={{ position: 'absolute', top: -6, right: -6, background: 'hsl(var(--destructive))', color: 'white', borderRadius: '10px', fontSize: '0.65rem', padding: '0 4px', minWidth: '16px', textAlign: 'center', fontWeight: 'bold' }}>
                   {unreadCount}
                 </span>
               )}
             </Link>
+            
+            <NotificationBell />
+
             <div style={{ height: '32px', width: '1px', background: 'hsl(var(--border))' }}></div>
             <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
               <div style={{ textAlign: 'right' }}>

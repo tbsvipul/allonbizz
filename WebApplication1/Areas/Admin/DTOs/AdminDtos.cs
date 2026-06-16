@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.DTOs.Admin;
+namespace routent.AdminAPI.DTOs.Admin;
 
 public class CreateAdminRequestDto
 {
@@ -53,7 +53,7 @@ public class UpdateAdminProfileDto
     public string? Email { get; set; }
 }
 
-public class AdminListQueryDto : allonbiz.AdminAPI.DTOs.Common.PaginationParams
+public class AdminListQueryDto : routent.AdminAPI.DTOs.Common.PaginationParams
 {
     public string? Search { get; set; }
     public string? Role { get; set; }

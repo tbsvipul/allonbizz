@@ -128,6 +128,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showDeactivateReason, setShowDeactivateReason] = useState(true);
   const [reapplying, setReapplying] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
@@ -367,6 +368,14 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
       active = false;
     };
   }, [shopId]);
+
+  useEffect(() => {
+    if (shop?.deactivateReason) {
+      setShowDeactivateReason(true);
+      const timer = setTimeout(() => setShowDeactivateReason(false), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [shop?.deactivateReason]);
 
   async function handleCoverImageChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
@@ -623,8 +632,8 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
       `}} />
 
       {error ? <InlineNotice tone="error" message={error} /> : null}
-      {shop?.rejectionReason ? <InlineNotice tone="error" message={`Review feedback: ${shop.rejectionReason}`} /> : null}
-      {shop?.deactivateReason ? <InlineNotice tone="info" message={`Listing note: ${shop.deactivateReason}`} /> : null}
+      {String(shop?.verifyStatus || '').toLowerCase() === 'rejected' && shop?.rejectionReason ? <InlineNotice tone="error" message={`Review feedback: ${shop.rejectionReason}`} /> : null}
+      {String(shop?.verifyStatus || '').toLowerCase() === 'deactivated' && shop?.deactivateReason && showDeactivateReason ? <InlineNotice tone="info" message={`Listing note: ${shop.deactivateReason}`} /> : null}
 
       <form onSubmit={handleSubmit}>
         {/* Top Header Controls */}
@@ -639,7 +648,7 @@ export function ShopEditor({ shopId }: { shopId?: string }) {
           </div>
           
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            {isEditing && String(shop?.verifyStatus || '').toLowerCase() === 'rejected' ? (
+            {isEditing && (String(shop?.verifyStatus || '').toLowerCase() === 'rejected' || String(shop?.verifyStatus || '').toLowerCase() === 'deactivated') ? (
               <button type="button" className="button-secondary" onClick={() => void handleReapply()} disabled={reapplying || syncing}>
                 <Send size={16} />
                 {reapplying ? 'Reapplying...' : 'Reapply'}

@@ -1,13 +1,13 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class AdminOfferService : IAdminOfferService
 {

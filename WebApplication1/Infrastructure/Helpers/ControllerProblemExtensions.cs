@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class ControllerProblemExtensions
 {
@@ -27,6 +27,13 @@ public static class ControllerProblemExtensions
         {
             ContentTypes = { "application/problem+json" }
         };
+    }
+    public static ObjectResult BadRequestProblemResponse(
+        this ControllerBase controller,
+        string detail,
+        string title = "Bad Request")
+    {
+        return CreateProblemResult(controller.HttpContext, StatusCodes.Status400BadRequest, title, detail);
     }
 
     public static ObjectResult NotFoundProblemResponse(

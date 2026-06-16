@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Filters;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Filters;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Controllers;
+namespace routent.AdminAPI.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/journeys")]

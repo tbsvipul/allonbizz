@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Common;
 
-namespace allonbiz.AdminAPI.DTOs.Admin;
+namespace routent.AdminAPI.DTOs.Admin;
 
 public class AdminOfferListQueryDto : PaginationParams
 {

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Common;
 
-namespace allonbiz.AdminAPI.Controllers;
+namespace routent.AdminAPI.Controllers;
 
 [ApiController]
 [Route("api/v1/health")]

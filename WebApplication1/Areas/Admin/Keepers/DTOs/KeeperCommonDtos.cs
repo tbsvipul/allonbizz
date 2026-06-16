@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.DTOs.Keepers;
+namespace routent.AdminAPI.DTOs.Keepers;
 
 public class KeeperProfileDto
 {

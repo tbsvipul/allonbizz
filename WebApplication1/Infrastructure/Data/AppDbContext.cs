@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Helpers;
 
-namespace allonbiz.AdminAPI.Data;
+namespace routent.AdminAPI.Data;
 
 public class AppDbContext : DbContext
 {

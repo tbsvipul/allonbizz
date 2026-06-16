@@ -1,9 +1,9 @@
-using allonbiz.AdminAPI.DTOs.Keepers;
-using allonbiz.AdminAPI.DTOs.Shops;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Models.Entities;
+using routent.AdminAPI.DTOs.Keepers;
+using routent.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Models.Entities;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface IKeeperProfileService
 {

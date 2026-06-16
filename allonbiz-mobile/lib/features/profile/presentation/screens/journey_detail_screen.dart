@@ -310,67 +310,7 @@ class _JourneyDetailContent extends StatelessWidget {
             shopsEncountered: journey.shopsEncountered,
           ),
         ),
-        _DetailSection(
-          title: 'Route Trace',
-          child: pathPoints.isEmpty
-              ? Text(
-                  'Detailed route breadcrumbs are not available for this journey.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.grey600,
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: AppDimensions.xs,
-                      runSpacing: AppDimensions.xs,
-                      children: [
-                        _InfoChip(
-                          icon: Icons.flag_circle_outlined,
-                          label:
-                              'First: ${formatJourneyCoordinates(pathPoints.first.latitude, pathPoints.first.longitude)}',
-                        ),
-                        _InfoChip(
-                          icon: Icons.outlined_flag_rounded,
-                          label:
-                              'Last: ${formatJourneyCoordinates(pathPoints.last.latitude, pathPoints.last.longitude)}',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppDimensions.md),
-                    ...pathPoints
-                        .take(8)
-                        .toList(growable: false)
-                        .asMap()
-                        .entries
-                        .map(
-                          (entry) => Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppDimensions.sm,
-                            ),
-                            child: _DetailRow(
-                              label: 'Point ${entry.key + 1}',
-                              value: formatJourneyCoordinates(
-                                entry.value.latitude,
-                                entry.value.longitude,
-                              ),
-                            ),
-                          ),
-                        ),
-                    if (pathPoints.length > 8)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppDimensions.xs),
-                        child: Text(
-                          '${pathPoints.length - 8} more route points were recorded.',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.grey600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-        ),
+        
         const SizedBox(height: AppDimensions.xl),
       ],
     );
@@ -523,12 +463,18 @@ class _LocationDetailBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: accentColor,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 16, color: accentColor),
+              const SizedBox(width: 4),
+              Text(
+                title,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: accentColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppDimensions.xs),
           Text(
@@ -536,11 +482,6 @@ class _LocationDetailBlock extends StatelessWidget {
             style: AppTextStyles.titleSmall.copyWith(
               fontWeight: FontWeight.w700,
             ),
-          ),
-          const SizedBox(height: AppDimensions.xs),
-          Text(
-            coordinates,
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.grey600),
           ),
           const SizedBox(height: AppDimensions.xs),
           Text(

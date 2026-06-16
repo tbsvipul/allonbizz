@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Moderation;
+namespace routent.AdminAPI.DTOs.Moderation;
 
 public class ApproveDto
 {
@@ -36,7 +36,7 @@ public class ActionOnReportDto
     public string? Notes { get; set; }
 }
 
-public class ModerationQueueQueryDto : allonbiz.AdminAPI.DTOs.Common.PaginationParams
+public class ModerationQueueQueryDto : routent.AdminAPI.DTOs.Common.PaginationParams
 {
     public string? Search { get; set; }
     public string? Status { get; set; }
@@ -55,7 +55,7 @@ public class ModerationQueueItemDto
     public Guid ReferenceId { get; set; }
 }
 
-public class ModerationReportQueryDto : allonbiz.AdminAPI.DTOs.Common.PaginationParams
+public class ModerationReportQueryDto : routent.AdminAPI.DTOs.Common.PaginationParams
 {
     public string? Status { get; set; }
     public string? ItemType { get; set; }

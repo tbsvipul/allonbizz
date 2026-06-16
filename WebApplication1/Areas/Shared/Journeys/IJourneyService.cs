@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.DTOs.Users;
+using routent.AdminAPI.DTOs.Users;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface IJourneyService
 {

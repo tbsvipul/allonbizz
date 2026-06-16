@@ -50,7 +50,7 @@ interface Shop {
 }
 
 type StatusFilter = 'all' | 'active' | 'inactive';
-type VerifyFilter = 'all' | 'Pending' | 'Verified' | 'Rejected';
+type VerifyFilter = 'all' | 'Pending' | 'Verified' | 'Rejected' | 'Deactivated';
 type ActionType = 'verify' | 'reject' | 'activate' | 'deactivate' | null;
 type Toast = { tone: 'success' | 'error'; message: string };
 type Tone = { background: string; color: string; border: string };
@@ -68,6 +68,7 @@ const verifyOptions: Array<{ value: VerifyFilter; label: string }> = [
   { value: 'Pending', label: 'Pending Review' },
   { value: 'Verified', label: 'Verified' },
   { value: 'Rejected', label: 'Rejected' },
+  { value: 'Deactivated', label: 'Deactivated' },
 ];
 
 function SummaryCard({
@@ -159,6 +160,7 @@ function getVerificationTone(status: string): Tone {
         border: 'rgba(16, 185, 129, 0.22)',
       };
     case 'rejected':
+    case 'deactivated':
       return {
         background: 'rgba(239, 68, 68, 0.12)',
         color: '#ef4444',
@@ -700,6 +702,7 @@ export default function ShopsPage() {
                   { value: 'Pending', label: 'Pending Review', icon: <Clock size={16} />, color: '#f59e0b' },
                   { value: 'Verified', label: 'Verified', icon: <ShieldCheck size={16} />, color: '#10b981' },
                   { value: 'Rejected', label: 'Rejected', icon: <XCircle size={16} />, color: '#ef4444' },
+                  { value: 'Deactivated', label: 'Deactivated', icon: <XCircle size={16} />, color: '#ef4444' },
                 ]}
                 style={{ width: '100%', minWidth: '220px' }}
                 className="shops-verify-select"
@@ -991,7 +994,7 @@ export default function ShopsPage() {
                           <span>{shop.status}</span>
                         </div>
                         <div className="shop-meta-chip" style={{ background: verificationTone.background, borderColor: verificationTone.border, color: verificationTone.color, justifyContent: 'center' }}>
-                          {shop.verifyStatus.toLowerCase() === 'verified' ? <ShieldCheck size={13} /> : shop.verifyStatus.toLowerCase() === 'rejected' ? <XCircle size={13} /> : <Clock size={13} />}
+                          {shop.verifyStatus.toLowerCase() === 'verified' ? <ShieldCheck size={13} /> : (shop.verifyStatus.toLowerCase() === 'rejected' || shop.verifyStatus.toLowerCase() === 'deactivated') ? <XCircle size={13} /> : <Clock size={13} />}
                           <span>{shop.verifyStatus}</span>
                         </div>
                         {/* Open / Closed indicator */}

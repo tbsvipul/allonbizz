@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.DTOs.Users;
+namespace routent.AdminAPI.DTOs.Users;
 
 public class RouteCalculateRequestDto
 {

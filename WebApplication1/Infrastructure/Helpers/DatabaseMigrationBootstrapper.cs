@@ -1,11 +1,11 @@
 using System.Data;
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class DatabaseMigrationBootstrapper
 {

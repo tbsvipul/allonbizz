@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Common;
+namespace routent.AdminAPI.DTOs.Common;
 
 public class PaginationParams
 {

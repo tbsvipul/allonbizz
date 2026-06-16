@@ -13,6 +13,10 @@ export function getShopVerificationStatusLabel(status?: string | null, isVerifie
     return 'Rejected';
   }
 
+  if (normalized === 'deactivated') {
+    return 'Deactivated';
+  }
+
   return 'Pending';
 }
 

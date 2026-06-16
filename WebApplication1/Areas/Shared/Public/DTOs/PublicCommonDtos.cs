@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.DTOs.Public;
+namespace routent.AdminAPI.DTOs.Public;
 
 public class PublicCategoryDto
 {

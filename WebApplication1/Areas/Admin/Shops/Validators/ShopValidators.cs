@@ -1,7 +1,7 @@
 using FluentValidation;
-using allonbiz.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.DTOs.Shops;
 
-namespace allonbiz.AdminAPI.Validators;
+namespace routent.AdminAPI.Validators;
 
 public class UpdateShopStatusDtoValidator : AbstractValidator<UpdateShopStatusDto>
 {

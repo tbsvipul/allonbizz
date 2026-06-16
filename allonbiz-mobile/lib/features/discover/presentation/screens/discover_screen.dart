@@ -33,6 +33,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
   Timer? _searchDebounce;
   String _searchQuery = '';
   String? _selectedCategoryId;
@@ -48,10 +49,18 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
+    _searchFocusNode.addListener(_onSearchFocusChanged);
+  }
+
+  void _onSearchFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _searchFocusNode.removeListener(_onSearchFocusChanged);
+    _searchFocusNode.dispose();
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -90,6 +99,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   void _clearFilters() {
     _searchDebounce?.cancel();
     _searchController.clear();
+    _searchFocusNode.unfocus();
     setState(() {
       _searchQuery = '';
       _selectedCategoryId = null;
@@ -121,48 +131,52 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        CustomScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          slivers: [
-            const SliverPadding(
-              padding: EdgeInsets.only(top: AppDimensions.md),
-            ),
-            _buildSearch(context),
-            if (_hasFilters) _buildActiveFilters(),
-            if (discoverAsync.hasError && discoverAsync.valueOrNull == null)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: AppErrorWidget(
-                  title: 'Discover unavailable',
-                  message: discoverAsync.error.toString(),
-                  onRetry: () => ref.invalidate(userDiscoverProvider(query)),
-                ),
-              )
-            else ...[
-              _buildOffers(data.offers, discoverAsync.isLoading),
-              _buildShops(data.shops),
-              if (!discoverAsync.isLoading &&
-                  data.offers.isEmpty &&
-                  data.shops.isEmpty)
-                SliverToBoxAdapter(
-                  child: AppEmptyState(
-                    title: 'No matches found',
-                    subtitle:
-                        'Try removing a filter or expanding your discovery radius.',
-                    icon: Icons.explore_off_rounded,
-                    actionLabel: _hasFilters ? 'Clear filters' : null,
-                    onAction: _hasFilters ? _clearFilters : null,
-                  ),
-                ),
-            ],
-            SliverPadding(
-              padding: EdgeInsets.only(
-                bottom: 178 + MediaQuery.of(context).padding.bottom,
+        GestureDetector(
+          onTap: () => _searchFocusNode.unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              const SliverPadding(
+                padding: EdgeInsets.only(top: AppDimensions.md),
               ),
-            ),
-          ],
+              _buildSearch(context),
+              if (_hasFilters) _buildActiveFilters(),
+              if (discoverAsync.hasError && discoverAsync.valueOrNull == null)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: AppErrorWidget(
+                    title: 'Discover unavailable',
+                    message: discoverAsync.error.toString(),
+                    onRetry: () => ref.invalidate(userDiscoverProvider(query)),
+                  ),
+                )
+              else ...[
+                _buildOffers(data.offers, discoverAsync.isLoading),
+                _buildShops(data.shops),
+                if (!discoverAsync.isLoading &&
+                    data.offers.isEmpty &&
+                    data.shops.isEmpty)
+                  SliverToBoxAdapter(
+                    child: AppEmptyState(
+                      title: 'No matches found',
+                      subtitle:
+                          'Try removing a filter or expanding your discovery radius.',
+                      icon: Icons.explore_off_rounded,
+                      actionLabel: _hasFilters ? 'Clear filters' : null,
+                      onAction: _hasFilters ? _clearFilters : null,
+                    ),
+                  ),
+              ],
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  bottom: 178 + MediaQuery.of(context).padding.bottom,
+                ),
+              ),
+            ],
+          ),
         ),
-        if (_searchQuery.isNotEmpty)
+        if (_searchQuery.isNotEmpty && _searchFocusNode.hasFocus)
           Positioned(
             top: AppDimensions.md + 66,
             left: AppDimensions.lg,
@@ -185,11 +199,23 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         padding: const EdgeInsets.symmetric(horizontal: AppDimensions.lg),
         child: AppTextField.search(
           controller: _searchController,
+          focusNode: _searchFocusNode,
           hint: l10n.searchHint,
           onChanged: _handleSearchChanged,
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () {
+                    _searchController.clear();
+                    _searchFocusNode.unfocus();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
           onSubmitted: (value) {
             _searchDebounce?.cancel();
             setState(() => _searchQuery = value.trim());
+            _searchFocusNode.unfocus();
           },
         ),
       ),
@@ -281,9 +307,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       borderRadius: BorderRadius.circular(22),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
-        child: GlassmorphicContainer(
+        child: Container(
           padding: const EdgeInsets.all(AppDimensions.md),
-          borderRadius: BorderRadius.circular(22),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
           child:
               isLoading && categorySuggestions.isEmpty && tagSuggestions.isEmpty
               ? const Center(child: AppLoader.inline(size: 22))

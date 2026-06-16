@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using allonbiz.AdminAPI.Data;
+using routent.AdminAPI.Data;
 
 #nullable disable
 
-namespace allonbiz.AdminAPI.Infrastructure.Migrations
+namespace routent.AdminAPI.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260526080353_UserNotificationSystem")]
@@ -27,7 +27,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.AdminAccount", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.AdminAccount", b =>
                 {
                     b.Property<Guid>("AdminId")
                         .ValueGeneratedOnAdd()
@@ -125,7 +125,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("admin_accounts", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.AuditLog", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("AuditId")
                         .ValueGeneratedOnAdd()
@@ -183,7 +183,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.AuthChallenge", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.AuthChallenge", b =>
                 {
                     b.Property<Guid>("ChallengeId")
                         .ValueGeneratedOnAdd()
@@ -230,7 +230,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("auth_challenges", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Category", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Category", b =>
                 {
                     b.Property<Guid>("CategoryId")
                         .ValueGeneratedOnAdd()
@@ -271,7 +271,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ChatMessage", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ChatMessage", b =>
                 {
                     b.Property<Guid>("MessageId")
                         .ValueGeneratedOnAdd()
@@ -305,7 +305,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("chat_messages", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ChatThread", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ChatThread", b =>
                 {
                     b.Property<Guid>("ThreadId")
                         .ValueGeneratedOnAdd()
@@ -341,7 +341,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("chat_threads", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ErrorLog", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ErrorLog", b =>
                 {
                     b.Property<Guid>("LogId")
                         .ValueGeneratedOnAdd()
@@ -414,7 +414,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("error_logs", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Favourite", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Favourite", b =>
                 {
                     b.Property<Guid>("FavouriteId")
                         .ValueGeneratedOnAdd()
@@ -447,7 +447,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Favourites");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Journey", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Journey", b =>
                 {
                     b.Property<Guid>("JourneyId")
                         .ValueGeneratedOnAdd()
@@ -522,7 +522,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Journeys");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Keeper", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Keeper", b =>
                 {
                     b.Property<Guid>("KeeperId")
                         .ValueGeneratedOnAdd()
@@ -620,7 +620,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Keepers");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperAuditSchedule", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.KeeperAuditSchedule", b =>
                 {
                     b.Property<Guid>("AuditScheduleId")
                         .ValueGeneratedOnAdd()
@@ -658,7 +658,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("keeper_audit_schedules", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperDocument", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.KeeperDocument", b =>
                 {
                     b.Property<Guid>("DocumentId")
                         .ValueGeneratedOnAdd()
@@ -710,7 +710,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("keeper_documents", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperReviewMessage", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.KeeperReviewMessage", b =>
                 {
                     b.Property<Guid>("MessageId")
                         .ValueGeneratedOnAdd()
@@ -746,7 +746,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("keeper_review_messages", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.LoyaltyWallet", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.LoyaltyWallet", b =>
                 {
                     b.Property<Guid>("WalletId")
                         .ValueGeneratedOnAdd()
@@ -776,7 +776,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("loyalty_wallets", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.MediaAsset", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.MediaAsset", b =>
                 {
                     b.Property<Guid>("AssetId")
                         .ValueGeneratedOnAdd()
@@ -818,7 +818,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("MediaAssets", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ModerationQueueItem", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ModerationQueueItem", b =>
                 {
                     b.Property<Guid>("ItemId")
                         .ValueGeneratedOnAdd()
@@ -896,7 +896,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("moderation_queue", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Notification", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Notification", b =>
                 {
                     b.Property<Guid>("NotificationId")
                         .ValueGeneratedOnAdd()
@@ -1000,7 +1000,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.NotificationDeliveryJob", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.NotificationDeliveryJob", b =>
                 {
                     b.Property<Guid>("JobId")
                         .ValueGeneratedOnAdd()
@@ -1050,7 +1050,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("notification_delivery_jobs", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.NotificationLog", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.NotificationLog", b =>
                 {
                     b.Property<Guid>("LogId")
                         .ValueGeneratedOnAdd()
@@ -1084,7 +1084,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("NotificationLogs");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Offer", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Offer", b =>
                 {
                     b.Property<Guid>("OfferId")
                         .ValueGeneratedOnAdd()
@@ -1181,7 +1181,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Offers");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.PlatformRule", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.PlatformRule", b =>
                 {
                     b.Property<Guid>("RuleId")
                         .ValueGeneratedOnAdd()
@@ -1217,7 +1217,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("platform_rules", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Redemption", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Redemption", b =>
                 {
                     b.Property<Guid>("RedemptionId")
                         .ValueGeneratedOnAdd()
@@ -1255,7 +1255,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Redemptions");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.RefreshToken", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1301,7 +1301,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Review", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Review", b =>
                 {
                     b.Property<Guid>("ReviewId")
                         .ValueGeneratedOnAdd()
@@ -1345,7 +1345,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Reviews");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.RouteRecord", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.RouteRecord", b =>
                 {
                     b.Property<Guid>("RouteId")
                         .ValueGeneratedOnAdd()
@@ -1398,7 +1398,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("route_records", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Shop", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Shop", b =>
                 {
                     b.Property<Guid>("ShopId")
                         .ValueGeneratedOnAdd()
@@ -1509,7 +1509,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
                 {
                     b.Property<Guid>("ProgramId")
                         .ValueGeneratedOnAdd()
@@ -1551,7 +1551,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("shop_loyalty_programs", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
                 {
                     b.Property<Guid>("SettingId")
                         .ValueGeneratedOnAdd()
@@ -1582,7 +1582,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("ShopNotificationSettings");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Tag", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Tag", b =>
                 {
                     b.Property<Guid>("TagId")
                         .ValueGeneratedOnAdd()
@@ -1615,7 +1615,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Tags");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.User", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.User", b =>
                 {
                     b.Property<Guid>("UserId")
                         .ValueGeneratedOnAdd()
@@ -1701,7 +1701,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.UserNotification", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.UserNotification", b =>
                 {
                     b.Property<Guid>("UserNotificationId")
                         .ValueGeneratedOnAdd()
@@ -1738,7 +1738,7 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("UserNotifications");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.UserReport", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.UserReport", b =>
                 {
                     b.Property<Guid>("ReportId")
                         .ValueGeneratedOnAdd()
@@ -1808,9 +1808,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.ToTable("user_reports", (string)null);
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.AuditLog", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.AuditLog", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "Admin")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "Admin")
                         .WithMany()
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1819,18 +1819,18 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Admin");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Category", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Category", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Category", "ParentCategory")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Category", "ParentCategory")
                         .WithMany("SubCategories")
                         .HasForeignKey("ParentCategoryId");
 
                     b.Navigation("ParentCategory");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ChatMessage", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ChatMessage", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.ChatThread", "Thread")
+                    b.HasOne("routent.AdminAPI.Models.Entities.ChatThread", "Thread")
                         .WithMany("Messages")
                         .HasForeignKey("ThreadId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1839,15 +1839,15 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Thread");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ChatThread", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ChatThread", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Keeper", "Keeper")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Keeper", "Keeper")
                         .WithMany()
                         .HasForeignKey("KeeperId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1858,26 +1858,26 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ErrorLog", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ErrorLog", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "Resolver")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "Resolver")
                         .WithMany()
                         .HasForeignKey("ResolvedBy");
 
                     b.Navigation("Resolver");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Favourite", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Favourite", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Offer", "Offer")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Offer", "Offer")
                         .WithMany()
                         .HasForeignKey("OfferId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany()
                         .HasForeignKey("ShopId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1890,9 +1890,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Journey", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Journey", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1901,9 +1901,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Keeper", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Keeper", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1912,15 +1912,15 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperAuditSchedule", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.KeeperAuditSchedule", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Keeper", "Keeper")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Keeper", "Keeper")
                         .WithMany("AuditSchedules")
                         .HasForeignKey("KeeperId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "RequestedByAdmin")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "RequestedByAdmin")
                         .WithMany()
                         .HasForeignKey("RequestedByAdminId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1931,15 +1931,15 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("RequestedByAdmin");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperDocument", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.KeeperDocument", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Keeper", "Keeper")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Keeper", "Keeper")
                         .WithMany("Documents")
                         .HasForeignKey("KeeperId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "ReviewedByAdmin")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "ReviewedByAdmin")
                         .WithMany()
                         .HasForeignKey("ReviewedByAdminId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -1949,15 +1949,15 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("ReviewedByAdmin");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.KeeperReviewMessage", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.KeeperReviewMessage", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "Admin")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "Admin")
                         .WithMany()
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Keeper", "Keeper")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Keeper", "Keeper")
                         .WithMany("ReviewMessages")
                         .HasForeignKey("KeeperId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1968,9 +1968,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Keeper");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.LoyaltyWallet", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.LoyaltyWallet", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1979,30 +1979,30 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ModerationQueueItem", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ModerationQueueItem", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "Reviewer")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "Reviewer")
                         .WithMany()
                         .HasForeignKey("ReviewedBy");
 
                     b.Navigation("Reviewer");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Notification", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Notification", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Offer", "Offer")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Offer", "Offer")
                         .WithMany()
                         .HasForeignKey("OfferId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "SentByAdmin")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "SentByAdmin")
                         .WithMany()
                         .HasForeignKey("SentByAdminAdminId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany()
                         .HasForeignKey("ShopId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
@@ -2015,9 +2015,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.NotificationDeliveryJob", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.NotificationDeliveryJob", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Notification", "Notification")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Notification", "Notification")
                         .WithMany()
                         .HasForeignKey("NotificationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2026,15 +2026,15 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Notification");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.NotificationLog", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.NotificationLog", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Notification", "Notification")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Notification", "Notification")
                         .WithMany("NotificationLogs")
                         .HasForeignKey("NotificationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
@@ -2043,19 +2043,19 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Offer", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Offer", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Category", "Category")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Keeper", "Keeper")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Keeper", "Keeper")
                         .WithMany()
                         .HasForeignKey("KeeperId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany("Offers")
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2068,21 +2068,21 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Shop");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Redemption", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Redemption", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Offer", "Offer")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Offer", "Offer")
                         .WithMany()
                         .HasForeignKey("OfferId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany()
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2095,17 +2095,17 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Review", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Review", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Offer", "Offer")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Offer", "Offer")
                         .WithMany()
                         .HasForeignKey("OfferId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany("Reviews")
                         .HasForeignKey("ShopId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2118,9 +2118,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.RouteRecord", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.RouteRecord", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2129,13 +2129,13 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Shop", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Shop", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Category", "Category")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId");
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Keeper", "Keeper")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Keeper", "Keeper")
                         .WithMany("Shops")
                         .HasForeignKey("KeeperId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2146,9 +2146,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Keeper");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ShopLoyaltyProgram", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany()
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2157,9 +2157,9 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Shop");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ShopNotificationSetting", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Shop", "Shop")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Shop", "Shop")
                         .WithMany()
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2168,15 +2168,15 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Shop");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.UserNotification", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.UserNotification", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.Notification", "Notification")
+                    b.HasOne("routent.AdminAPI.Models.Entities.Notification", "Notification")
                         .WithMany("UserNotifications")
                         .HasForeignKey("NotificationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.User", "User")
+                    b.HasOne("routent.AdminAPI.Models.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2187,26 +2187,26 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.UserReport", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.UserReport", b =>
                 {
-                    b.HasOne("allonbiz.AdminAPI.Models.Entities.AdminAccount", "Handler")
+                    b.HasOne("routent.AdminAPI.Models.Entities.AdminAccount", "Handler")
                         .WithMany()
                         .HasForeignKey("HandledBy");
 
                     b.Navigation("Handler");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Category", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Category", b =>
                 {
                     b.Navigation("SubCategories");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.ChatThread", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.ChatThread", b =>
                 {
                     b.Navigation("Messages");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Keeper", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Keeper", b =>
                 {
                     b.Navigation("AuditSchedules");
 
@@ -2217,14 +2217,14 @@ namespace allonbiz.AdminAPI.Infrastructure.Migrations
                     b.Navigation("Shops");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Notification", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Notification", b =>
                 {
                     b.Navigation("NotificationLogs");
 
                     b.Navigation("UserNotifications");
                 });
 
-            modelBuilder.Entity("allonbiz.AdminAPI.Models.Entities.Shop", b =>
+            modelBuilder.Entity("routent.AdminAPI.Models.Entities.Shop", b =>
                 {
                     b.Navigation("Offers");
 

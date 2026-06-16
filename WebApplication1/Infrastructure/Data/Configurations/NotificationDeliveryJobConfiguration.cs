@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using allonbiz.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Entities;
 
-namespace allonbiz.AdminAPI.Data.Configurations;
+namespace routent.AdminAPI.Data.Configurations;
 
 public class NotificationDeliveryJobConfiguration : IEntityTypeConfiguration<NotificationDeliveryJob>
 {

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class ImageConversionHelper
 {

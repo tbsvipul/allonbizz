@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.Constants;
+namespace routent.AdminAPI.Constants;
 
 public static class Permissions
 {

@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Support;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Support;
+using routent.AdminAPI.Services.Interfaces;
 using System.Security.Claims;
 
-namespace allonbiz.AdminAPI.Areas.User.Controllers;
+namespace routent.AdminAPI.Areas.User.Controllers;
 
 [ApiController]
 [Route("api/v1/user/support")]

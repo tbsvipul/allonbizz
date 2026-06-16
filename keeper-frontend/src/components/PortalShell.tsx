@@ -86,18 +86,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-frame">
       <div className="portal-shell" data-collapsed={collapsed}>
-        <aside className="portal-sidebar">
-          <div className="portal-sidebar-top">
-            <Link href="/dashboard" className="portal-brand-link" title="Go to dashboard">
-              <div className="portal-brand-mark">
-                <Store size={18} />
-              </div>
+        <aside className="portal-sidebar" style={{ overflow: 'hidden' }}>
+          <div className="portal-sidebar-top" style={{ padding: 0, margin: collapsed ? '-0.85rem -2rem -0.5rem -0.85rem' : '-1rem -2rem -0.5rem -1rem', height: '88px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' }}>
+            <Link href="/dashboard" className="portal-brand-link" title="Go to dashboard" style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%', textDecoration: 'none' }}>
               {!collapsed ? (
-                <div className="portal-brand-copy">
-                  <span className="portal-eyebrow">allonbiz keeper</span>
-                  <strong>Merchant Console</strong>
-                </div>
-              ) : null}
+                <img src="/h2logo.png" alt="ROUTENT" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '0.5rem' }} />
+              ) : (
+                <img src="/simplelogo.png" alt="ROUTENT" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '0.5rem' }} />
+              )}
             </Link>
           </div>
 
@@ -169,19 +165,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               >
                 {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
               </button>
-
-              <form className="portal-search-form" onSubmit={handleSearchSubmit}>
-                <label className="portal-search-field" htmlFor="portal-search">
-                  <Search size={16} />
-                  <input
-                    id="portal-search"
-                    type="search"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search dashboard pages, shops, offers..."
-                  />
-                </label>
-              </form>
             </div>
 
             <div className="portal-topbar-right">

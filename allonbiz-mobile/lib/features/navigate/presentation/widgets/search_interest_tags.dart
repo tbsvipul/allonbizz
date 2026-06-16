@@ -154,7 +154,7 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
           Text(
             'WHAT ARE YOU LOOKING FOR?',
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.grey600,
+              color: AppColors.primaryDark,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
             ),
@@ -164,12 +164,10 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: widget.isDark ? AppColors.grey800 : AppColors.grey100,
+            color: widget.isDark ? AppColors.grey800 : AppColors.white.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
             border: Border.all(
-              color: widget.interestFocus.hasFocus
-                  ? colorScheme.primary
-                  : Colors.transparent,
+              color: AppColors.primary.withValues(alpha: 0.8),
               width: 1,
             ),
           ),
@@ -196,6 +194,11 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
                       color: AppColors.grey500,
                     ),
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     fillColor: Colors.transparent,
                     suffixIcon: widget.isAddingTag
@@ -336,19 +339,16 @@ class _SearchInterestTagsState extends State<SearchInterestTags> {
   Widget _buildTagChip(TagModel tag) {
     final isSelected = widget.selectedInterests.contains(tag.name);
     return FilterChip(
-          label: Text(tag.name),
+          label: Text('# ${tag.name}'),
           selected: isSelected,
           onSelected: (_) => widget.onToggleInterest(tag.name),
-          avatar: Icon(
-            tag.icon,
-            size: 16,
-            color: isSelected ? AppColors.white : AppColors.grey600,
-          ),
+          showCheckmark: false,
           backgroundColor: tag.displayColor.withValues(alpha: 0.1),
           selectedColor: tag.displayColor,
-          checkmarkColor: AppColors.white,
+          side: BorderSide.none,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           labelStyle: AppTextStyles.labelSmall.copyWith(
-            color: isSelected ? AppColors.white : AppColors.grey700,
+            color: isSelected ? AppColors.white : AppColors.grey800,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         )

@@ -6,8 +6,8 @@ class BaseApi {
   BaseApi._();
 
   static const String _backendFallbackWeb = 'http://localhost:5247/api/v1';
-  static const String _backendFallbackNative = 'http://10.0.2.2:5247/api/v1';
-  static const String _placesFallbackNative = 'http://10.0.2.2:5000/api/v1';
+  static const String _backendFallbackNative = 'http://192.168.1.189:5247/api/v1';
+  static const String _placesFallbackNative = 'http://192.168.1.189:5000/api/v1';
   static const String _nominatimFallback =
       'https://nominatim.openstreetmap.org';
   static const String _osrmFallback = 'https://router.project-osrm.org';
@@ -110,7 +110,9 @@ class BaseApi {
 
   static bool isTrustedDevelopmentHost(String host) {
     final normalized = host.trim().toLowerCase();
-    return normalized == '10.0.2.2' || isLoopbackHost(normalized);
+    return normalized == '10.0.2.2' || 
+           isLoopbackHost(normalized) || 
+           normalized.startsWith('192.168.');
   }
 
   static String _trimTrailingSlash(String url) {

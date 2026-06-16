@@ -1,10 +1,10 @@
-using allonbiz.AdminAPI.DTOs.Categories;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Moderation;
-using allonbiz.AdminAPI.DTOs.Analytics;
-using allonbiz.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Categories;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Moderation;
+using routent.AdminAPI.DTOs.Analytics;
+using routent.AdminAPI.DTOs.Admin;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface ICategoryService {
     Task<List<CategoryTreeDto>> GetCategoryTreeAsync(bool includeInactive = false, CancellationToken ct = default);

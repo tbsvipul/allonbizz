@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 using System.Text.Json;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class UserProfileService : IUserProfileService
 {
@@ -34,7 +34,16 @@ public class UserProfileService : IUserProfileService
     public async Task<UserProfileDto> GetProfileAsync(Guid userId)
     {
         var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
-        if (user == null) return null!;
+        if (user == null || !user.IsActive || user.Status != UserStatus.Active)
+        {
+            var message = "Your account is inactive, suspended, or banned.";
+            if (user != null && !string.IsNullOrWhiteSpace(user.StatusReason))
+            {
+                message += $" Reason: {user.StatusReason}";
+            }
+            throw new UnauthorizedAccessException(message);
+        }
+
         return new UserProfileDto 
         { 
             UserId = user.UserId, 
@@ -665,9 +674,31 @@ public class FavouriteService : IFavouriteService
 
     public async Task ToggleFavouriteAsync(Guid userId, ToggleFavouriteDto dto)
     {
-        var fav = await _db.Favourites.FirstOrDefaultAsync(f => f.UserId == userId && (f.ShopId == dto.ShopId || f.OfferId == dto.OfferId));
-        if (fav != null) _db.Favourites.Remove(fav);
-        else _db.Favourites.Add(new Favourite { UserId = userId, ShopId = dto.ShopId, OfferId = dto.OfferId, Type = dto.ShopId.HasValue ? "shop" : "offer" });
+        Favourite? fav = null;
+        if (dto.ShopId.HasValue)
+        {
+            fav = await _db.Favourites.FirstOrDefaultAsync(f => f.UserId == userId && f.ShopId == dto.ShopId);
+        }
+        else if (dto.OfferId.HasValue)
+        {
+            fav = await _db.Favourites.FirstOrDefaultAsync(f => f.UserId == userId && f.OfferId == dto.OfferId);
+        }
+
+        if (fav != null)
+        {
+            _db.Favourites.Remove(fav);
+        }
+        else
+        {
+            _db.Favourites.Add(new Favourite 
+            { 
+                UserId = userId, 
+                ShopId = dto.ShopId, 
+                OfferId = dto.OfferId, 
+                Type = dto.ShopId.HasValue ? "shop" : "offer" 
+            });
+        }
+        
         await _db.SaveChangesAsync();
     }
 }

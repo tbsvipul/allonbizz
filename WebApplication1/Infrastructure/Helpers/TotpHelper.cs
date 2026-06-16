@@ -1,6 +1,6 @@
 using OtpNet;
 
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class TotpHelper
 {
@@ -10,7 +10,7 @@ public static class TotpHelper
         return Base32Encoding.ToString(key);
     }
 
-    public static string GenerateQrUri(string secret, string email, string issuer = "allonbiz Admin")
+    public static string GenerateQrUri(string secret, string email, string issuer = "routent Admin")
     {
         return $"otpauth://totp/{issuer}:{email}?secret={secret}&issuer={issuer}&digits=6&period=30";
     }

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Categories;
+namespace routent.AdminAPI.DTOs.Categories;
 
 public class CreateCategoryRequestDto
 {

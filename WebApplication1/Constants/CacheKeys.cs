@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.Constants;
+namespace routent.AdminAPI.Constants;
 
 public static class CacheKeys
 {

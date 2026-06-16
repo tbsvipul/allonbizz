@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Support;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Support;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Infrastructure.Support;
+namespace routent.AdminAPI.Infrastructure.Support;
 
 public class SupportTicketService : ISupportTicketService
 {

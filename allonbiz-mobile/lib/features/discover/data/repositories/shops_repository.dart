@@ -31,4 +31,22 @@ class ShopsRepository {
       throw DatabaseFailure(error.message);
     }
   }
+
+  Future<void> saveShop(String shopId) async {
+    try {
+      await _apiClient.post(
+        '/user/favourites',
+        body: {'shopId': shopId},
+      );
+      await _invalidateShopCaches(shopId);
+    } on ServerFailure catch (error) {
+      throw DatabaseFailure(error.message);
+    }
+  }
+
+  Future<void> _invalidateShopCaches(String shopId) async {
+    await Future.wait([
+      _apiClient.invalidateCacheKey('shop-detail:$shopId'),
+    ]);
+  }
 }

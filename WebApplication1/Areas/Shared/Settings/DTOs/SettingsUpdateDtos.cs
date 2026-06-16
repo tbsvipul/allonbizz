@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using allonbiz.AdminAPI.DTOs.System;
+using routent.AdminAPI.DTOs.System;
 
-namespace allonbiz.AdminAPI.DTOs.Settings;
+namespace routent.AdminAPI.DTOs.Settings;
 
 public class UpdateSettingsDto
 {

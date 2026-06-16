@@ -164,11 +164,19 @@ class MainLayout extends ConsumerWidget {
   }
 
   Widget _getDefaultTitle(int index, AppLocalizations l10n) {
+    if (index == 0) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset('assets/images/tranperentlogo.png', height: 60),
+          const SizedBox(width: 8),
+          Text(l10n.appName),
+        ],
+      );
+    }
+
     String title;
     switch (index) {
-      case 0:
-        title = l10n.appName;
-        break;
       case 1:
         title = l10n.navNavigate;
         break;

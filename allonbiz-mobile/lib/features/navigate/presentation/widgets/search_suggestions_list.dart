@@ -19,7 +19,7 @@ class SearchSuggestionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (isLoading && suggestions.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(child: CircularProgressIndicator()),
@@ -42,8 +42,14 @@ class SearchSuggestionsList extends StatelessWidget {
           ),
         ],
       ),
-      child: ListView.separated(
-        shrinkWrap: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isLoading)
+            const LinearProgressIndicator(minHeight: 2),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
         padding: EdgeInsets.zero,
         itemCount: suggestions.length,
         separatorBuilder: (context, index) => Divider(
@@ -76,6 +82,9 @@ class SearchSuggestionsList extends StatelessWidget {
           );
         },
       ),
+    ),
+  ],
+),
     );
   }
 }

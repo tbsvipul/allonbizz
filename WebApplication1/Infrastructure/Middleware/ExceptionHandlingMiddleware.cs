@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
-namespace allonbiz.AdminAPI.Middleware;
+namespace routent.AdminAPI.Middleware;
 
 public class ExceptionHandlingMiddleware
 {

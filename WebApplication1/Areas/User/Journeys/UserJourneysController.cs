@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Controllers;
+namespace routent.AdminAPI.Controllers;
 
 [ApiController]
 [Route("api/v1/user/journeys")]
@@ -19,9 +19,20 @@ public class UserJourneysController : ControllerBase
     [HttpPost("start")]
     public async Task<IActionResult> StartJourney([FromBody] StartJourneyDto dto)
     {
-        var userId = User.GetUserId();
-        var journeyId = await _journeyService.StartJourneyAsync(userId, dto);
-        return Ok(ApiResponse<object>.Ok(new { journeyId }, "Journey started successfully"));
+        try
+        {
+            var userId = User.GetUserId();
+            var journeyId = await _journeyService.StartJourneyAsync(userId, dto);
+            return Ok(ApiResponse<object>.Ok(new { journeyId }, "Journey started successfully"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return this.BadRequestProblemResponse(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return this.UnauthorizedProblemResponse(ex.Message);
+        }
     }
 
     [HttpGet]

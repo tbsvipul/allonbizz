@@ -27,6 +27,7 @@ final class Offer extends Equatable {
     this.rating,
     this.reviewCount,
     this.distance,
+    this.isSaved = false,
     this.tags = const [],
   });
 
@@ -54,6 +55,7 @@ final class Offer extends Equatable {
   final int? reviewCount;
   final DateTime createdAt;
   final String? distance; // Temporary UI field for display
+  final bool isSaved;
   final List<String> tags;
 
   factory Offer.fromMap(Map<String, dynamic> data) {
@@ -80,6 +82,7 @@ final class Offer extends Equatable {
 
       createdAt: _parseTimestamp(data['createdAt']),
       distance: null,
+      isSaved: data['isSaved'] as bool? ?? false,
       tags: parseTags(data['tags']),
     );
   }
@@ -153,6 +156,7 @@ final class Offer extends Equatable {
       reviewCount: json['reviewCount'] as int?,
       createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
       distance: json['distance']?.toString() ?? json['distanceKm']?.toString(),
+      isSaved: json['isSaved'] as bool? ?? json['IsSaved'] as bool? ?? false,
       tags: parseTags(
         json['tags'] ??
             json['Tags'] ??
@@ -190,6 +194,7 @@ final class Offer extends Equatable {
     if (rating != null) 'rating': rating,
     if (reviewCount != null) 'reviewCount': reviewCount,
     'createdAt': createdAt.toIso8601String(),
+    'isSaved': isSaved,
     if (tags.isNotEmpty) 'tags': tags,
   };
 
@@ -215,6 +220,7 @@ final class Offer extends Equatable {
 
     DateTime? createdAt,
     String? distance,
+    bool? isSaved,
     List<String>? tags,
   }) {
     return Offer(
@@ -239,6 +245,7 @@ final class Offer extends Equatable {
 
       createdAt: createdAt ?? this.createdAt,
       distance: distance ?? this.distance,
+      isSaved: isSaved ?? this.isSaved,
       tags: tags ?? this.tags,
     );
   }
@@ -323,6 +330,7 @@ final class Offer extends Equatable {
 
     createdAt,
     distance,
+    isSaved,
     tags,
   ];
 

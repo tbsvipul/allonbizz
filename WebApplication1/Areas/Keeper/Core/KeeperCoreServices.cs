@@ -1,15 +1,15 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic.FileIO;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Keepers;
-using allonbiz.AdminAPI.DTOs.Shops;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Keepers;
+using routent.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class KeeperContextService : IKeeperContextService
 {
@@ -19,10 +19,22 @@ public class KeeperContextService : IKeeperContextService
 
     public async Task<Keeper> GetRequiredKeeperAsync(Guid userId, CancellationToken ct = default)
     {
-        return await _db.Keepers
+        var keeper = await _db.Keepers
             .Include(keeper => keeper.User)
             .FirstOrDefaultAsync(keeper => keeper.UserId == userId, ct)
             ?? throw new KeyNotFoundException($"Keeper account for user {userId} was not found.");
+
+        if (keeper.User == null || !keeper.User.IsActive || keeper.User.Status != UserStatus.Active)
+        {
+            var message = "Your account is inactive, suspended, or banned.";
+            if (keeper.User != null && !string.IsNullOrWhiteSpace(keeper.User.StatusReason))
+            {
+                message += $" Reason: {keeper.User.StatusReason}";
+            }
+            throw new UnauthorizedAccessException(message);
+        }
+
+        return keeper;
     }
 
     public async Task<Keeper> GetRequiredActiveKeeperAsync(Guid userId, CancellationToken ct = default)
@@ -495,7 +507,23 @@ public class KeeperOfferService : IKeeperOfferService
         offer.TermsAndConditions = dto.TermsAndConditions;
         offer.ImageData = ImageConversionHelper.ParseBase64Image(dto.ImageUrl);
         offer.Tags = dto.Tags?.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).Distinct().ToList() ?? new List<string>();
-        offer.UpdatedAt = DateTime.UtcNow;
+        
+        // Reactivate the offer whenever the keeper sets a future end date,
+        // regardless of the current status (Expired, Paused, Draft, etc.)
+        var now = DateTime.UtcNow;
+        if (offer.EndDate > now && offer.StartDate <= now)
+        {
+            offer.Status = OfferStatus.Active;
+            offer.IsActive = true;
+        }
+        else if (offer.EndDate > now && offer.StartDate > now)
+        {
+            // Future-scheduled offer — mark as Active but keep ready
+            offer.Status = OfferStatus.Active;
+            offer.IsActive = true;
+        }
+
+        offer.UpdatedAt = now;
         await _db.SaveChangesAsync();
         await _firestore.SyncOfferAsync(offer);
     }

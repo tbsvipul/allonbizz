@@ -1,14 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Services.Interfaces;
-using allonbiz.AdminAPI.Filters;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Filters;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.DTOs.Users;
 
-namespace allonbiz.AdminAPI.Controllers;
+namespace routent.AdminAPI.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/notifications")]
@@ -79,6 +80,35 @@ public class AdminNotificationsController : ControllerBase
     {
         await _notificationService.SendNotificationAsync(id, User.GetUserId());
         return Ok(ApiResponse<object?>.Ok(null, "Notification queued for delivery"));
+    }
+
+    // Admin Inbox Endpoints
+    [HttpGet("inbox")]
+    public async Task<IActionResult> GetAdminInboxNotifications([FromQuery] PaginationParams paging)
+    {
+        var result = await _notificationService.GetUserNotificationsAsync(User.GetUserId(), "admin", paging);
+        return Ok(ApiResponse<PagedResponse<UserNotificationDto>>.Ok(result));
+    }
+
+    [HttpGet("inbox/unread-count")]
+    public async Task<IActionResult> GetAdminInboxUnreadCount()
+    {
+        var count = await _notificationService.GetUnreadNotificationCountAsync(User.GetUserId(), "admin");
+        return Ok(ApiResponse<int>.Ok(count));
+    }
+
+    [HttpPut("inbox/{id}/read")]
+    public async Task<IActionResult> MarkAdminInboxAsRead(Guid id)
+    {
+        await _notificationService.MarkUserNotificationReadAsync(User.GetUserId(), id);
+        return Ok(ApiResponse<object>.Ok(null, "Notification marked as read"));
+    }
+
+    [HttpDelete("inbox/{id}")]
+    public async Task<IActionResult> DeleteAdminInboxNotification(Guid id)
+    {
+        await _notificationService.DeleteUserNotificationAsync(User.GetUserId(), id);
+        return Ok(ApiResponse<object>.Ok(null, "Notification deleted"));
     }
 }
 

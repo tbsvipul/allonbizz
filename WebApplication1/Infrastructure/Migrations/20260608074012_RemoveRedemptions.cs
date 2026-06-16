@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace allonbiz.AdminAPI.Infrastructure.Migrations
+namespace routent.AdminAPI.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class RemoveRedemptions : Migration

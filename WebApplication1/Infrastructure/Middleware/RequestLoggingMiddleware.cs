@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.Middleware;
+namespace routent.AdminAPI.Middleware;
 
 public class RequestLoggingMiddleware
 {

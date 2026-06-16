@@ -18,6 +18,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/current_location_provider.dart';
 import '../../../navigate/presentation/controllers/navigation_controller.dart';
+import '../../../profile/presentation/screens/saved_offers_screen.dart';
 import '../../../../app/routes/app_routes.dart';
 
 final offerDetailProvider = FutureProvider.family<Offer, String>((ref, id) {
@@ -43,6 +44,8 @@ class OfferDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
+  bool? _localIsSaved;
+
   void _showReviewSheet(BuildContext context, String offerId) {
     int selectedRating = 0;
     final reviewController = TextEditingController();
@@ -511,28 +514,39 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
                     const SizedBox(width: 12),
                     IconButton.filledTonal(
                       onPressed: () async {
+                        final currentSavedStatus = _localIsSaved ?? offer.isSaved;
+                        setState(() {
+                          _localIsSaved = !currentSavedStatus;
+                        });
                         try {
                           await ref
                               .read(offersRepositoryProvider)
                               .saveOffer(offer.id);
+                          ref.invalidate(offerDetailProvider(offer.id));
+                          ref.invalidate(favouritesProvider);
                           if (context.mounted) {
                             AppSnackbar.show(
                               context,
-                              message: 'Offer saved!',
+                              message: currentSavedStatus ? 'Offer removed' : 'Offer saved!',
                               type: AppSnackbarType.success,
                             );
                           }
                         } catch (e) {
+                          if (mounted) {
+                            setState(() {
+                              _localIsSaved = currentSavedStatus;
+                            });
+                          }
                           if (context.mounted) {
                             AppSnackbar.show(
                               context,
-                              message: 'Failed to save offer',
+                              message: 'Failed to update offer',
                               type: AppSnackbarType.error,
                             );
                           }
                         }
                       },
-                      icon: const Icon(Icons.bookmark_border_rounded),
+                      icon: Icon((_localIsSaved ?? offer.isSaved) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
                     ),
                   ],
                 ),

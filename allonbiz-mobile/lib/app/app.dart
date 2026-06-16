@@ -7,8 +7,8 @@ import '../core/services/theme_mode_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'routes/app_router.dart';
 
-class AllonbizApp extends ConsumerWidget {
-  const AllonbizApp({super.key});
+class routentApp extends ConsumerWidget {
+  const routentApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,7 +18,7 @@ class AllonbizApp extends ConsumerWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'allonbiz',
+      title: 'ROUTENT',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
@@ -31,6 +31,9 @@ class AllonbizApp extends ConsumerWidget {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
+      builder: (context, child) {
+        return child!;
+      },
     );
   }
 }

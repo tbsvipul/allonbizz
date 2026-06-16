@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Tags;
+namespace routent.AdminAPI.DTOs.Tags;
 
 public class CreateTagRequestDto
 {

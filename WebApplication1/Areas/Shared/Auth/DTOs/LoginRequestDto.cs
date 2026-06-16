@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Auth;
+namespace routent.AdminAPI.DTOs.Auth;
 
 public class LoginRequestDto
 {

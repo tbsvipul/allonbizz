@@ -615,7 +615,7 @@ export default function SettingsPage() {
                   {activeTab === 'security' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Security Settings</h3>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Change Password</h3>
                         {hasPermission(PERMISSIONS.settingsEdit) && (
                           <button
                             onClick={() => void handleSave()}

@@ -56,7 +56,10 @@ class OffersRepository {
 
   Future<void> saveOffer(String offerId) async {
     try {
-      await _apiClient.post('/user/offer/$offerId/save');
+      await _apiClient.post(
+        '/user/favourites',
+        body: {'offerId': offerId},
+      );
       await _invalidateOfferCaches(offerId);
     } on ServerFailure catch (error) {
       throw DatabaseFailure(error.message);

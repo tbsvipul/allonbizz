@@ -282,7 +282,6 @@ Future<bool> onIosBackground(ServiceInstance service) async => true;
 
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
-  DartPluginRegistrant.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
 
   String title = NotificationService._defaultJourneyTitle;

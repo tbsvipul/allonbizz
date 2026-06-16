@@ -35,7 +35,7 @@ class SearchInputFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel('START POINT', AppColors.primary),
+        _buildLabel('START POINT', AppColors.primaryDark),
         const SizedBox(height: AppDimensions.sm),
         _buildFieldContainer(
           icon: Icons.my_location_rounded,
@@ -59,7 +59,7 @@ class SearchInputFields extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppDimensions.md),
-        _buildLabel('DESTINATION', AppColors.grey600),
+        _buildLabel('DESTINATION', AppColors.primaryDark),
         const SizedBox(height: AppDimensions.sm),
         _buildFieldContainer(
           icon: Icons.location_on_rounded,
@@ -96,7 +96,7 @@ class SearchInputFields extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.grey800 : AppColors.grey100,
+        color: isDark ? AppColors.grey800 : AppColors.white.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
       ),
       child: Row(
@@ -115,6 +115,11 @@ class SearchInputFields extends StatelessWidget {
       hintText: hint,
       hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey500),
       border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      errorBorder: InputBorder.none,
+      focusedErrorBorder: InputBorder.none,
+      disabledBorder: InputBorder.none,
       contentPadding: const EdgeInsets.symmetric(vertical: 14),
       fillColor: Colors.transparent,
     );

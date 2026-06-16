@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class NotificationService : INotificationService
 {
@@ -379,10 +379,16 @@ public class NotificationService : INotificationService
     private async Task<int> CountRecipientsAsync(string? targetAudience, CancellationToken ct)
     {
         var normalizedAudience = NotificationAudienceHelper.Normalize(targetAudience);
+        if (Guid.TryParse(normalizedAudience, out _))
+        {
+            return 1;
+        }
+
         return normalizedAudience switch
         {
             "customers" => await _db.Users.CountAsync(user => user.Role == "customer" && user.IsActive, ct),
             "keepers" => await _db.Users.CountAsync(user => user.Role == "keeper" && user.IsActive, ct),
+            "admins" => await _db.Users.CountAsync(user => user.Role == "admin" && user.IsActive, ct),
             _ => await _db.Users.CountAsync(user => user.IsActive, ct)
         };
     }
@@ -413,13 +419,21 @@ public class NotificationService : INotificationService
         var targetAudience = NotificationAudienceHelper.Normalize(notification.TargetAudience);
         List<Guid> recipientIds;
 
-        if (targetAudience == "customers")
+        if (Guid.TryParse(targetAudience, out var specificUserId))
+        {
+            recipientIds = new List<Guid> { specificUserId };
+        }
+        else if (targetAudience == "customers")
         {
             recipientIds = await _db.Users.Where(u => u.Role == "customer" && u.IsActive).Select(u => u.UserId).ToListAsync(ct);
         }
         else if (targetAudience == "keepers")
         {
             recipientIds = await _db.Users.Where(u => u.Role == "keeper" && u.IsActive).Select(u => u.UserId).ToListAsync(ct);
+        }
+        else if (targetAudience == "admins")
+        {
+            recipientIds = await _db.Users.Where(u => u.Role == "admin" && u.IsActive).Select(u => u.UserId).ToListAsync(ct);
         }
         else
         {

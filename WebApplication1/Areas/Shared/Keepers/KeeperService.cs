@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Keepers;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Keepers;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class KeeperService : IKeeperService
 {
@@ -16,17 +16,20 @@ public class KeeperService : IKeeperService
     private readonly IRepository<Keeper> _keeperRepo;
     private readonly ILogger<KeeperService> _logger;
     private readonly IAuditService _auditService;
+    private readonly IEmailService _emailService;
 
     public KeeperService(
         AppDbContext db,
         IRepository<Keeper> keeperRepo,
         ILogger<KeeperService> logger,
-        IAuditService auditService)
+        IAuditService auditService,
+        IEmailService emailService)
     {
         _db = db;
         _keeperRepo = keeperRepo;
         _logger = logger;
         _auditService = auditService;
+        _emailService = emailService;
     }
 
     public async Task<PagedResponse<KeeperApplicationListItemDto>> GetPendingKeepersAsync(KeeperListQueryDto query, CancellationToken ct = default)
@@ -80,18 +83,17 @@ public class KeeperService : IKeeperService
             ?? throw new KeyNotFoundException($"Keeper {keeperId} not found.");
         EnsureKeeperStatus(keeper, "approve", KeeperStatus.PendingApproval, KeeperStatus.OnHold);
 
+        var reviewNote = string.IsNullOrWhiteSpace(dto.Notes) ? "Application approved." : dto.Notes.Trim();
         keeper.Status = KeeperStatus.Approved;
+        keeper.IsVerified = true;
+        keeper.VerificationNotes = reviewNote;
         keeper.ApprovedAt = DateTime.UtcNow;
         keeper.RejectionReason = null;
         keeper.HoldReason = null;
         keeper.HoldUntil = null;
         keeper.UpdatedAt = DateTime.UtcNow;
 
-        AddReviewMessage(
-            keeperId,
-            actorAdminId,
-            "approve",
-            string.IsNullOrWhiteSpace(dto.Notes) ? "Application approved." : dto.Notes.Trim());
+        AddReviewMessage(keeperId, actorAdminId, "approve", reviewNote);
 
         await _db.SaveChangesAsync(ct);
 
@@ -107,6 +109,8 @@ public class KeeperService : IKeeperService
         EnsureKeeperStatus(keeper, "reject", KeeperStatus.PendingApproval, KeeperStatus.OnHold);
 
         keeper.Status = KeeperStatus.Rejected;
+        keeper.IsVerified = false;
+        keeper.VerificationNotes = reason;
         keeper.RejectionReason = reason;
         keeper.HoldReason = null;
         keeper.HoldUntil = null;
@@ -128,6 +132,8 @@ public class KeeperService : IKeeperService
 
         var message = dto.Message.Trim();
         keeper.Status = KeeperStatus.OnHold;
+        keeper.IsVerified = false;
+        keeper.VerificationNotes = message;
         keeper.RejectionReason = null;
         keeper.HoldReason = message;
         keeper.HoldUntil = null;
@@ -147,6 +153,8 @@ public class KeeperService : IKeeperService
 
         var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
         keeper.Status = KeeperStatus.OnHold;
+        keeper.IsVerified = false;
+        keeper.VerificationNotes = reason;
         keeper.RejectionReason = null;
         keeper.HoldReason = reason;
         keeper.HoldUntil = dto.HoldUntil;
@@ -258,6 +266,8 @@ public class KeeperService : IKeeperService
         EnsureKeeperStatus(keeper, "suspend", KeeperStatus.Approved, KeeperStatus.Active);
 
         keeper.Status = KeeperStatus.Suspended;
+        keeper.IsVerified = false;
+        keeper.VerificationNotes = reason;
         keeper.RejectionReason = reason;
         keeper.HoldReason = null;
         keeper.HoldUntil = null;
@@ -265,6 +275,11 @@ public class KeeperService : IKeeperService
 
         AddReviewMessage(keeperId, actorAdminId, "suspend", reason);
         await _db.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(keeper.User?.Email))
+        {
+            await _emailService.SendAccountSuspensionEmailAsync(keeper.User.Email, reason, "routentsupport@gmail.com");
+        }
 
         await _auditService.LogAsync(actorAdminId, "KEEPER_SUSPEND", nameof(Keeper), keeperId.ToString(), null, "N/A");
         _logger.LogInformation("Keeper {KeeperId} suspended. Reason: {Reason}", keeperId, dto.Reason);

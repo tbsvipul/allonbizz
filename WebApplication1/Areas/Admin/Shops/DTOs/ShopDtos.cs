@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Shops;
+namespace routent.AdminAPI.DTOs.Shops;
 
 public class ShopSummaryDto
 {

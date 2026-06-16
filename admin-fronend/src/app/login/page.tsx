@@ -5,24 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LogIn, Mail, Lock, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '@/lib/api';
-
-function extractErrorMessage(error: any) {
-  const payload = error?.response?.data;
-
-  if (payload?.errors && typeof payload.errors === 'object') {
-    const firstEntry = Object.values(payload.errors)[0];
-    if (Array.isArray(firstEntry) && firstEntry.length > 0) {
-      return String(firstEntry[0]);
-    }
-  }
-
-  return (
-    payload?.detail ||
-    payload?.message ||
-    (error?.response?.status === 401 ? 'Invalid email or password.' : null) ||
-    'Invalid credentials or server error'
-  );
-}
+import { getApiErrorMessage } from '@/lib/api-error';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -40,8 +23,8 @@ export default function LoginPage() {
       const response = await api.post('/admin/auth/login', { email: email.trim(), password });
       const { accessToken, refreshToken, admin } = response.data.data;
       login(accessToken, refreshToken, admin);
-    } catch (err: any) {
-      setError(extractErrorMessage(err));
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Invalid email or password.'));
     } finally {
       setLoading(false);
     }
@@ -58,16 +41,12 @@ export default function LoginPage() {
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div className="flex-center" style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            background: 'hsl(var(--primary))',
+            height: '80px',
+            background: 'transparent',
             margin: '0 auto 1rem',
-            color: 'white'
           }}>
-            <LogIn size={32} />
+            <img src="/hlogo.png" alt="ROUTENT" style={{ height: '100%', width: 'auto', objectFit: 'contain', borderRadius: '8px' }} />
           </div>
-          <h1 className="text-gradient" style={{ fontSize: '1.875rem', fontWeight: 700 }}>allonbiz Admin</h1>
           <p style={{ color: 'hsl(var(--muted-foreground))', marginTop: '0.5rem' }}>Welcome back, please sign in</p>
         </div>
 

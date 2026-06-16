@@ -4,8 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>allonbiz.AdminAPI</RootNamespace>
-    <AssemblyName>allonbiz.AdminAPI</AssemblyName>
+    <RootNamespace>routent.AdminAPI</RootNamespace>
+    <AssemblyName>routent.AdminAPI</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

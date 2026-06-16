@@ -2,13 +2,13 @@ using System.Data;
 using System.Data.Common;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
+using routent.AdminAPI.Data;
 
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class StringMediaSchemaRepair
 {
-    private const string Utf8ProbeFunctionName = "allonbiz_try_convert_utf8";
+    private const string Utf8ProbeFunctionName = "routent_try_convert_utf8";
 
     private static readonly MediaColumnTarget[] Targets =
     {

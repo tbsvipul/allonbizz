@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using allonbiz.AdminAPI.Constants;
+using routent.AdminAPI.Constants;
 
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 /// <summary>
 /// Extension methods for extracting user identity from JWT claims safely.

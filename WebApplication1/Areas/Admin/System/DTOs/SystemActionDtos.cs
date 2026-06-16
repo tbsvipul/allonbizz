@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.System;
+namespace routent.AdminAPI.DTOs.System;
 
 public class ResolveErrorDto
 {

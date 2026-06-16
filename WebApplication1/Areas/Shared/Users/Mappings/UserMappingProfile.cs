@@ -1,9 +1,9 @@
 using AutoMapper;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.DTOs.Auth;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.DTOs.Auth;
 
-namespace allonbiz.AdminAPI.Mappings;
+namespace routent.AdminAPI.Mappings;
 
 public class UserMappingProfile : Profile
 {

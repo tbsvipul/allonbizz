@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
-    show kDebugMode, kIsWeb, kProfileMode, visibleForTesting;
+    show kDebugMode, kIsWeb, kProfileMode, visibleForTesting, ValueNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -128,10 +128,13 @@ class ApiClient {
 
   final Map<String, _MemoryCacheEntry> _memoryCache = {};
   final Map<String, Future<http.Response>> _inFlightGets = {};
-  final StreamController<void> _authFailedController =
-      StreamController<void>.broadcast();
+  final StreamController<String?> _authFailedController =
+      StreamController<String?>.broadcast();
 
-  Stream<void> get onAuthFailed => _authFailedController.stream;
+  // Global state to track if the server is unreachable
+  static final ValueNotifier<bool> isServerOffline = ValueNotifier<bool>(false);
+
+  Stream<String?> get onAuthFailed => _authFailedController.stream;
 
   Future<bool>? _refreshFuture;
 
@@ -465,6 +468,11 @@ class ApiClient {
       final response = await http.Response.fromStream(streamedResponse);
       _logTrackedAuthResponse(endpoint, response);
 
+      // Successfully reached server, clear offline state if set
+      if (isServerOffline.value) {
+        isServerOffline.value = false;
+      }
+
       if (response.statusCode == 401 && !isRetry) {
         final success = await _tryRefreshToken();
         if (success) {
@@ -477,21 +485,28 @@ class ApiClient {
             isRetry: true,
           );
         } else {
-          _authFailedController.add(null);
+          String? msg;
+          try { msg = _extractErrorMessage(jsonDecode(response.body)); } catch (_) {}
+          _authFailedController.add(msg);
         }
       } else if (response.statusCode == 401 && isRetry) {
-        _authFailedController.add(null);
+        String? msg;
+        try { msg = _extractErrorMessage(jsonDecode(response.body)); } catch (_) {}
+        _authFailedController.add(msg);
       }
 
       _handleErrorResponse(response);
       return _decodeBody(response);
     } on http.ClientException catch (error) {
+      isServerOffline.value = true;
       _logTrackedAuthException(method, endpoint, error);
       throw const NetworkFailure();
     } on SocketException catch (error) {
+      isServerOffline.value = true;
       _logTrackedAuthException(method, endpoint, error);
       throw const NetworkFailure();
     } on TimeoutException catch (error) {
+      isServerOffline.value = true;
       _logTrackedAuthException(method, endpoint, error);
       throw const NetworkFailure();
     } catch (error) {
@@ -598,6 +613,11 @@ class ApiClient {
           .timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
+      // Successfully reached server, clear offline state if set
+      if (isServerOffline.value) {
+        isServerOffline.value = false;
+      }
+
       if (response.statusCode == 401 && !isRetry) {
         final success = await _tryRefreshToken();
         if (success) {
@@ -608,19 +628,26 @@ class ApiClient {
             isRetry: true,
           );
         } else {
-          _authFailedController.add(null);
+          String? msg;
+          try { msg = _extractErrorMessage(jsonDecode(response.body)); } catch (_) {}
+          _authFailedController.add(msg);
         }
       } else if (response.statusCode == 401 && isRetry) {
-        _authFailedController.add(null);
+        String? msg;
+        try { msg = _extractErrorMessage(jsonDecode(response.body)); } catch (_) {}
+        _authFailedController.add(msg);
       }
 
       _handleErrorResponse(response);
       return response;
     } on http.ClientException {
+      isServerOffline.value = true;
       throw const NetworkFailure();
     } on SocketException {
+      isServerOffline.value = true;
       throw const NetworkFailure();
     } on TimeoutException {
+      isServerOffline.value = true;
       throw const NetworkFailure();
     }
   }

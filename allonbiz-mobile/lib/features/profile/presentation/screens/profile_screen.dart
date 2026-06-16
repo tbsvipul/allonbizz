@@ -136,44 +136,7 @@ class ProfileScreen extends ConsumerWidget {
                     ref.read(notificationsEnabledProvider.notifier).toggle(val);
                   },
                 ),
-                ProfileSwitchTileWidget(
-                  icon: Icons.location_on_rounded,
-                  title: l10n.navNavigate, // Using navNavigate as placeholder
-                  value: ref.watch(locationTrackingEnabledProvider),
-                  onChanged: (val) {
-                    ref
-                        .read(locationTrackingEnabledProvider.notifier)
-                        .toggle(val);
-                  },
-                ),
-                // Discovery Radius Preference
-                ProfileTileWidget(
-                  icon: Icons.radar_rounded,
-                  title: 'Discovery Radius',
-                  trailing: DropdownButton<double>(
-                    value: ref.watch(discoveryRadiusProvider),
-                    underline: const SizedBox(),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 18,
-                    ),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    items: const [500.0, 1000.0, 2000.0, 5000.0].map((radius) {
-                      return DropdownMenuItem(
-                        value: radius,
-                        child: Text('${(radius / 1000).toStringAsFixed(1)} km'),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref.read(discoveryRadiusProvider.notifier).state = val;
-                      }
-                    },
-                  ),
-                ),
+
 
                 // Location Marker Preference
                 ProfileTileWidget(

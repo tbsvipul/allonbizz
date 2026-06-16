@@ -9,7 +9,7 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
-  String get appName => 'allonbiz';
+  String get appName => 'routent';
 
   @override
   String get tagline => 'स्मार्ट नेविगेट करें। रास्ते में शानदार सौदे खोजें।';

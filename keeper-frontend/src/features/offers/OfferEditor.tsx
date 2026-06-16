@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { getApiErrorMessage, unwrapApiData } from '@/lib/api-response';
@@ -26,6 +26,8 @@ interface OfferFormState {
   imageUrl: string;
   tags: string;
 }
+
+const MAX_TAG_SUGGESTIONS = 8;
 
 function toFormState(offer: OfferDetail | null): OfferFormState {
   return {
@@ -63,14 +65,45 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
     }
   };
 
+  const handleSelectSuggestedTag = (tagName: string) => {
+    handleAddTag(tagName);
+    setTagInputValue('');
+    requestAnimationFrame(() => document.getElementById('offerTags')?.focus());
+  };
+
   const handleRemoveTag = (tagName: string) => {
     const currentTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
     const nextTags = currentTags.filter((tag) => tag.toLowerCase() !== tagName.toLowerCase());
     updateField('tags', nextTags.join(', '));
   };
 
-  const selectedTags = form.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
-  const availableTagsToDisplay = availableTags.filter((tag) => !selectedTags.some((selectedTag) => selectedTag.toLowerCase() === tag.name.toLowerCase()));
+  const selectedTags = useMemo(() => form.tags.split(',').map((tag) => tag.trim()).filter(Boolean), [form.tags]);
+  const availableTagsToDisplay = useMemo(
+    () => availableTags.filter((tag) => !selectedTags.some((selectedTag) => selectedTag.toLowerCase() === tag.name.toLowerCase())),
+    [availableTags, selectedTags],
+  );
+  const matchingTagSuggestions = useMemo(
+    () => {
+      const query = tagInputValue.trim().toLowerCase();
+      if (!query) {
+        return availableTagsToDisplay.slice(0, MAX_TAG_SUGGESTIONS);
+      }
+
+      return availableTagsToDisplay
+        .filter((tag) => tag.name.toLowerCase().includes(query))
+        .sort((left, right) => {
+          const leftStartsWithQuery = left.name.toLowerCase().startsWith(query);
+          const rightStartsWithQuery = right.name.toLowerCase().startsWith(query);
+          if (leftStartsWithQuery !== rightStartsWithQuery) {
+            return leftStartsWithQuery ? -1 : 1;
+          }
+
+          return left.name.localeCompare(right.name);
+        })
+        .slice(0, MAX_TAG_SUGGESTIONS);
+    },
+    [availableTagsToDisplay, tagInputValue],
+  );
 
   function updateField<Key extends keyof OfferFormState>(key: Key, value: OfferFormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -339,10 +372,16 @@ export function OfferEditor({ offerId }: { offerId?: string }) {
                   style={{ flex: 1, minWidth: '120px', border: 'none', background: 'transparent', outline: 'none', color: 'inherit', fontSize: '0.9rem', marginTop: '0.2rem' }}
                 />
               </div>
-              {availableTagsToDisplay.length > 0 ? (
+              {matchingTagSuggestions.length > 0 ? (
                 <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {availableTagsToDisplay.slice(0, 8).map((tag) => (
-                    <button key={tag.tagId} type="button" onClick={() => handleAddTag(tag.name)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, borderRadius: '999px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'transparent', color: 'hsl(var(--muted-foreground))', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  {matchingTagSuggestions.map((tag) => (
+                    <button
+                      key={tag.tagId}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleSelectSuggestedTag(tag.name)}
+                      style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, borderRadius: '999px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'transparent', color: 'hsl(var(--muted-foreground))', cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
                       + {tag.name}
                     </button>
                   ))}

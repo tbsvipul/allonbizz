@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Auth;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Auth;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Services.Interfaces;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class AdminAuthService : IAdminAuthService
 {

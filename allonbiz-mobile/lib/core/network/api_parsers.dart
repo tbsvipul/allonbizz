@@ -259,6 +259,7 @@ Offer parseOfferJson(JsonMap json) {
       'distanceKm',
       'DistanceKm',
     ]),
+    isSaved: boolValue(json, ['isSaved', 'IsSaved']),
     tags: parseStringList(
       firstPresent(json, [
         'tags',

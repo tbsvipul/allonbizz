@@ -1,11 +1,11 @@
 using Microsoft.IdentityModel.Tokens;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class JwtService : IJwtService
 {

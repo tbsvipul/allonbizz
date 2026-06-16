@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace allonbiz.AdminAPI.Models.Entities;
+namespace routent.AdminAPI.Models.Entities;
 
 public class AuditLog
 {

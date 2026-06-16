@@ -1,18 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text.Json;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Settings;
-using allonbiz.AdminAPI.DTOs.System;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Settings;
+using routent.AdminAPI.DTOs.System;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class SettingsService : ISettingsService
 {

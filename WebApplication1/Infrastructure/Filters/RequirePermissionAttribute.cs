@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Helpers;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Helpers;
 
-namespace allonbiz.AdminAPI.Filters;
+namespace routent.AdminAPI.Filters;
 
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
 public class RequirePermissionAttribute : Attribute, IAuthorizationFilter

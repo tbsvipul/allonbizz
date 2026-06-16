@@ -68,6 +68,7 @@ class AppTextField extends StatefulWidget {
     required TextEditingController controller,
     String? hint,
     FocusNode? focusNode,
+    Widget? suffixIcon,
     void Function(String)? onChanged,
     void Function(String)? onSubmitted,
   }) = _AppTextFieldSearch;
@@ -304,6 +305,7 @@ class _AppTextFieldSearch extends AppTextField {
     required super.controller,
     super.hint,
     super.focusNode,
+    super.suffixIcon,
     super.onChanged,
     super.onSubmitted,
   }) : super._(variant: AppTextFieldVariant.search);

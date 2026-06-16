@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Models.Enums;
 
-namespace allonbiz.AdminAPI.Models.Entities;
+namespace routent.AdminAPI.Models.Entities;
 
 public class Keeper
 {

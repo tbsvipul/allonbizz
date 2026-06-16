@@ -1,11 +1,11 @@
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Models.Enums;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace allonbiz.AdminAPI.Infrastructure.BackgroundJobs;
+namespace routent.AdminAPI.Infrastructure.BackgroundJobs;
 
 public class OfferExpiryService : BackgroundService
 {
@@ -40,6 +40,7 @@ public class OfferExpiryService : BackgroundService
                     foreach (var offer in expiredOffers)
                     {
                         offer.Status = OfferStatus.Expired;
+                        offer.IsActive = false;
                         offer.UpdatedAt = now;
                     }
 

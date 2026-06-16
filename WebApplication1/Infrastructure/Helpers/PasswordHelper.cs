@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.Helpers;
+namespace routent.AdminAPI.Helpers;
 
 public static class PasswordHelper
 {

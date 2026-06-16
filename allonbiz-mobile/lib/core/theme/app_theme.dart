@@ -4,7 +4,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 import 'app_text_styles.dart';
 
-/// Material 3 luxury theme definitions for allonbiz.
+/// Material 3 luxury theme definitions for routent.
 class AppTheme {
   AppTheme._();
 

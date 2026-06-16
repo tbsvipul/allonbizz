@@ -3,19 +3,19 @@ using System.Text;
 using System.Text.Json;
 using CsvHelper;
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Keepers;
-using allonbiz.AdminAPI.DTOs.Shops;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Keepers;
+using routent.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class UserService : IUserService
 {
@@ -27,6 +27,7 @@ public class UserService : IUserService
     private readonly IRepository<UserReport> _reportRepo;
     private readonly IAuthService _authService;
     private readonly IAuditService _auditService;
+    private readonly IEmailService _emailService;
     private readonly ILogger<UserService> _logger;
 
     public UserService(
@@ -38,6 +39,7 @@ public class UserService : IUserService
         IRepository<UserReport> reportRepo,
         IAuthService authService,
         IAuditService auditService,
+        IEmailService emailService,
         ILogger<UserService> logger)
     {
         _db = db;
@@ -48,6 +50,7 @@ public class UserService : IUserService
         _reportRepo = reportRepo;
         _authService = authService;
         _auditService = auditService;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -314,6 +317,11 @@ public class UserService : IUserService
         await RevokeActiveTokensAsync(userId, ct);
         await _userRepo.SaveChangesAsync(ct);
 
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            await _emailService.SendAccountSuspensionEmailAsync(user.Email, dto.Reason, "routentsupport@gmail.com");
+        }
+
         _logger.LogInformation("User {UserId} suspended. Reason: {Reason}", userId, dto.Reason);
     }
 
@@ -326,6 +334,11 @@ public class UserService : IUserService
         _userRepo.Update(user);
         await RevokeActiveTokensAsync(userId, ct);
         await _userRepo.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            await _emailService.SendAccountSuspensionEmailAsync(user.Email, dto.Reason, "routentsupport@gmail.com");
+        }
 
         _logger.LogInformation("User {UserId} banned. Reason: {Reason}", userId, dto.Reason);
     }
@@ -372,12 +385,16 @@ public class UserService : IUserService
                         break;
                     case "suspend":
                         ApplyUserStatus(user, UserStatus.Suspended.ToString(), dto.Reason, null);
+                        if (!string.IsNullOrWhiteSpace(user.Email))
+                            await _emailService.SendAccountSuspensionEmailAsync(user.Email, dto.Reason ?? string.Empty, "routentsupport@gmail.com");
                         break;
                     case "unsuspend":
                         ApplyUserStatus(user, UserStatus.Active.ToString(), null, null);
                         break;
                     case "ban":
                         ApplyUserStatus(user, UserStatus.Banned.ToString(), dto.Reason, null);
+                        if (!string.IsNullOrWhiteSpace(user.Email))
+                            await _emailService.SendAccountSuspensionEmailAsync(user.Email, dto.Reason ?? string.Empty, "routentsupport@gmail.com");
                         break;
                     case "unban":
                         ApplyUserStatus(user, UserStatus.Active.ToString(), null, null);

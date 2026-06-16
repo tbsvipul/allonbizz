@@ -1,7 +1,7 @@
 using FluentValidation;
-using allonbiz.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Admin;
 
-namespace allonbiz.AdminAPI.Validators;
+namespace routent.AdminAPI.Validators;
 
 public class CreateNotificationDtoValidator : AbstractValidator<CreateNotificationDto>
 {

@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace allonbiz.AdminAPI.Migrations
+namespace routent.AdminAPI.Migrations
 {
     /// <inheritdoc />
     public partial class AddRejectionReasonToShop : Migration

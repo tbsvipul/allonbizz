@@ -1,7 +1,7 @@
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.DTOs.Support;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.DTOs.Support;
 
-namespace allonbiz.AdminAPI.Services.Interfaces;
+namespace routent.AdminAPI.Services.Interfaces;
 
 public interface ISupportTicketService
 {

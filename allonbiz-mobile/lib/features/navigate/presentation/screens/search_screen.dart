@@ -87,7 +87,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return status;
   }
 
-  void _showAllTagsDialog(List<TagModel> allTags) {
+  void _showAllTagsDialog() {
     final popupSearchController = TextEditingController();
     final popupFocusNode = FocusNode();
 
@@ -99,6 +99,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: Consumer(
           builder: (context, ref, _) {
             final searchState = ref.watch(searchControllerProvider);
+            final tagsAsync = ref.watch(tagsProvider);
+            final tags = tagsAsync.valueOrNull ?? [];
+            final allTags = [
+              ...tags,
+              ...searchState.customInterests,
+            ];
             final theme = Theme.of(context);
             final textTheme = theme.textTheme;
             final isDark = theme.brightness == Brightness.dark;
@@ -568,7 +574,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               onToggleInterest: (name) => ref
                                   .read(searchControllerProvider.notifier)
                                   .toggleInterest(name),
-                              onShowAllTags: () => _showAllTagsDialog(allTags),
+                              onShowAllTags: _showAllTagsDialog,
                               isDark: isDark,
                               isCompact: true,
                             );

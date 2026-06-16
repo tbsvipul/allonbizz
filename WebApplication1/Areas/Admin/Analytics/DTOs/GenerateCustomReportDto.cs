@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace allonbiz.AdminAPI.DTOs.Analytics;
+namespace routent.AdminAPI.DTOs.Analytics;
 
 public class GenerateCustomReportDto
 {

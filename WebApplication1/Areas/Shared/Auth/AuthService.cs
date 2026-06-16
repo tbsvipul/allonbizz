@@ -1,20 +1,20 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Auth;
-using allonbiz.AdminAPI.DTOs.Users;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Models.Enums;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Auth;
+using routent.AdminAPI.DTOs.Users;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Models.Enums;
+using routent.AdminAPI.Services.Interfaces;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.IO;
 using Microsoft.AspNetCore.Http;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class AuthService : IAuthService
 {
@@ -120,6 +120,19 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Password changed for user {UserId}", userId);
+
+        // Send email notification about password change
+        if (!string.IsNullOrEmpty(account.Email))
+        {
+            try
+            {
+                await _emailService.SendPasswordChangedNotificationEmailAsync(account.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password change notification email to {Email}", account.Email);
+            }
+        }
     }
 
     public async Task ForgotPasswordAsync(string email)
@@ -183,6 +196,19 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Password reset completed for user {UserId}", user.UserId);
+
+        // Send email notification about password reset
+        if (!string.IsNullOrEmpty(user.Email))
+        {
+            try
+            {
+                await _emailService.SendPasswordChangedNotificationEmailAsync(user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset notification email to {Email}", user.Email);
+            }
+        }
     }
 
     public async Task SendOtpAsync(string email)
@@ -565,12 +591,12 @@ public class AuthService : IAuthService
 
         throw user.Status switch
         {
-            UserStatus.Banned => new UnauthorizedAccessException("Account is banned."),
+            UserStatus.Banned => new UnauthorizedAccessException(string.IsNullOrEmpty(user.StatusReason) ? "Account is banned." : $"Account is banned. Reason: {user.StatusReason}"),
             UserStatus.Suspended when user.SuspendedUntil.HasValue =>
-                new UnauthorizedAccessException($"Account is suspended until {user.SuspendedUntil.Value:yyyy-MM-dd HH:mm:ss} UTC."),
-            UserStatus.Suspended => new UnauthorizedAccessException("Account is suspended."),
+                new UnauthorizedAccessException(string.IsNullOrEmpty(user.StatusReason) ? $"Account is suspended " : $"Account is suspended Reason: {user.StatusReason}"),
+            UserStatus.Suspended => new UnauthorizedAccessException(string.IsNullOrEmpty(user.StatusReason) ? "Account is suspended." : $"Account is suspended. Reason: {user.StatusReason}"),
             UserStatus.PendingVerification => new UnauthorizedAccessException("Account is pending verification."),
-            _ => new UnauthorizedAccessException("Account is inactive.")
+            _ => new UnauthorizedAccessException(string.IsNullOrEmpty(user.StatusReason) ? "Account is inactive." : $"Account is inactive. Reason: {user.StatusReason}")
         };
     }
 

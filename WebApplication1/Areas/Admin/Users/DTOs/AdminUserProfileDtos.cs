@@ -1,8 +1,8 @@
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Keepers;
-using allonbiz.AdminAPI.DTOs.Shops;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Keepers;
+using routent.AdminAPI.DTOs.Shops;
 
-namespace allonbiz.AdminAPI.DTOs.Users;
+namespace routent.AdminAPI.DTOs.Users;
 
 public class AdminUserProfileDto
 {

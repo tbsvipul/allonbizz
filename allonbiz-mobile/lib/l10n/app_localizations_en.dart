@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'allonbiz';
+  String get appName => 'routent';
 
   @override
   String get tagline => 'Navigate smarter. Discover deals along every route.';

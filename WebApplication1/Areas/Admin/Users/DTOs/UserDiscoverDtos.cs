@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.DTOs.Users;
+namespace routent.AdminAPI.DTOs.Users;
 
 public class UserDiscoverQueryDto
 {

@@ -9,17 +9,17 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using allonbiz.AdminAPI.Data;
-using allonbiz.AdminAPI.Mappings;
-using allonbiz.AdminAPI.Middleware;
-using allonbiz.AdminAPI.Services;
-using allonbiz.AdminAPI.Services.Interfaces;
-using allonbiz.AdminAPI.Validators;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Constants;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.Data.Repositories;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Mappings;
+using routent.AdminAPI.Middleware;
+using routent.AdminAPI.Services;
+using routent.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Validators;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Constants;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.Data.Repositories;
 using AutoMapper;
 using Serilog;
 using System.Text;
@@ -35,7 +35,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/allonbizs-admin-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.File("logs/routents-admin-.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 builder.Host.UseSerilog();
 
@@ -198,7 +198,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "allonbiz Admin API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "routent Admin API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme.",
@@ -269,14 +269,14 @@ builder.Services.AddScoped<IUserDiscoverService, UserDiscoverService>();
 builder.Services.AddScoped<IUserHistoryService, UserHistoryService>();
 builder.Services.AddScoped<IFavouriteService, FavouriteService>();
 builder.Services.AddScoped<IChatService, ChatService>();
-builder.Services.AddScoped<ISupportTicketService, allonbiz.AdminAPI.Infrastructure.Support.SupportTicketService>();
+builder.Services.AddScoped<ISupportTicketService, routent.AdminAPI.Infrastructure.Support.SupportTicketService>();
 
 builder.Services.AddScoped<IKeeperProfileService, KeeperProfileService>();
 builder.Services.AddScoped<IKeeperOfferService, KeeperOfferService>();
 builder.Services.AddScoped<IKeeperDashboardService, KeeperDashboardService>();
 builder.Services.AddScoped<IKeeperContextService, KeeperContextService>();
 
-builder.Services.AddHostedService<allonbiz.AdminAPI.Infrastructure.BackgroundJobs.OfferExpiryService>();
+builder.Services.AddHostedService<routent.AdminAPI.Infrastructure.BackgroundJobs.OfferExpiryService>();
 
 var app = builder.Build();
 
@@ -332,14 +332,17 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "allonbiz Admin API v1"));
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "routent Admin API v1"));
 }
 else
 {
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
 if (!Directory.Exists(uploadsPath))

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace allonbiz.AdminAPI.Data.Interfaces;
+namespace routent.AdminAPI.Data.Interfaces;
 
 public interface IRepository<T> where T : class
 {

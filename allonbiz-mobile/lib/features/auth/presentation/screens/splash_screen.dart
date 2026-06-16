@@ -55,15 +55,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           children: [
             // Logo icon
             Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.navigation_rounded,
-                    size: 64,
-                    color: AppColors.white,
+                  child: Image.asset(
+                    'assets/images/tranperentlogo.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
                   ),
                 )
                 .animate()
@@ -75,31 +76,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 )
                 .fadeIn(duration: 400.ms),
 
-            const SizedBox(height: 24),
-
-            // App name
-            Text(
-                  'allonbiz',
-                  style: AppTextStyles.displaySmall.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                  ),
-                )
-                .animate()
-                .fadeIn(delay: 400.ms, duration: 500.ms)
-                .slideY(begin: 0.3, end: 0, delay: 400.ms, duration: 500.ms),
-
-            const SizedBox(height: 8),
-
-            // Tagline
-            Text(
-              'Navigate smarter. Discover deals.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(delay: 700.ms, duration: 500.ms),
+            // App name and tagline removed as requested
 
             const SizedBox(height: 48),
 

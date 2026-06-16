@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using allonbiz.AdminAPI.DTOs.Admin;
-using allonbiz.AdminAPI.DTOs.Auth;
-using allonbiz.AdminAPI.DTOs.Common;
-using allonbiz.AdminAPI.Helpers;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Auth;
+using routent.AdminAPI.DTOs.Common;
+using routent.AdminAPI.Helpers;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Controllers;
+namespace routent.AdminAPI.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/auth")]

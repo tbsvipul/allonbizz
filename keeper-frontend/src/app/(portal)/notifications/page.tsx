@@ -53,10 +53,9 @@ export default function NotificationsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // We will collect available images from shops and offers to let user select
+  // We will collect available images from shops to let user select
   const availableImages = Array.from(new Set([
-    ...shops.map(s => s.shopProfileImage).filter(Boolean),
-    ...offers.map(o => o.imageUrl).filter(Boolean)
+    ...shops.map(s => s.shopProfileImage).filter(Boolean)
   ])) as string[];
 
   const isCustomImage = imageUrl && !availableImages.includes(imageUrl);
@@ -64,7 +63,7 @@ export default function NotificationsPage() {
     { value: '', label: 'No image' },
     ...availableImages.map(img => ({
       value: img,
-      label: 'Shop/Offer Image',
+      label: 'Shop Image',
       icon: <img src={img} alt="thumb" style={{ width: 16, height: 16, borderRadius: 4, objectFit: 'cover' }} />
     }))
   ];
@@ -114,6 +113,7 @@ export default function NotificationsPage() {
   }, []);
 
   async function handleSend() {
+    if (sending) return;
     if (!title.trim() || !message.trim()) {
       setError('Title and message are required.');
       return;

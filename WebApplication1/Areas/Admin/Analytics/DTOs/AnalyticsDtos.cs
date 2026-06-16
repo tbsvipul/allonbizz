@@ -1,6 +1,6 @@
-using allonbiz.AdminAPI.DTOs.Admin;
+using routent.AdminAPI.DTOs.Admin;
 
-namespace allonbiz.AdminAPI.DTOs.Analytics;
+namespace routent.AdminAPI.DTOs.Analytics;
 
 public class AnalyticsRangeQueryDto
 {

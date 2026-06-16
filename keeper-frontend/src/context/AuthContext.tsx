@@ -14,6 +14,8 @@ import { canManageKeeper } from '@/lib/keeper';
 import { KeeperProfile, SessionUser, UserProfile } from '@/lib/types';
 import { useToast } from '@/context/ToastContext';
 
+const LIVE_PROFILE_REFRESH_INTERVAL_MS = 30000;
+
 interface AuthContextValue {
   user: SessionUser | null;
   loading: boolean;
@@ -24,6 +26,11 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function isAuthenticationFailure(error: unknown) {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  return status === 401 || status === 403;
+}
+
 function composeSessionUser(userProfile: UserProfile, keeperProfile: KeeperProfile | null): SessionUser {
   return {
     ...userProfile,
@@ -32,7 +39,7 @@ function composeSessionUser(userProfile: UserProfile, keeperProfile: KeeperProfi
   };
 }
 
-async function fetchSessionUser() {
+async function fetchSessionUser(fallbackUser?: SessionUser | null) {
   const userResponse = await api.get('/user/profile');
   const userProfile = unwrapApiData<UserProfile>(userResponse);
 
@@ -40,8 +47,14 @@ async function fetchSessionUser() {
   try {
     const keeperResponse = await api.get('/keeper/profile');
     keeperProfile = unwrapApiData<KeeperProfile>(keeperResponse);
-  } catch {
-    keeperProfile = null;
+  } catch (error) {
+    if (isAuthenticationFailure(error)) {
+      throw error;
+    }
+
+    keeperProfile = fallbackUser?.userId === userProfile.userId
+      ? fallbackUser.keeper
+      : null;
   }
 
   return composeSessionUser(userProfile, keeperProfile);
@@ -52,9 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { showToast } = useToast();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const userId = user?.userId;
 
   const refreshUser = useMemo(() => async () => {
-    const nextUser = await fetchSessionUser();
+    const nextUser = await fetchSessionUser(getStoredUser<SessionUser>());
     setUser(nextUser);
     setStoredUser(nextUser);
     return nextUser;
@@ -79,15 +93,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const nextUser = await fetchSessionUser();
+        const nextUser = await fetchSessionUser(cachedUser);
         if (!cancelled) {
           setUser(nextUser);
           setStoredUser(nextUser);
         }
-      } catch {
-        clearStoredSession();
+      } catch (error) {
         if (!cancelled) {
-          setUser(null);
+          if (cachedUser && !isAuthenticationFailure(error)) {
+            setUser(cachedUser);
+          } else {
+            clearStoredSession();
+            setUser(null);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -109,7 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       nextUser = await refreshUser();
-    } catch {
+    } catch (error) {
+      if (isAuthenticationFailure(error)) {
+        clearStoredSession();
+        throw error;
+      }
+
       if (!fallbackUser?.userId || String(fallbackUser.role || '').trim().toLowerCase() !== 'keeper') {
         throw new Error('Unable to load keeper profile.');
       }
@@ -132,6 +155,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.replace('/dashboard');
     });
   };
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    let cancelled = false;
+    let refreshing = false;
+
+    const refreshLiveProfile = async () => {
+      if (refreshing || !getStoredAccessToken()) {
+        return;
+      }
+
+      refreshing = true;
+      try {
+        await refreshUser();
+      } catch (error) {
+        if (isAuthenticationFailure(error)) {
+          clearStoredSession();
+          if (!cancelled) {
+            setUser(null);
+            startTransition(() => {
+              router.replace('/login');
+            });
+          }
+        }
+      } finally {
+        refreshing = false;
+      }
+    };
+
+    const handleFocus = () => {
+      void refreshLiveProfile();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshLiveProfile();
+      }
+    };
+
+    void refreshLiveProfile();
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const intervalId = window.setInterval(refreshLiveProfile, LIVE_PROFILE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [refreshUser, router, userId]);
 
   const logout = async () => {
     try {

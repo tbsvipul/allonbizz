@@ -1,4 +1,4 @@
-namespace allonbiz.AdminAPI.DTOs.Support;
+namespace routent.AdminAPI.DTOs.Support;
 
 public class CreateSupportTicketDto
 {

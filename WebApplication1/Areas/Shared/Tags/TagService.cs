@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using allonbiz.AdminAPI.Data.Interfaces;
-using allonbiz.AdminAPI.DTOs.Tags;
-using allonbiz.AdminAPI.Models.Entities;
-using allonbiz.AdminAPI.Services.Interfaces;
+using routent.AdminAPI.Data.Interfaces;
+using routent.AdminAPI.DTOs.Tags;
+using routent.AdminAPI.Models.Entities;
+using routent.AdminAPI.Services.Interfaces;
 
-namespace allonbiz.AdminAPI.Services;
+namespace routent.AdminAPI.Services;
 
 public class TagService : ITagService
 {
