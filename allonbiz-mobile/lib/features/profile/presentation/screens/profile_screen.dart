@@ -142,101 +142,79 @@ class ProfileScreen extends ConsumerWidget {
                 ProfileTileWidget(
                   icon: Icons.person_pin_circle_rounded,
                   title: 'Location Marker',
-                  trailing: DropdownButton<String>(
-                    value: ref.watch(locationMarkerProvider),
-                    underline: const SizedBox(),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 18,
+                  trailing: DropdownMenu<String>(
+                    initialSelection: ref.watch(locationMarkerProvider),
+                    leadingIcon: ref.watch(locationMarkerProvider) == 'ripple'
+                        ? const Icon(Icons.my_location_rounded, size: 20, color: AppColors.primary)
+                        : Image.asset('assets/images/location_marker/${ref.watch(locationMarkerProvider)}', width: 20, height: 20),
+                    width: 160,
+                    menuStyle: MenuStyle(
+                      backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
                     ),
-                    style: AppTextStyles.bodyMedium.copyWith(
+                    textStyle: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
-                    items: [
-                      DropdownMenuItem(
+                    inputDecorationTheme: const InputDecorationTheme(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      isDense: true,
+                    ),
+                    onSelected: (val) {
+                      if (val != null) {
+                        ref.read(locationMarkerProvider.notifier).setMarker(val);
+                      }
+                    },
+                    dropdownMenuEntries: [
+                      DropdownMenuEntry(
                         value: 'ripple',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.my_location_rounded,
-                              size: 20,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text('Ripple'),
-                          ],
+                        label: 'Ripple',
+                        leadingIcon: const Icon(
+                          Icons.my_location_rounded,
+                          size: 20,
+                          color: AppColors.primary,
                         ),
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: 'blue_car.png',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/location_marker/blue_car.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text('Blue Car'),
-                          ],
+                        label: 'Blue Car',
+                        leadingIcon: Image.asset(
+                          'assets/images/location_marker/blue_car.png',
+                          width: 20,
+                          height: 20,
                         ),
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: 'man.png',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/location_marker/man.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text('Man'),
-                          ],
+                        label: 'Man',
+                        leadingIcon: Image.asset(
+                          'assets/images/location_marker/man.png',
+                          width: 20,
+                          height: 20,
                         ),
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: 'weman.png',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/location_marker/weman.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text('Woman'),
-                          ],
+                        label: 'Woman',
+                        leadingIcon: Image.asset(
+                          'assets/images/location_marker/weman.png',
+                          width: 20,
+                          height: 20,
                         ),
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: 'yellow_car.png',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/location_marker/yellow_car.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text('Yellow Car'),
-                          ],
+                        label: 'Yellow Car',
+                        leadingIcon: Image.asset(
+                          'assets/images/location_marker/yellow_car.png',
+                          width: 20,
+                          height: 20,
                         ),
                       ),
                     ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref
-                            .read(locationMarkerProvider.notifier)
-                            .setMarker(val);
-                      }
-                    },
                   ),
                 ),
 
@@ -291,30 +269,35 @@ class ProfileScreen extends ConsumerWidget {
                 ProfileTileWidget(
                   icon: Icons.language_rounded,
                   title: 'App Language',
-                  trailing: DropdownButton<String>(
-                    value: ref.watch(localeProvider).languageCode,
-                    underline: const SizedBox(),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 18,
+                  trailing: DropdownMenu<String>(
+                    initialSelection: ref.watch(localeProvider).languageCode,
+                    width: 140,
+                    menuStyle: MenuStyle(
+                      backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
                     ),
-                    style: AppTextStyles.bodyMedium.copyWith(
+                    textStyle: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
-                    items: LocaleNotifier.supportedLanguages.entries.map((
-                      entry,
-                    ) {
-                      return DropdownMenuItem(
-                        value: entry.key,
-                        child: Text(entry.value),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
+                    inputDecorationTheme: const InputDecorationTheme(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      isDense: true,
+                    ),
+                    onSelected: (val) {
                       if (val != null) {
                         ref.read(localeProvider.notifier).setLocale(val);
                       }
                     },
+                    dropdownMenuEntries: LocaleNotifier.supportedLanguages.entries.map((entry) {
+                      return DropdownMenuEntry(
+                        value: entry.key,
+                        label: entry.value,
+                      );
+                    }).toList(),
                   ),
                 ),
 

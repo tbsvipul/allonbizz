@@ -23,7 +23,7 @@ public interface ISystemService {
 
 public interface ISettingsService {
     Task<SystemConfigDto> GetSettingsAsync(CancellationToken ct = default);
-    Task UpdateSettingsAsync(UpdateSettingsDto dto, CancellationToken ct = default);
+    Task UpdateSettingsAsync(UpdateSettingsDto dto, bool isSuperAdmin, CancellationToken ct = default);
     Task<SecuritySettingsDto> GetSecuritySettingsAsync(CancellationToken ct = default);
     Task UpdateSecuritySettingsAsync(UpdateSecurityDto dto, CancellationToken ct = default);
     Task<PagedResponse<AdminListItemDto>> GetAdminsAsync(AdminListQueryDto query, CancellationToken ct = default);

@@ -7,6 +7,7 @@ class SearchSuggestionsList extends StatelessWidget {
   final List<PlaceSuggestion> suggestions;
   final bool isLoading;
   final bool isDark;
+  final bool isHistory;
   final Function(PlaceSuggestion) onSelect;
 
   const SearchSuggestionsList({
@@ -14,6 +15,7 @@ class SearchSuggestionsList extends StatelessWidget {
     required this.suggestions,
     required this.isLoading,
     required this.isDark,
+    this.isHistory = false,
     required this.onSelect,
   });
 
@@ -27,6 +29,33 @@ class SearchSuggestionsList extends StatelessWidget {
     }
 
     if (suggestions.isEmpty) return const SizedBox.shrink();
+
+    if (isHistory) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: suggestions.map((suggestion) {
+          return ActionChip(
+            label: Text(suggestion.name),
+            avatar: Icon(
+              Icons.history_rounded,
+              size: 16,
+              color: isDark ? AppColors.grey400 : AppColors.grey600,
+            ),
+            backgroundColor: isDark ? AppColors.grey800 : AppColors.white.withValues(alpha: 0.5),
+            side: BorderSide(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              width: 1,
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            labelStyle: AppTextStyles.labelSmall.copyWith(
+              color: isDark ? AppColors.white : AppColors.grey800,
+            ),
+            onPressed: () => onSelect(suggestion),
+          );
+        }).toList(),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -60,7 +89,7 @@ class SearchSuggestionsList extends StatelessWidget {
           final suggestion = suggestions[index];
           return ListTile(
             leading: Icon(
-              Icons.location_on_rounded,
+              isHistory ? Icons.history_rounded : Icons.location_on_rounded,
               color: AppColors.primary.withValues(alpha: 0.6),
               size: 20,
             ),
@@ -70,7 +99,7 @@ class SearchSuggestionsList extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            subtitle: Text(
+            subtitle: isHistory ? null : Text(
               suggestion.description,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

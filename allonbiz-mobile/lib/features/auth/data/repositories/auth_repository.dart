@@ -11,11 +11,13 @@ import '../../../profile/data/repositories/profile_repository.dart';
 
 /// Riverpod provider for AuthRepository.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(
+  final repo = AuthRepository(
     apiClient: ref.watch(apiClientProvider),
     storageService: ref.watch(storageServiceProvider),
     profileRepository: ref.watch(profileRepositoryProvider),
   );
+  ref.onDispose(() => repo.dispose());
+  return repo;
 });
 
 /// Stream of auth state changes.
@@ -90,12 +92,9 @@ class AuthRepository {
         } else if (e is NetworkFailure) {
           // Keep user authenticated if offline
           _logAuthFlow('init-refresh-profile-network-failure');
-          // If we had a cached profile, we could load it here.
-          // For now, if we have a token, we assume they are authenticated
-          // but we might not have the user object if they just started the app.
-          // Actually, if we couldn't fetch profile, they will be stuck in loading or unauthenticated?
-          // Since _currentUser is null, they will be unauthenticated.
-          _updateState(null); 
+          // Mark as initialized but keep existing user state to retain session
+          _isInitialized = true;
+          _authController.add(_currentUser);
         } else {
           _updateState(null);
         }
@@ -264,6 +263,11 @@ class AuthRepository {
       _storageService.backendRefreshToken = null;
       _updateState(null);
     }
+  }
+
+  void dispose() {
+    _authController.close();
+    _forcedLogoutController.close();
   }
 
   Future<void> sendPasswordResetEmail(String email) async {

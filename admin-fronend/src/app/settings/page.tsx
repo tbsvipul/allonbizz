@@ -29,6 +29,8 @@ interface GeneralSettingsState {
   apiVersion: string;
   environment: string;
   externalServices: Record<string, string>;
+  maxAllowedRadiusKm: number;
+  journeyDiscoveryRadiusKm: number;
 }
 
 interface SecuritySettingsState {
@@ -86,6 +88,8 @@ const defaultGeneralSettings: GeneralSettingsState = {
   apiVersion: '',
   environment: '',
   externalServices: {},
+  maxAllowedRadiusKm: 25.0,
+  journeyDiscoveryRadiusKm: 30.0,
 };
 
 const defaultSecuritySettings: SecuritySettingsState = {
@@ -261,6 +265,8 @@ export default function SettingsPage() {
           apiVersion: payload.apiVersion || '',
           environment: payload.environment || '',
           externalServices: payload.externalServices || {},
+          maxAllowedRadiusKm: typeof payload.maxAllowedRadiusKm === 'number' ? payload.maxAllowedRadiusKm : 25.0,
+          journeyDiscoveryRadiusKm: typeof payload.journeyDiscoveryRadiusKm === 'number' ? payload.journeyDiscoveryRadiusKm : 30.0,
         });
       } else if (activeTab === 'security') {
         const response = await api.get('/settings/security');
@@ -604,6 +610,47 @@ export default function SettingsPage() {
                               value={generalSettings.environment}
                               onChange={(event) => setGeneralSettings({ ...generalSettings, environment: event.target.value })}
                               disabled={!hasPermission(PERMISSIONS.settingsEdit)}
+                              style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', outline: 'none' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                              Maximum Allowed Shop Radius (km)
+                              {!currentUserIsSuperAdmin && (
+                                <span style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 400, marginLeft: '0.5rem' }}>
+                                  (Super Admin Only)
+                                </span>
+                              )}
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              step="any"
+                              value={generalSettings.maxAllowedRadiusKm}
+                              onChange={(event) => setGeneralSettings({ ...generalSettings, maxAllowedRadiusKm: Number(event.target.value || 0) })}
+                              disabled={!currentUserIsSuperAdmin || !hasPermission(PERMISSIONS.settingsEdit)}
+                              style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', outline: 'none' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                              Journey Discovery Radius (km)
+                              {!currentUserIsSuperAdmin && (
+                                <span style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', fontWeight: 400, marginLeft: '0.5rem' }}>
+                                  (Super Admin Only)
+                                </span>
+                              )}
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              step="any"
+                              value={generalSettings.journeyDiscoveryRadiusKm}
+                              onChange={(event) => setGeneralSettings({ ...generalSettings, journeyDiscoveryRadiusKm: Number(event.target.value || 0) })}
+                              disabled={!currentUserIsSuperAdmin || !hasPermission(PERMISSIONS.settingsEdit)}
                               style={{ padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid hsl(var(--border))', background: 'hsl(var(--secondary))', outline: 'none' }}
                             />
                           </div>

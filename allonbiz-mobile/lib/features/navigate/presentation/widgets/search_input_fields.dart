@@ -71,6 +71,21 @@ class SearchInputFields extends StatelessWidget {
             onSubmitted: onDestinationSubmitted,
             decoration: _getInputDecoration('Destination Location'),
           ),
+          suffix: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: destinationController,
+            builder: (context, value, child) {
+              if (value.text.isEmpty) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.clear_rounded, color: AppColors.grey500, size: 20),
+                onPressed: () {
+                  destinationController.clear();
+                  onDestinationChanged('');
+                },
+                tooltip: 'Clear',
+                visualDensity: VisualDensity.compact,
+              );
+            },
+          ),
         ),
       ],
     );

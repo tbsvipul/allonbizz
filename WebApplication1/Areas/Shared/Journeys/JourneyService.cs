@@ -111,28 +111,31 @@ public class JourneyService : IJourneyService
         var journey = await _db.Journeys.FindAsync(journeyId);
         if (journey == null) return new List<JourneyRecommendationResponse>();
 
-        var journeyTags = NormalizeTags(
-            string.IsNullOrEmpty(journey.TagsJson)
-                ? new List<string>()
-                : JsonSerializer.Deserialize<List<string>>(journey.TagsJson) ?? new List<string>());
+        // Load dynamic discovery radius (super admin configurable, defaults to 30.0 km)
+        double targetRadius = 30.0;
+        var radiusRule = await _db.PlatformRules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Group == "General" && r.Key == "JourneyDiscoveryRadiusKm");
+        if (radiusRule != null && double.TryParse(radiusRule.Value, out var parsedRadius))
+        {
+            targetRadius = parsedRadius;
+        }
 
-        // Approximate bounding box (1 degree latitude is approx 111km)
-        double latOffset = radiusKm / 111.0;
-        double lngOffset = radiusKm / (111.0 * Math.Cos(lat * Math.PI / 180.0));
+        // Bounding box query
+        double latOffset = targetRadius / 111.0;
+        double lngOffset = targetRadius / (111.0 * Math.Cos(lat * Math.PI / 180.0));
         
         var minLat = lat - latOffset;
         var maxLat = lat + latOffset;
         var minLng = lng - lngOffset;
         var maxLng = lng + lngOffset;
 
-        // Fetch only shops within the bounding box to avoid loading the entire table
         var shopsInBox = await _db.Shops
             .Include(s => s.Category)
+            .Include(s => s.Offers) // Include the offers
             .Where(s => s.IsActive && s.IsVerified && s.Latitude.HasValue && s.Longitude.HasValue &&
                         s.Latitude.Value >= minLat && s.Latitude.Value <= maxLat &&
                         s.Longitude.Value >= minLng && s.Longitude.Value <= maxLng)
-            .OrderBy(s => (s.Latitude!.Value - lat) * (s.Latitude!.Value - lat) + (s.Longitude!.Value - lng) * (s.Longitude!.Value - lng))
-            .Take(100) // Limit to a reasonable number to prevent huge memory spikes if too many shops in the box
             .ToListAsync();
 
         var recommendations = shopsInBox
@@ -141,8 +144,7 @@ public class JourneyService : IJourneyService
                 Distance = CalculateDistance(lat, lng, s.Latitude!.Value, s.Longitude!.Value),
                 Tags = BuildShopMatchTokens(s.Tags, s.Category?.Name)
             })
-            .Where(x => x.Distance <= radiusKm)
-            .Where(x => journeyTags.Count == 0 || MatchesAnyJourneyTag(journeyTags, x.Tags))
+            .Where(x => x.Distance <= targetRadius)
             .OrderBy(x => x.Distance)
             .Select(x => new JourneyRecommendationResponse
             {
@@ -155,7 +157,23 @@ public class JourneyService : IJourneyService
                 Distance = Math.Round(x.Distance, 2),
                 ShopProfileImage = ImageConversionHelper.ToBase64DataUrl(x.Shop.ImageUrl),
                 IsOpen = x.Shop.IsOpen,
-                Tags = x.Tags
+                Tags = x.Tags,
+                Offers = x.Shop.Offers != null
+                    ? x.Shop.Offers
+                        .Where(o => o.IsActive && o.Status == routent.AdminAPI.Models.Enums.OfferStatus.Active)
+                        .Select(o => new JourneyOfferDto
+                        {
+                            OfferId = o.OfferId,
+                            Title = o.Title,
+                            Description = o.Description,
+                            DiscountPercentage = o.DiscountPercentage,
+                            DiscountAmount = o.DiscountAmount,
+                            CouponCode = o.CouponCode,
+                            OfferImage = ImageConversionHelper.ToBase64DataUrl(o.ImageData),
+                            Tags = o.Tags
+                        })
+                        .ToList()
+                    : new List<JourneyOfferDto>()
             })
             .ToList();
 
@@ -464,12 +482,60 @@ public class JourneyService : IJourneyService
         return journey.StartName ?? "Destination";
     }
 
+    private double CalculatePathDistanceMeters(List<double[]> path)
+    {
+        double totalDistanceKm = 0;
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            var p1 = path[i];
+            var p2 = path[i + 1];
+            if (p1.Length >= 2 && p2.Length >= 2)
+            {
+                totalDistanceKm += CalculateDistance(p1[0], p1[1], p2[0], p2[1]);
+            }
+        }
+        return totalDistanceKm * 1000.0;
+    }
+
     private double ResolveJourneyDistanceMeters(
         Journey journey,
         double candidateDistance,
         double? endLat,
         double? endLng)
     {
+        // 1. If candidateDistance from DTO/device is valid (greater than 0), trust it as the primary source!
+        if (candidateDistance > 0)
+        {
+            return candidateDistance;
+        }
+
+        // 2. If candidateDistance is 0 but we have a path trail, calculate cumulative distance along the path!
+        if (!string.IsNullOrEmpty(journey.PathJson))
+        {
+            try
+            {
+                var path = JsonSerializer.Deserialize<List<double[]>>(journey.PathJson);
+                if (path != null && path.Count > 1)
+                {
+                    // Ensure the final end location is in the path list for accurate final distance
+                    if (endLat.HasValue && endLng.HasValue && (endLat.Value != 0 || endLng.Value != 0))
+                    {
+                        var lastPoint = path.Last();
+                        if (lastPoint.Length >= 2 && (Math.Abs(lastPoint[0] - endLat.Value) > 0.0001 || Math.Abs(lastPoint[1] - endLng.Value) > 0.0001))
+                        {
+                            path.Add(new[] { endLat.Value, endLng.Value });
+                        }
+                    }
+                    return CalculatePathDistanceMeters(path);
+                }
+            }
+            catch
+            {
+                // Fallback on JSON parse failure
+            }
+        }
+
+        // 3. Fallback to straight-line distance from start to end coordinate
         if (endLat.HasValue && endLng.HasValue && (endLat.Value != 0 || endLng.Value != 0))
         {
             return CalculateDistance(journey.StartLat, journey.StartLng, endLat.Value, endLng.Value) * 1000.0;
@@ -478,11 +544,6 @@ public class JourneyService : IJourneyService
         if (journey.EndLat.HasValue && journey.EndLng.HasValue && (journey.EndLat.Value != 0 || journey.EndLng.Value != 0))
         {
             return CalculateDistance(journey.StartLat, journey.StartLng, journey.EndLat.Value, journey.EndLng.Value) * 1000.0;
-        }
-
-        if (candidateDistance > 0)
-        {
-            return candidateDistance;
         }
 
         return journey.Distance;

@@ -46,6 +46,7 @@ class AuthController extends StateNotifier<AuthState> {
 
   final AuthRepository _repo;
   StreamSubscription? _authSub;
+  StreamSubscription? _forcedLogoutSub;
   bool _isManualAuth = false;
 
   AuthController(this._repo) : super(const AuthState()) {
@@ -55,6 +56,7 @@ class AuthController extends StateNotifier<AuthState> {
   @override
   void dispose() {
     _authSub?.cancel();
+    _forcedLogoutSub?.cancel();
     super.dispose();
   }
 
@@ -65,19 +67,13 @@ class AuthController extends StateNotifier<AuthState> {
       _handleUpdate(user);
     });
 
-    _repo.onForcedLogout.listen((message) {
+    _forcedLogoutSub = _repo.onForcedLogout.listen((message) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         errorMessage: message,
         clearUser: true,
       );
     });
-
-    // 2. Manually check current repo state immediately to resolve the session faster if possible
-    final currentUser = _repo.currentUser;
-    if (currentUser != null || _repo.isInitialized) {
-      _handleUpdate(currentUser);
-    }
   }
 
   void _handleUpdate(AppUser? user) {

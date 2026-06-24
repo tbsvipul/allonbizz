@@ -152,8 +152,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   ),
                 )
               else ...[
-                _buildOffers(data.offers, discoverAsync.isLoading),
-                _buildShops(data.shops),
+                _buildOffers(data.offers, discoverAsync.isLoading, data.personalization),
+                _buildShops(data.shops, data.personalization),
                 if (!discoverAsync.isLoading &&
                     data.offers.isEmpty &&
                     data.shops.isEmpty)
@@ -398,16 +398,22 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 
-  Widget _buildOffers(List<DiscoverOfferResult> offers, bool isLoading) {
+  Widget _buildOffers(List<DiscoverOfferResult> offers, bool isLoading, UserDiscoverPersonalization personalization) {
     return SliverMainAxisGroup(
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: AppDimensions.xl),
-            child: AppSectionHeader(
-              title: 'Exclusive Offers',
-              icon: Icons.workspace_premium_rounded,
-              iconColor: AppColors.secondary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSectionHeader(
+                  title: personalization.hasHistory ? 'Exclusive for You' : 'Trending Offers',
+                  icon: personalization.hasHistory ? Icons.workspace_premium_rounded : Icons.local_fire_department_rounded,
+                  iconColor: AppColors.secondary,
+                ),
+                
+              ],
             ),
           ),
         ),
@@ -439,15 +445,21 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 
-  Widget _buildShops(List<DiscoverShopResult> shops) {
+  Widget _buildShops(List<DiscoverShopResult> shops, UserDiscoverPersonalization personalization) {
     return SliverMainAxisGroup(
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: AppDimensions.xl),
-            child: AppSectionHeader(
-              title: 'Recommended Shops',
-              icon: Icons.storefront_rounded,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSectionHeader(
+                  title: personalization.hasHistory ? 'Recommended Shops' : 'Popular Shops',
+                  icon: Icons.storefront_rounded,
+                ),
+                
+              ],
             ),
           ),
         ),

@@ -19,7 +19,7 @@ public class Shop
     public bool IsOpen { get; set; } = true;
     public string? BusinessHoursJson { get; set; }
     public List<string> Amenities { get; set; } = new();
-    public double? NotificationRadius { get; set; }
+    public double? NotificationRadius { get; set; } = 10.0;
     public string? AdminNotes { get; set; }
     
     /// <summary>

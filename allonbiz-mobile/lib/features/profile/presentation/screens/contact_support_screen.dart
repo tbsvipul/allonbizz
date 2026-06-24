@@ -6,7 +6,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../core/network/api_client.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../../../core/widgets/app_bar_binding.dart';
 class ContactSupportScreen extends ConsumerStatefulWidget {
   const ContactSupportScreen({super.key});
 
@@ -73,16 +73,25 @@ class _ContactSupportScreenState extends ConsumerState<ContactSupportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
+    return AppBarBinding(
+      config: AppBarConfig(
         title: const Text('Contact Support'),
         centerTitle: true,
-        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppDimensions.lg),
-        child: Column(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            AppDimensions.lg,
+            AppDimensions.lg,
+            AppDimensions.lg,
+            140 + MediaQuery.of(context).padding.bottom,
+          ),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Icon(
@@ -117,10 +126,39 @@ class _ContactSupportScreenState extends ConsumerState<ContactSupportScreen> {
 
             DropdownButtonFormField<String>(
               initialValue: _priority,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
               decoration: InputDecoration(
                 labelText: 'Priority',
+                labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.surfaceElevatedDark.withValues(alpha: 0.86)
+                    : AppColors.white.withValues(alpha: 0.92),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.md,
+                  vertical: AppDimensions.md,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.72),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.72),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary, width: 1.6,
+                  ),
                 ),
               ),
               items: [
@@ -150,6 +188,6 @@ class _ContactSupportScreenState extends ConsumerState<ContactSupportScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

@@ -13,10 +13,29 @@ using routent.AdminAPI.Models.Enums;
 
 namespace routent.AdminAPI.Services;
 
-public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleService, IPlacesService
+public class PlatformFeatureService : IReviewService, IAdminPanelService, IRuleService, IPlacesService, IUserReportService
 {
     private readonly AppDbContext _db;
     public PlatformFeatureService(AppDbContext db) => _db = db;
+
+    public async Task SubmitReportAsync(Guid userId, SubmitReportDto dto, CancellationToken ct = default)
+    {
+        var report = new UserReport
+        {
+            ReportId = Guid.NewGuid(),
+            ReportedBy = userId,
+            ReportedItemId = dto.ReportedItemId,
+            ItemType = dto.ItemType,
+            Reason = dto.Reason,
+            Comments = dto.Comments,
+            Evidence = dto.Evidence ?? new List<string>(),
+            Status = "pending",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.UserReports.Add(report);
+        await _db.SaveChangesAsync(ct);
+    }
 
     public async Task<PagedResponse<ReviewDto>> GetReviewsAsync(
         Guid? shopId,

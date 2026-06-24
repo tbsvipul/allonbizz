@@ -34,3 +34,8 @@ public interface IPlacesService
     Task<List<PlaceSearchResponseDto>> SearchPlacesAsync(string query);
     Task<List<TrendingOfferDto>> GetTrendingOffersAsync();
 }
+
+public interface IUserReportService
+{
+    Task SubmitReportAsync(Guid userId, SubmitReportDto dto, CancellationToken ct = default);
+}

@@ -268,6 +268,21 @@ public class KeeperProfileService : IKeeperProfileService
             }
         }
 
+        var maxRadiusRule = await _db.PlatformRules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Group == "General" && r.Key == "MaxAllowedRadiusKm");
+        var maxRadius = maxRadiusRule != null && double.TryParse(maxRadiusRule.Value, out var parsedMax) ? parsedMax : 25.0;
+
+        var radius = dto.NotificationRadius ?? 10.0;
+        if (radius <= 0)
+        {
+            throw new ArgumentException("Notification radius must be greater than zero.");
+        }
+        if (radius > maxRadius)
+        {
+            throw new ArgumentException($"Notification radius cannot exceed the maximum allowed limit of {maxRadius} km.");
+        }
+
         var now = DateTime.UtcNow;
         var shop = new Shop
         {
@@ -287,7 +302,7 @@ public class KeeperProfileService : IKeeperProfileService
                 .ToList() ?? new List<byte[]>(),
             CategoryId = dto.CategoryId,
             IsOpen = dto.IsOpen,
-            NotificationRadius = dto.NotificationRadius,
+            NotificationRadius = radius,
             CreatedAt = now,
             UpdatedAt = now,
             Amenities = NormalizeStringList(dto.Amenities),

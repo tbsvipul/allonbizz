@@ -550,6 +550,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ? SearchInputField.origin
                               : SearchInputField.destination,
                         ),
+                      )
+                    else if (_searchFocus.hasFocus && searchState.searchHistory.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, top: 12, bottom: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.history_rounded,
+                                  size: 16,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Recent Searches',
+                                  style: textTheme.labelLarge?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SearchSuggestionsList(
+                            suggestions: searchState.searchHistory,
+                            isLoading: false,
+                            isDark: isDark,
+                            isHistory: true,
+                            onSelect: (suggestion) => _selectSuggestion(
+                              suggestion,
+                              field: SearchInputField.destination,
+                            ),
+                          ),
+                        ],
                       ),
 
                     const SizedBox(height: AppDimensions.xl),

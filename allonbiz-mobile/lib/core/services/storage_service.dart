@@ -65,6 +65,11 @@ class StorageService {
       await Hive.openBox(StorageKeys.responsesBox, encryptionCipher: cipher);
       await Hive.openBox(StorageKeys.routesBox, encryptionCipher: cipher);
     } catch (_) {
+      // Close any boxes that might have opened successfully before deleting
+      if (Hive.isBoxOpen(StorageKeys.prefsBox)) await Hive.box(StorageKeys.prefsBox).close();
+      if (Hive.isBoxOpen(StorageKeys.responsesBox)) await Hive.box(StorageKeys.responsesBox).close();
+      if (Hive.isBoxOpen(StorageKeys.routesBox)) await Hive.box(StorageKeys.routesBox).close();
+
       // If decryption fails (e.g. data is unencrypted), clear and reopen.
       await Hive.deleteBoxFromDisk(StorageKeys.prefsBox);
       await Hive.deleteBoxFromDisk(StorageKeys.responsesBox);
@@ -206,6 +211,17 @@ class StorageService {
   Future<void> clearActiveJourneySession() async {
     await _prefs.delete(StorageKeys.activeJourneySession);
   }
+
+  List<Map<String, dynamic>> get searchHistory {
+    final raw = _prefs.get(StorageKeys.searchHistory, defaultValue: []);
+    if (raw is List) {
+      return raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    return [];
+  }
+
+  set searchHistory(List<Map<String, dynamic>> value) =>
+      _prefs.put(StorageKeys.searchHistory, value);
 
   Future<void> putCachedResponse(
     String key, {

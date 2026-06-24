@@ -5,6 +5,10 @@ using routent.AdminAPI.DTOs.Users;
 using routent.AdminAPI.Helpers;
 using routent.AdminAPI.Services.Interfaces;
 
+using Microsoft.EntityFrameworkCore;
+using routent.AdminAPI.Data;
+using routent.AdminAPI.Models.Entities;
+
 namespace routent.AdminAPI.Controllers;
 
 [ApiController]
@@ -13,8 +17,13 @@ namespace routent.AdminAPI.Controllers;
 public class UserJourneysController : ControllerBase
 {
     private readonly IJourneyService _journeyService;
+    private readonly AppDbContext _db;
 
-    public UserJourneysController(IJourneyService journeyService) => _journeyService = journeyService;
+    public UserJourneysController(IJourneyService journeyService, AppDbContext db)
+    {
+        _journeyService = journeyService;
+        _db = db;
+    }
 
     [HttpPost("start")]
     public async Task<IActionResult> StartJourney([FromBody] StartJourneyDto dto)

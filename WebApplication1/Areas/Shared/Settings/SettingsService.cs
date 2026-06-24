@@ -47,13 +47,32 @@ public class SettingsService : ISettingsService
             FirebaseProjectId = GetRuleValue(settings, nameof(SystemConfigDto.FirebaseProjectId)),
             ApiVersion = GetRuleValue(settings, nameof(SystemConfigDto.ApiVersion), "v1"),
             Environment = GetRuleValue(settings, nameof(SystemConfigDto.Environment), "Production"),
-            ExternalServices = DeserializeExternalServices(GetRuleValue(settings, nameof(SystemConfigDto.ExternalServices), "{}"))
+            ExternalServices = DeserializeExternalServices(GetRuleValue(settings, nameof(SystemConfigDto.ExternalServices), "{}")),
+            MaxAllowedRadiusKm = double.TryParse(GetRuleValue(settings, nameof(SystemConfigDto.MaxAllowedRadiusKm), "25.0"), out var maxRadius) ? maxRadius : 25.0,
+            JourneyDiscoveryRadiusKm = double.TryParse(GetRuleValue(settings, nameof(SystemConfigDto.JourneyDiscoveryRadiusKm), "30.0"), out var journeyRadius) ? journeyRadius : 30.0
         };
     }
 
-    public async Task UpdateSettingsAsync(UpdateSettingsDto dto, CancellationToken ct = default)
+    public async Task UpdateSettingsAsync(UpdateSettingsDto dto, bool isSuperAdmin, CancellationToken ct = default)
     {
         var settings = dto.Config ?? throw new ArgumentException("Config payload is required.");
+
+        var currentSettings = await GetSettingsAsync(ct);
+        if (Math.Abs(settings.MaxAllowedRadiusKm - currentSettings.MaxAllowedRadiusKm) > 0.001)
+        {
+            if (!isSuperAdmin)
+            {
+                throw new UnauthorizedAccessException("Only Super Admin users can modify the maximum allowed shop radius.");
+            }
+        }
+
+        if (Math.Abs(settings.JourneyDiscoveryRadiusKm - currentSettings.JourneyDiscoveryRadiusKm) > 0.001)
+        {
+            if (!isSuperAdmin)
+            {
+                throw new UnauthorizedAccessException("Only Super Admin users can modify the journey discovery/interest radius.");
+            }
+        }
 
         await UpsertRuleAsync("General", nameof(SystemConfigDto.BaseUrl), settings.BaseUrl, "Base URL", ct);
         await UpsertRuleAsync("General", nameof(SystemConfigDto.FirebaseProjectId), settings.FirebaseProjectId, "Firebase project ID", ct);
@@ -65,6 +84,12 @@ public class SettingsService : ISettingsService
             JsonSerializer.Serialize(settings.ExternalServices ?? new Dictionary<string, string>()),
             "External service settings",
             ct);
+
+        if (isSuperAdmin)
+        {
+            await UpsertRuleAsync("General", nameof(SystemConfigDto.MaxAllowedRadiusKm), settings.MaxAllowedRadiusKm.ToString("0.##"), "Maximum allowed shop radius in km", ct);
+            await UpsertRuleAsync("General", nameof(SystemConfigDto.JourneyDiscoveryRadiusKm), settings.JourneyDiscoveryRadiusKm.ToString("0.##"), "Journey interest/discovery search radius in km", ct);
+        }
 
         await _ruleRepo.SaveChangesAsync(ct);
     }

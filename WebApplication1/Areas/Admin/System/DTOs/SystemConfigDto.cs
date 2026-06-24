@@ -7,4 +7,7 @@ public class SystemConfigDto
     public string ApiVersion { get; set; } = "v1";
     public string Environment { get; set; } = "Production";
     public Dictionary<string, string> ExternalServices { get; set; } = new();
+    public double MaxAllowedRadiusKm { get; set; } = 25.0;
+    public double JourneyDiscoveryRadiusKm { get; set; } = 30.0;
 }
+

@@ -28,7 +28,8 @@ public class SettingsController : ControllerBase
     [RequirePermission(Permissions.SettingsEdit)]
     public async Task<IActionResult> UpdateSettings([FromBody] UpdateSettingsDto dto)
     {
-        await _settingsService.UpdateSettingsAsync(dto, HttpContext.RequestAborted);
+        var isSuperAdmin = User.IsInRole(Roles.SuperAdmin);
+        await _settingsService.UpdateSettingsAsync(dto, isSuperAdmin, HttpContext.RequestAborted);
         return NoContent();
     }
 

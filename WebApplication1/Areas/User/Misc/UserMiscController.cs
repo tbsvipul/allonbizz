@@ -16,12 +16,31 @@ public class UserMiscController : ControllerBase
     private readonly INotificationService _notificationService;
     private readonly IReviewService _reviewService;
     private readonly IChatService _chatService;
+    private readonly IUserReportService _userReportService;
 
-    public UserMiscController(INotificationService notificationService, IReviewService reviewService, IChatService chatService)
+    public UserMiscController(
+        INotificationService notificationService, 
+        IReviewService reviewService, 
+        IChatService chatService,
+        IUserReportService userReportService)
     {
         _notificationService = notificationService;
         _reviewService = reviewService;
         _chatService = chatService;
+        _userReportService = userReportService;
+    }
+
+    [HttpPost("report")]
+    public async Task<IActionResult> SubmitReport([FromBody] SubmitReportDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.ReportedItemId) || string.IsNullOrWhiteSpace(dto.ItemType) || string.IsNullOrWhiteSpace(dto.Reason))
+        {
+            return this.ValidationProblemResponse("ReportedItemId, ItemType, and Reason are required.");
+        }
+
+        var userId = User.GetUserId();
+        await _userReportService.SubmitReportAsync(userId, dto);
+        return Ok(ApiResponse<object?>.Ok(null, "Report submitted successfully"));
     }
 
     [HttpPost("chat/{keeperId:guid}")]

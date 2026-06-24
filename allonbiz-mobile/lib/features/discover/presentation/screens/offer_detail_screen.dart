@@ -20,6 +20,7 @@ import '../../../../core/services/current_location_provider.dart';
 import '../../../navigate/presentation/controllers/navigation_controller.dart';
 import '../../../profile/presentation/screens/saved_offers_screen.dart';
 import '../../../../app/routes/app_routes.dart';
+import '../../../../core/widgets/report_dialog.dart';
 
 final offerDetailProvider = FutureProvider.family<Offer, String>((ref, id) {
   return ref.watch(offersRepositoryProvider).getOfferDetail(id);
@@ -207,6 +208,15 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.report_problem_rounded),
+            tooltip: 'Report Offer',
+            onPressed: () {
+              ReportDialog.show(context, reportedItemId: offerId, itemType: 'offer');
+            },
+          ),
+        ],
       ),
       child: content,
     );

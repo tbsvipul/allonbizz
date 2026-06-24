@@ -7,6 +7,7 @@ import '../../../../core/constants/app_durations.dart';
 import '../../../../core/models/discovery_model.dart';
 import '../../../../core/services/discovery_service.dart';
 import '../../../../core/services/places_service.dart';
+import '../../../../core/services/storage_service.dart';
 import '../utils/interest_tag_utils.dart';
 
 enum SearchInputField { origin, destination }
@@ -16,6 +17,7 @@ enum CustomInterestAddStatus { empty, duplicate, added, failed }
 class SearchViewState {
   const SearchViewState({
     this.suggestions = const <PlaceSuggestion>[],
+    this.searchHistory = const <PlaceSuggestion>[],
     this.isLoading = false,
     this.isStartingJourney = false,
     this.isAddingCustomInterest = false,
@@ -28,6 +30,7 @@ class SearchViewState {
   });
 
   final List<PlaceSuggestion> suggestions;
+  final List<PlaceSuggestion> searchHistory;
   final bool isLoading;
   final bool isStartingJourney;
   final bool isAddingCustomInterest;
@@ -40,6 +43,7 @@ class SearchViewState {
 
   SearchViewState copyWith({
     List<PlaceSuggestion>? suggestions,
+    List<PlaceSuggestion>? searchHistory,
     bool? isLoading,
     bool? isStartingJourney,
     bool? isAddingCustomInterest,
@@ -52,6 +56,7 @@ class SearchViewState {
   }) {
     return SearchViewState(
       suggestions: suggestions ?? this.suggestions,
+      searchHistory: searchHistory ?? this.searchHistory,
       isLoading: isLoading ?? this.isLoading,
       isStartingJourney: isStartingJourney ?? this.isStartingJourney,
       isAddingCustomInterest:
@@ -80,12 +85,19 @@ class SearchController extends StateNotifier<SearchViewState> {
   SearchController({
     required PlacesService placesService,
     required DiscoveryService discoveryService,
+    required StorageService storageService,
   }) : _placesService = placesService,
        _discoveryService = discoveryService,
-       super(const SearchViewState());
+       _storageService = storageService,
+       super(SearchViewState(
+         searchHistory: storageService.searchHistory
+             .map((e) => PlaceSuggestion.fromJson(e))
+             .toList(),
+       ));
 
   final PlacesService _placesService;
   final DiscoveryService _discoveryService;
+  final StorageService _storageService;
 
   Timer? _debounce;
   int _requestSequence = 0;
@@ -195,6 +207,7 @@ class SearchController extends StateNotifier<SearchViewState> {
     PlaceSuggestion suggestion, {
     required SearchInputField field,
   }) {
+    _addToHistory(suggestion);
     if (field == SearchInputField.origin) {
       _originQuery = suggestion.name;
       state = state.copyWith(
@@ -297,6 +310,21 @@ class SearchController extends StateNotifier<SearchViewState> {
     state = state.copyWith(selectedOrigin: point, selectedOriginLabel: label);
   }
 
+  void _addToHistory(PlaceSuggestion suggestion) {
+    if (suggestion.isCurrentLocation) return;
+    
+    final currentHistory = [...state.searchHistory];
+    currentHistory.removeWhere((e) => e.placeId == suggestion.placeId);
+    currentHistory.insert(0, suggestion);
+    if (currentHistory.length > 5) {
+      currentHistory.removeLast();
+    }
+    
+    _storageService.searchHistory = currentHistory.map((e) => e.toJson()).toList();
+    
+    state = state.copyWith(searchHistory: currentHistory);
+  }
+
   PlaceSuggestion _bestMatchingSuggestion(
     String query,
     List<PlaceSuggestion> suggestions,
@@ -323,5 +351,6 @@ final searchControllerProvider =
       return SearchController(
         placesService: ref.watch(placesServiceProvider),
         discoveryService: ref.watch(discoveryServiceProvider),
+        storageService: ref.watch(storageServiceProvider),
       );
     });

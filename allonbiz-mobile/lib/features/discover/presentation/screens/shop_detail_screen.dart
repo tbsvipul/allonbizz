@@ -20,6 +20,7 @@ import '../../../../shared/widgets/app_error_widget.dart';
 import '../../../../shared/widgets/app_glass.dart';
 import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/app_loader.dart';
+import '../../../../core/widgets/report_dialog.dart';
 
 final shopDetailProvider = FutureProvider.family<Shop, String>((ref, id) {
   return ref.watch(shopsRepositoryProvider).getShopDetail(id);
@@ -69,6 +70,15 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.report_problem_rounded),
+            tooltip: 'Report Shop',
+            onPressed: () {
+              ReportDialog.show(context, reportedItemId: widget.shopId, itemType: 'shop');
+            },
+          ),
+        ],
       ),
       child: Scaffold(backgroundColor: Colors.transparent, body: content),
     );

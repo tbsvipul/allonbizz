@@ -159,16 +159,26 @@ public static class DatabaseMigrationBootstrapper
             """,
             ct);
 
-        if (repairedSuperAdmins > 0 || mediaRepair.NormalizedColumns > 0 || mediaRepair.FallbackRows > 0 || repairedNotifications > 0 || publishedReviews > 0 || normalizedShopArrays > 0)
+        var repairedShopsRadius = await db.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE "Shops"
+            SET "NotificationRadius" = 10.0,
+                "UpdatedAt" = NOW()
+            WHERE "NotificationRadius" IS NULL OR "NotificationRadius" <> 10.0;
+            """,
+            ct);
+
+        if (repairedSuperAdmins > 0 || mediaRepair.NormalizedColumns > 0 || mediaRepair.FallbackRows > 0 || repairedNotifications > 0 || publishedReviews > 0 || normalizedShopArrays > 0 || repairedShopsRadius > 0)
         {
             logger?.LogWarning(
-                "Repaired legacy runtime data. Super admins fixed: {SuperAdminsFixed}, media columns normalized: {NormalizedColumns}, binary fallback rows: {FallbackRows}, notifications fixed: {NotificationsFixed}, pending reviews published: {PublishedReviews}, shop array columns normalized: {NormalizedShopArrays}.",
+                "Repaired legacy runtime data. Super admins fixed: {SuperAdminsFixed}, media columns normalized: {NormalizedColumns}, binary fallback rows: {FallbackRows}, notifications fixed: {NotificationsFixed}, pending reviews published: {PublishedReviews}, shop array columns normalized: {NormalizedShopArrays}, shop radius updated: {RepairedShopsRadius}.",
                 repairedSuperAdmins,
                 mediaRepair.NormalizedColumns,
                 mediaRepair.FallbackRows,
                 repairedNotifications,
                 publishedReviews,
-                normalizedShopArrays);
+                normalizedShopArrays,
+                repairedShopsRadius);
         }
     }
 

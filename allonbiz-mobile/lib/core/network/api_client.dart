@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -126,7 +127,8 @@ class ApiClient {
   final StorageService storageService;
   final http.Client _client;
 
-  final Map<String, _MemoryCacheEntry> _memoryCache = {};
+  final LinkedHashMap<String, _MemoryCacheEntry> _memoryCache = LinkedHashMap<String, _MemoryCacheEntry>();
+  static const int _maxCacheEntries = 100;
   final Map<String, Future<http.Response>> _inFlightGets = {};
   final StreamController<String?> _authFailedController =
       StreamController<String?>.broadcast();
@@ -293,6 +295,9 @@ class ApiClient {
     final memoryEntry = _memoryCache[scopedKey];
 
     if (memoryEntry != null) {
+      // Move to end for LRU
+      _memoryCache.remove(scopedKey);
+      _memoryCache[scopedKey] = memoryEntry;
       if (memoryEntry.value is T) {
         return CachedApiValue<T>(
           value: memoryEntry.value as T,
@@ -326,11 +331,15 @@ class ApiClient {
       parser: parser,
       decodeInBackground: options.decodeInBackground,
     );
-    _memoryCache[scopedKey] = _MemoryCacheEntry(
+    final memoryEntryCache = _MemoryCacheEntry(
       payload: diskEntry.payload,
       fetchedAt: diskEntry.fetchedAt,
       value: parsed,
     );
+    _memoryCache[scopedKey] = memoryEntryCache;
+    if (_memoryCache.length > _maxCacheEntries) {
+      _memoryCache.remove(_memoryCache.keys.first);
+    }
     return CachedApiValue<T>(
       value: parsed,
       fetchedAt: diskEntry.fetchedAt,
@@ -462,10 +471,10 @@ class ApiClient {
         request = httpRequest;
       }
 
-      final streamedResponse = await _client
-          .send(request)
-          .timeout(const Duration(seconds: 15));
-      final response = await http.Response.fromStream(streamedResponse);
+      final responseFuture = _client.send(request).then(
+        (streamed) => http.Response.fromStream(streamed),
+      );
+      final response = await responseFuture.timeout(const Duration(seconds: 15));
       _logTrackedAuthResponse(endpoint, response);
 
       // Successfully reached server, clear offline state if set
@@ -476,6 +485,10 @@ class ApiClient {
       if (response.statusCode == 401 && !isRetry) {
         final success = await _tryRefreshToken();
         if (success) {
+          if (files != null && files.isNotEmpty) {
+            // Cannot reuse http.MultipartFile streams after they've been consumed
+            throw const NetworkFailure();
+          }
           return _request(
             method,
             endpoint,
@@ -608,10 +621,10 @@ class ApiClient {
   }) async {
     try {
       final request = http.Request('GET', uri)..headers.addAll(_headers);
-      final streamedResponse = await _client
-          .send(request)
-          .timeout(const Duration(seconds: 15));
-      final response = await http.Response.fromStream(streamedResponse);
+      final responseFuture = _client.send(request).then(
+        (streamed) => http.Response.fromStream(streamed),
+      );
+      final response = await responseFuture.timeout(const Duration(seconds: 15));
 
       // Successfully reached server, clear offline state if set
       if (isServerOffline.value) {
@@ -690,6 +703,8 @@ class ApiClient {
           }
           return true;
         }
+      } else if (response.statusCode == 401) {
+        _authFailedController.add('Session expired. Please log in again.');
       }
 
       return false;
@@ -772,6 +787,9 @@ class ApiClient {
       fetchedAt: fetchedAt,
       value: value,
     );
+    if (_memoryCache.length > _maxCacheEntries) {
+      _memoryCache.remove(_memoryCache.keys.first);
+    }
     await storageService.putCachedResponse(
       scopedKey,
       payload: payload,

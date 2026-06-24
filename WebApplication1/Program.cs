@@ -237,6 +237,7 @@ builder.Services.AddScoped<IReviewService, PlatformFeatureService>();
 builder.Services.AddScoped<IAdminPanelService, PlatformFeatureService>();
 builder.Services.AddScoped<IRuleService, PlatformFeatureService>();
 builder.Services.AddScoped<IPlacesService, PlatformFeatureService>();
+builder.Services.AddScoped<IUserReportService, PlatformFeatureService>();
 
 builder.Services.AddScoped<IKeeperService, KeeperService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();

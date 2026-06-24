@@ -166,6 +166,21 @@ public class ShopService : IShopService
         var tagsList = NormalizeStringList(dto.Tags);
         await EnsureTagsExistAsync(tagsList, ct);
 
+        var maxRadiusRule = await _context.PlatformRules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Group == "General" && r.Key == "MaxAllowedRadiusKm", ct);
+        var maxRadius = maxRadiusRule != null && double.TryParse(maxRadiusRule.Value, out var parsedMax) ? parsedMax : 25.0;
+
+        var radius = dto.NotificationRadius ?? 10.0;
+        if (radius <= 0)
+        {
+            throw new ArgumentException("Notification radius must be greater than zero.");
+        }
+        if (radius > maxRadius)
+        {
+            throw new ArgumentException($"Notification radius cannot exceed the maximum allowed limit of {maxRadius} km.");
+        }
+
         var shop = new Shop
         {
             ShopId = Guid.NewGuid(),
@@ -184,7 +199,7 @@ public class ShopService : IShopService
                 .OfType<byte[]>()
                 .ToList() ?? new List<byte[]>(),
             IsOpen = dto.IsOpen,
-            NotificationRadius = dto.NotificationRadius,
+            NotificationRadius = radius,
             Amenities = NormalizeStringList(dto.Amenities),
             Tags = tagsList,
             CreatedAt = DateTime.UtcNow,
@@ -207,6 +222,21 @@ public class ShopService : IShopService
         var tagsList = NormalizeStringList(dto.Tags);
         await EnsureTagsExistAsync(tagsList, ct);
 
+        var maxRadiusRule = await _context.PlatformRules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Group == "General" && r.Key == "MaxAllowedRadiusKm", ct);
+        var maxRadius = maxRadiusRule != null && double.TryParse(maxRadiusRule.Value, out var parsedMax) ? parsedMax : 25.0;
+
+        var radius = dto.NotificationRadius ?? 10.0;
+        if (radius <= 0)
+        {
+            throw new ArgumentException("Notification radius must be greater than zero.");
+        }
+        if (radius > maxRadius)
+        {
+            throw new ArgumentException($"Notification radius cannot exceed the maximum allowed limit of {maxRadius} km.");
+        }
+
         shop.Name = NormalizeRequired(dto.Name, nameof(dto.Name));
         shop.Description = NormalizeOptional(dto.Description);
         shop.Address = NormalizeOptional(dto.Address);
@@ -221,7 +251,7 @@ public class ShopService : IShopService
         shop.Latitude = dto.Latitude;
         shop.Longitude = dto.Longitude;
         shop.IsOpen = dto.IsOpen;
-        shop.NotificationRadius = dto.NotificationRadius;
+        shop.NotificationRadius = radius;
         shop.Amenities = NormalizeStringList(dto.Amenities);
         shop.Tags = tagsList;
         shop.UpdatedAt = DateTime.UtcNow;

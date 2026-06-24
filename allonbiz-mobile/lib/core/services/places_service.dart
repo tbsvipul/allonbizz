@@ -42,6 +42,40 @@ class PlaceSuggestion {
     this.houseNumber,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'placeId': placeId,
+      'name': name,
+      'city': city,
+      'country': country,
+      'lat': lat,
+      'lon': lon,
+      'description': description,
+      'isCurrentLocation': isCurrentLocation,
+      'state': state,
+      'postcode': postcode,
+      'street': street,
+      'houseNumber': houseNumber,
+    };
+  }
+
+  factory PlaceSuggestion.fromJson(Map<String, dynamic> json) {
+    return PlaceSuggestion(
+      placeId: json['placeId']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      country: json['country']?.toString() ?? '',
+      lat: (json['lat'] as num?)?.toDouble() ?? 0.0,
+      lon: (json['lon'] as num?)?.toDouble() ?? 0.0,
+      description: json['description']?.toString() ?? '',
+      isCurrentLocation: json['isCurrentLocation'] as bool? ?? false,
+      state: json['state']?.toString(),
+      postcode: json['postcode']?.toString(),
+      street: json['street']?.toString(),
+      houseNumber: json['houseNumber']?.toString(),
+    );
+  }
+
   factory PlaceSuggestion.fromNominatimJson(Map<String, dynamic> item) {
     final lat = double.tryParse(item['lat']?.toString() ?? '0') ?? 0.0;
     final lon = double.tryParse(item['lon']?.toString() ?? '0') ?? 0.0;

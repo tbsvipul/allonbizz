@@ -35,6 +35,18 @@ public class UpdateJourneyProgressDto
     public List<string> ShopsEncountered { get; set; } = new();
 }
 
+public class JourneyOfferDto
+{
+    public Guid OfferId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal? DiscountPercentage { get; set; }
+    public decimal? DiscountAmount { get; set; }
+    public string? CouponCode { get; set; }
+    public string? OfferImage { get; set; }
+    public List<string> Tags { get; set; } = new();
+}
+
 public class JourneyRecommendationResponse
 {
     public Guid ShopId { get; set; }
@@ -47,6 +59,7 @@ public class JourneyRecommendationResponse
     public string? ShopProfileImage { get; set; }
     public bool IsOpen { get; set; }
     public List<string> Tags { get; set; } = new();
+    public List<JourneyOfferDto> Offers { get; set; } = new();
 }
 
 public class JourneyHistoryDto

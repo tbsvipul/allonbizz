@@ -240,24 +240,7 @@ export default function CategoriesPage() {
             <p style={{ color: 'hsl(var(--muted-foreground))' }}>Organize business types and sync them with the mobile app.</p>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            {hasPermission(PERMISSIONS.categoriesEdit) && (
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: 'hsl(var(--secondary))',
-                  border: '1px solid hsl(var(--border))',
-                  padding: '0.75rem 1.25rem',
-                  fontWeight: 600,
-                }}
-              >
-                <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-                {syncing ? 'Syncing...' : 'Sync to Firestore'}
-              </button>
-            )}
+            
             {hasPermission(PERMISSIONS.categoriesCreate) && (
               <button onClick={() => openEditor()} className="premium-gradient" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', color: 'white', padding: '0.75rem 1.5rem', fontWeight: 600 }}>
                 <Plus size={18} />

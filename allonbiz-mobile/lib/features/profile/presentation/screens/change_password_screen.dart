@@ -158,7 +158,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               child: GradientBackground(
                 child: SafeArea(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.fromLTRB(24, 24, 24, 140 + MediaQuery.of(context).padding.bottom),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 460),

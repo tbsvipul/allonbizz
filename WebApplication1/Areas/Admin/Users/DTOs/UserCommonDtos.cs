@@ -75,3 +75,12 @@ public class CategorySummaryDto
     public string Name { get; set; } = string.Empty;
     public string? Icon { get; set; }
 }
+
+public class SubmitReportDto
+{
+    public string ReportedItemId { get; set; } = string.Empty;
+    public string ItemType { get; set; } = string.Empty; // review | promotion | user | shop
+    public string Reason { get; set; } = string.Empty;
+    public string? Comments { get; set; }
+    public List<string> Evidence { get; set; } = new();
+}
